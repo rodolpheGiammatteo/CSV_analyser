@@ -1,0 +1,122 @@
+<ui:FluentWindow x:Class="CsvAnalyser.App.ComputedCurveWindow"
+                 xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                 xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+                 xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+                 xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+                 xmlns:vm="clr-namespace:CsvAnalyser.App.ViewModels"
+                 mc:Ignorable="d"
+                 d:DataContext="{d:DesignInstance Type=vm:ComputedCurveViewModel}"
+                 Title="{Binding Title}"
+                 Width="560"
+                 SizeToContent="Height"
+                 ResizeMode="NoResize"
+                 ShowInTaskbar="False"
+                 WindowStartupLocation="CenterOwner"
+                 ExtendsContentIntoTitleBar="True"
+                 WindowBackdropType="None"
+                 Background="{DynamicResource ApplicationBackgroundBrush}"
+                 WindowCornerPreference="Round">
+    <ui:FluentWindow.Resources>
+        <Style x:Key="SectionTitle" TargetType="TextBlock">
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Margin" Value="0,0,0,6" />
+        </Style>
+        <Style x:Key="Help" TargetType="TextBlock">
+            <Setter Property="Margin" Value="0,4,0,0" />
+            <Setter Property="TextWrapping" Value="Wrap" />
+            <Setter Property="Foreground" Value="{DynamicResource AppSecondaryTextBrush}" />
+        </Style>
+    </ui:FluentWindow.Resources>
+    <Grid Background="{DynamicResource ApplicationBackgroundBrush}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <ui:TitleBar Grid.Row="0" Title="{Binding Title}" ShowMinimize="False" ShowMaximize="False" />
+
+        <StackPanel Grid.Row="1" Margin="24,4,24,0">
+            <TextBlock Style="{StaticResource SectionTitle}" Text="Calcul" />
+            <ComboBox ItemsSource="{x:Static vm:ComputedCurveViewModel.KindChoices}"
+                      SelectedValuePath="Value"
+                      DisplayMemberPath="Label"
+                      SelectedValue="{Binding Kind}" />
+
+            <!-- Formule -->
+            <StackPanel Margin="0,16,0,0" Visibility="{Binding IsFormula, Converter={StaticResource BoolToVisibility}}">
+                <DockPanel Margin="0,0,0,6">
+                    <ComboBox x:Name="InsertCombo" DockPanel.Dock="Right" Width="220"
+                              ItemsSource="{Binding Curves}"
+                              DisplayMemberPath="LegendText"
+                              ToolTip="Insère la courbe choisie dans la formule"
+                              SelectionChanged="OnInsertCurve" />
+                    <TextBlock VerticalAlignment="Center" FontWeight="SemiBold" Text="Formule" />
+                    <TextBlock Margin="12,0,8,0" VerticalAlignment="Center" HorizontalAlignment="Right"
+                               Foreground="{DynamicResource AppSecondaryTextBrush}" Text="Insérer une courbe" />
+                </DockPanel>
+                <TextBox x:Name="ExpressionBox"
+                         MinHeight="64"
+                         FontFamily="Consolas"
+                         AcceptsReturn="False"
+                         TextWrapping="Wrap"
+                         Text="{Binding Expression, UpdateSourceTrigger=PropertyChanged}" />
+                <TextBlock Style="{StaticResource Help}" FontFamily="Consolas" Text="{Binding FormulaCheck}" />
+                <TextBlock Style="{StaticResource Help}" Text="{Binding FormulaHelp}" />
+            </StackPanel>
+
+            <!-- Filtres -->
+            <StackPanel Margin="0,16,0,0" Visibility="{Binding IsFilter, Converter={StaticResource BoolToVisibility}}">
+                <TextBlock Style="{StaticResource SectionTitle}" Text="Courbe à traiter" />
+                <ComboBox ItemsSource="{Binding Curves}"
+                          DisplayMemberPath="LegendText"
+                          SelectedItem="{Binding Source}" />
+                <TextBlock Style="{StaticResource Help}" Text="{Binding KindHelp}" />
+                <StackPanel Margin="0,12,0,0" Visibility="{Binding HasParameter, Converter={StaticResource BoolToVisibility}}">
+                    <TextBlock Style="{StaticResource SectionTitle}" Text="{Binding ParameterLabel}" />
+                    <ui:TextBox Width="160" HorizontalAlignment="Left"
+                                Text="{Binding ParameterText, UpdateSourceTrigger=PropertyChanged}" />
+                </StackPanel>
+                <CheckBox Margin="0,10,0,0"
+                          Content="Sans déphasage (filtre appliqué dans les deux sens)"
+                          ToolTip="La courbe filtrée n'est pas décalée dans le temps, et la pente du filtre est doublée"
+                          IsChecked="{Binding ZeroPhase}"
+                          Visibility="{Binding HasZeroPhase, Converter={StaticResource BoolToVisibility}}" />
+            </StackPanel>
+
+            <!-- Nom et unité -->
+            <Grid Margin="0,16,0,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="12" />
+                    <ColumnDefinition Width="120" />
+                </Grid.ColumnDefinitions>
+                <StackPanel Grid.Column="0">
+                    <TextBlock Style="{StaticResource SectionTitle}" Text="Nom de la nouvelle courbe" />
+                    <ui:TextBox Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}" />
+                </StackPanel>
+                <StackPanel Grid.Column="2">
+                    <TextBlock Style="{StaticResource SectionTitle}" Text="Unité" />
+                    <ui:TextBox Text="{Binding Unit, UpdateSourceTrigger=PropertyChanged}" />
+                </StackPanel>
+            </Grid>
+            <TextBlock Margin="0,10,0,0" Foreground="#D13438" TextWrapping="Wrap" Text="{Binding Error}" />
+        </StackPanel>
+
+        <DockPanel Grid.Row="2" Margin="24,12,24,20" LastChildFill="False">
+            <ui:Button DockPanel.Dock="Right"
+                       MinWidth="110"
+                       Margin="8,0,0,0"
+                       Appearance="Primary"
+                       Content="{Binding OkText}"
+                       Icon="{ui:SymbolIcon MathFormula24}"
+                       IsDefault="True"
+                       Click="OnOk" />
+            <ui:Button DockPanel.Dock="Right"
+                       MinWidth="100"
+                       Content="Annuler"
+                       IsCancel="True" />
+        </DockPanel>
+    </Grid>
+</ui:FluentWindow>

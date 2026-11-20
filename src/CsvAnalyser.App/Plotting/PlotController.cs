@@ -114,6 +114,7 @@ public sealed class PlotController : IPlotView
         menu.Add("Placer le curseur A ici", plot => PlaceMeasureCursorAtMenu(plot, 'A'));
         menu.Add("Placer le curseur B ici", plot => PlaceMeasureCursorAtMenu(plot, 'B'));
         menu.AddSeparator();
+        menu.Add("Spectre (FFT) de ce graphe…", plot => _vm.ShowSpectrumCommand.Execute(GraphOf(plot)));
         menu.Add("Titre, légende et axes…", plot => _vm.EditAxesCommand.Execute(GraphOf(plot)));
         menu.AddSeparator();
         menu.Add("Copier l'image", WpfPlotMenu.CopyImageToClipboard);
@@ -199,7 +200,9 @@ public sealed class PlotController : IPlotView
         if (specs.Count == 0)
             specs = [new GraphSpec(new GraphViewModel(0, () => { }, () => { }), [])];
         _layoutSignature = GraphLayout.Signature(specs);
-        _axisMembers = specs.SelectMany(g => g.Axes.Select(a => (Key: AxisId(g.Graph, a.Key), Members: string.Join("+", a.Curves.Select(c => c.Channel.SourceName)))))
+        // Members = curves and their data arrays: an axis whose computed curve was recomputed is fitted again.
+        _axisMembers = specs.SelectMany(g => g.Axes.Select(a => (Key: AxisId(g.Graph, a.Key), Members: string.Join("+", a.Curves.Select(c =>
+                c.Channel.SourceName + "#" + System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(c.Channel.Values))))))
             .ToDictionary(x => x.Key, x => x.Members);
 
         _graphs.Clear();

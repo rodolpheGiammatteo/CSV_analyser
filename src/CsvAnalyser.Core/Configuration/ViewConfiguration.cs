@@ -35,10 +35,15 @@ public sealed class ViewConfiguration
     /// <summary>Measurement cursors A and B (positions restored only on the same file).</summary>
     public MeasureConfig? Measure { get; set; }
 
-    /// <summary>Columns used by the configuration that are not in <paramref name="available"/>.</summary>
+    /// <summary>Computed curves, in creation order (one may use the previous ones).</summary>
+    public List<ComputedCurveConfig> Computed { get; set; } = [];
+
+    /// <summary>Columns used by the configuration's curves that are neither in <paramref name="available"/> nor computed.</summary>
     public IReadOnlyList<string> MissingColumns(IEnumerable<string> available)
     {
         var known = new HashSet<string>(available, StringComparer.Ordinal);
+        foreach (var c in Computed)
+            known.Add(c.Name);
         var missing = new List<string>();
         foreach (var name in Curves.Select(c => c.Column))
         {
@@ -100,6 +105,35 @@ public sealed class RangeConfig
 
     [JsonIgnore]
     public bool IsValid => double.IsFinite(Min) && double.IsFinite(Max) && Min < Max;
+}
+
+/// <summary>Definition of a computed curve: a formula, or a filter applied to one curve.</summary>
+public sealed class ComputedCurveConfig
+{
+    public const string Formula = "Formula", MovingAverage = "MovingAverage", LowPass = "LowPass",
+        HighPass = "HighPass", Derivative = "Derivative", Integral = "Integral";
+
+    /// <summary>Name of the new curve (also its key in <see cref="ViewConfiguration.Curves"/>).</summary>
+    public string Name { get; set; } = "";
+
+    public string Unit { get; set; } = "";
+
+    /// <summary>Formula, MovingAverage, LowPass, HighPass, Derivative or Integral.</summary>
+    public string Kind { get; set; } = Formula;
+
+    /// <summary>The formula text (kind Formula).</summary>
+    public string? Expression { get; set; }
+
+    /// <summary>The filtered curve (other kinds).</summary>
+    public string? Source { get; set; }
+
+    /// <summary>Window of a moving average (unit of the time base), or cut-off frequency of a filter (Hz).</summary>
+    public double? Parameter { get; set; }
+
+    /// <summary>Filters: run forward then backward (no delay).</summary>
+    public bool ZeroPhase { get; set; } = true;
+
+    public ComputedCurveConfig Clone() => (ComputedCurveConfig)MemberwiseClone();
 }
 
 public sealed class MeasureConfig

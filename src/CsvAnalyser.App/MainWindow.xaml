@@ -135,7 +135,23 @@
                            Icon="{ui:SymbolIcon DataLine24}"
                            ToolTip="Titre et légende des graphes, axes Y automatiques ou manuels, alignement des zéros (aussi : clic droit sur un graphe)"
                            Command="{Binding EditAxesCommand}" />
-                <ToggleButton Margin="12,2,0,2"
+                <ui:Button Margin="12,2,0,2"
+                           Content="Calculs"
+                           Icon="{ui:SymbolIcon MathFormula24}"
+                           ToolTip="Courbes calculées (formules, moyennes, filtres, dérivée, intégrale) et spectre FFT"
+                           Click="OnOpenButtonMenu">
+                    <ui:Button.ContextMenu>
+                        <ContextMenu>
+                            <MenuItem Header="Nouvelle courbe calculée…"
+                                      Icon="{ui:SymbolIcon MathFormula24}"
+                                      Command="{Binding NewComputedCommand}" />
+                            <MenuItem Header="Spectre (FFT)…"
+                                      Icon="{ui:SymbolIcon DataHistogram24}"
+                                      Command="{Binding ShowSpectrumCommand}" />
+                        </ContextMenu>
+                    </ui:Button.ContextMenu>
+                </ui:Button>
+                <ToggleButton Margin="8,2,0,2"
                               Padding="11,5"
                               ToolTip="Deux curseurs A et B à faire glisser sur le graphe : valeurs, écart, min, max, moyenne et valeur efficace entre les deux (Ctrl+M)"
                               IsChecked="{Binding IsMeasuring}"
@@ -201,6 +217,20 @@
                                                   Icon="{ui:SymbolIcon Edit20}"
                                                   Command="{Binding PlacementTarget.Tag.EditChannelCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
                                                   CommandParameter="{Binding}" />
+                                        <MenuItem Header="Nouvelle courbe calculée à partir de celle-ci…"
+                                                  Icon="{ui:SymbolIcon MathFormula24}"
+                                                  Command="{Binding PlacementTarget.Tag.NewComputedCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                                  CommandParameter="{Binding}" />
+                                        <MenuItem Header="Modifier le calcul…"
+                                                  Icon="{ui:SymbolIcon Edit20}"
+                                                  Visibility="{Binding IsComputed, Converter={StaticResource BoolToVisibility}}"
+                                                  Command="{Binding PlacementTarget.Tag.EditComputedCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                                  CommandParameter="{Binding}" />
+                                        <MenuItem Header="Supprimer la courbe calculée"
+                                                  Icon="{ui:SymbolIcon Delete20}"
+                                                  Visibility="{Binding IsComputed, Converter={StaticResource BoolToVisibility}}"
+                                                  Command="{Binding PlacementTarget.Tag.DeleteComputedCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                                  CommandParameter="{Binding}" />
                                     </ContextMenu>
                                 </Grid.ContextMenu>
                                 <Grid.ColumnDefinitions>
@@ -213,6 +243,10 @@
                                                    VerticalAlignment="Center"
                                                    Fill="{Binding Brush}"
                                                    Visibility="{Binding IsPlotted, Converter={StaticResource BoolToVisibility}}" />
+                                        <TextBlock Margin="0,0,5,0" VerticalAlignment="Center" FontStyle="Italic" FontWeight="SemiBold"
+                                                   Foreground="{DynamicResource SystemAccentColorPrimaryBrush}" Text="ƒ"
+                                                   ToolTip="Courbe calculée (clic droit pour modifier le calcul)"
+                                                   Visibility="{Binding IsComputed, Converter={StaticResource BoolToVisibility}}" />
                                         <TextBlock VerticalAlignment="Center" Text="{Binding Name}" />
                                         <TextBlock Margin="6,0,0,0" VerticalAlignment="Center" Foreground="{DynamicResource AppSecondaryTextBrush}" Text="{Binding UnitLabel}" />
                                     </StackPanel>

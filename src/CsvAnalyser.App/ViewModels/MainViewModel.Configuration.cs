@@ -65,6 +65,7 @@ public partial class MainViewModel
 
         foreach (var item in PlottedChannels.Concat(Channels.Where(c => !c.IsPlotted && !c.IsDefaultAppearance)))
             config.Curves.Add(ToConfig(item));
+        config.Computed.AddRange(ComputedChannels.Select(c => c.Definition!.Clone()));
         if (IsMeasuring || MeasureA is not null)
             config.Measure = new MeasureConfig { Enabled = IsMeasuring, A = MeasureA, B = MeasureB };
         return config;
@@ -100,10 +101,7 @@ public partial class MainViewModel
         if (Dataset is null)
             return [];
 
-        var bySource = new Dictionary<string, ChannelItemViewModel>(StringComparer.Ordinal);
-        foreach (var item in Channels)
-            bySource.TryAdd(item.Channel.SourceName, item);
-        var missing = config.MissingColumns(bySource.Keys);
+        var missing = config.MissingColumns(Channels.Where(c => !c.IsComputed).Select(c => c.Channel.SourceName)).ToList();
         var created = new List<GraphViewModel>();
 
         _suppressPlotEvents = true;
@@ -117,6 +115,23 @@ public partial class MainViewModel
                     item.ResetAppearanceCommand.Execute(null);
                 item.Graph = null;
             }
+
+            // Names and units first: a formula may use a renamed curve.
+            foreach (var cc in config.Curves)
+            {
+                if (Channels.FirstOrDefault(c => !c.IsComputed && c.Channel.SourceName == cc.Column) is { } item)
+                {
+                    if (cc.Name is { Length: > 0 } name)
+                        item.Name = name;
+                    if (cc.Unit is { } unit)
+                        item.Unit = unit;
+                }
+            }
+            missing.AddRange(RebuildComputed(config.Computed));
+
+            var bySource = new Dictionary<string, ChannelItemViewModel>(StringComparer.Ordinal);
+            foreach (var item in Channels)
+                bySource.TryAdd(item.Channel.SourceName, item);
 
             Graphs.Clear();
             foreach (var gc in config.Graphs.Count > 0 ? config.Graphs : [new GraphConfig()])

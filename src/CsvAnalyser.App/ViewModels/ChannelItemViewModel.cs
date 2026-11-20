@@ -80,6 +80,11 @@ public partial class ChannelItemViewModel : ObservableObject
 
     public Channel Channel { get; }
 
+    /// <summary>How the curve is computed; null for a column of the file.</summary>
+    public CsvAnalyser.Core.Configuration.ComputedCurveConfig? Definition { get; init; }
+
+    public bool IsComputed => Definition is not null;
+
     public string Name
     {
         get => Channel.DisplayName;
@@ -197,6 +202,15 @@ public partial class ChannelItemViewModel : ObservableObject
     }
 
     partial void OnIsPlottedChanged(bool value) => _host.OnPlottedChanged(this);
+
+    /// <summary>Marks the curve as plotted without telling the host (it was put in the plotted list directly).</summary>
+    public void SetPlottedSilently(bool value)
+    {
+#pragma warning disable MVVMTK0034
+        _isPlotted = value;
+#pragma warning restore MVVMTK0034
+        OnPropertyChanged(nameof(IsPlotted));
+    }
 
     partial void OnColorChanged(ScottPlot.Color value) => _host.OnAppearanceChanged(this);
 

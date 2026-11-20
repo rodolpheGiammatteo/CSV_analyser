@@ -1,4 +1,4 @@
-﻿using System.Windows;
+using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
@@ -42,6 +42,17 @@ public partial class MainWindow : FluentWindow
             var window = new ExportWindow(export, System.IO.Path.GetDirectoryName(viewModel.Dataset?.FilePath)) { Owner = this };
             if (window.ShowDialog() == true && window.ChosenPath is { } path)
                 await viewModel.ExportAsync(path, export.Columns, export.Rows, export.Options);
+        };
+        viewModel.ComputedCurveRequested += (_, request) =>
+            new ComputedCurveWindow(viewModel, new ComputedCurveViewModel(viewModel, request)) { Owner = this }.ShowDialog();
+        viewModel.SpectrumRequested += (_, graph) =>
+        {
+            if (viewModel.PlottedChannels.Count == 0)
+            {
+                System.Windows.MessageBox.Show("Cochez d'abord les courbes à analyser.", "Spectre", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
+                return;
+            }
+            new SpectrumWindow(viewModel, graph) { Owner = this }.Show();
         };
         Closing += (_, _) => viewModel.SaveSession();
     }
