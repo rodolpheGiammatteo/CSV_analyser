@@ -17,6 +17,8 @@ dotnet test tests/CsvAnalyser.Tests --filter "FullyQualifiedName~FrenchDateColum
 dotnet run --project src/CsvAnalyser.App -- "chemin\fichier.csv"                   # open a file at startup
 ```
 
+Versioning is automatic (Nerdbank.GitVersioning, enabled for every project by `Directory.Build.props`): the version is `major.minor` from `version.json` plus the number of commits since that line last changed (e.g. `1.0.7`). To start a new version, edit `"version"` in `version.json` (e.g. `"1.1"` or `"2.0"`) and commit. Builds from a branch other than `main` get a `-g<commit>` suffix. The app shows it through `AppInfo.Version` (generated `ThisAssembly` class). A shallow clone breaks the commit count, so CI must fetch full history.
+
 The app icon is drawn in code by `tools/makeicon.cs` (same design as `src/CsvAnalyser.App/Assets/app.svg`, simplified below 40 px). Regenerate with `dotnet run tools/makeicon.cs -- <dossier>` then copy `app.ico` and `app-64.png` into `src/CsvAnalyser.App/Assets/`.
 
 `données de test/` holds a real sample file; `CsvImporterTests.RealSampleFile_IfPresent` loads it when present.

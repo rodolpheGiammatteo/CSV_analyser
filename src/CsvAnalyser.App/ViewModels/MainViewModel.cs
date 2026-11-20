@@ -54,7 +54,7 @@ public partial class MainViewModel : ObservableObject
     private string _statusText = "Ouvrez un fichier CSV ou glissez-le dans la fenêtre.";
 
     [ObservableProperty]
-    private string _title = "CSV Analyser";
+    private string _title = AppInfo.FullTitle;
 
     [ObservableProperty]
     private string _cursorXText = "Survolez le graphe";
@@ -196,7 +196,7 @@ public partial class MainViewModel : ObservableObject
 
             Dataset = dataset;
             SelectedXAxis = timeOption ?? rowOption;
-            Title = $"{Path.GetFileName(dataset.FilePath)} — CSV Analyser";
+            Title = $"{Path.GetFileName(dataset.FilePath)} — {AppInfo.FullTitle}";
             StatusText = BuildStatus(dataset);
         }
         finally

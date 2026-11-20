@@ -18,6 +18,7 @@
     <UseWPF>true</UseWPF>
     <ApplicationIcon>Assets\app.ico</ApplicationIcon>
     <AssemblyTitle>CSV Analyser</AssemblyTitle>
+    <Product>CSV Analyser</Product>
   </PropertyGroup>
 
   <ItemGroup>
