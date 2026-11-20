@@ -95,11 +95,26 @@ public sealed class PlotController : IPlotView
         Rebuild(resetView: true);
     }
 
-    private void SetupContextMenu()
+    /// <summary>
+    /// The plot menu. Right-clicked on an axis, it starts with that axis back to automatic
+    /// (rebuilt at each right-click, see <see cref="OnPreviewMouseDown"/>).
+    /// </summary>
+    private void SetupContextMenu(GraphRender? axisGraph = null, IAxis? axis = null)
     {
         if (_view.Menu is not WpfPlotMenu menu)
             return;
         menu.Clear();
+        if (axisGraph is not null && axis is IYAxis yAxis && axisGraph.Axes.FirstOrDefault(a => a.Axis == yAxis) is { } axisRender)
+        {
+            string name = string.IsNullOrEmpty(axisRender.Spec.Label) ? L.T("Axe Y") : axisRender.Spec.Label;
+            menu.Add(L.F("Axe « {0} » en automatique", name), _ => SetAxisAuto(axisGraph, axisRender));
+            menu.AddSeparator();
+        }
+        else if (axisGraph is not null && axis is not null && axis == axisGraph.Plot.Axes.Bottom)
+        {
+            menu.Add(L.T("Axe X en automatique (tout afficher)"), _ => AutoScaleWithHistory(x: true, y: false));
+            menu.AddSeparator();
+        }
         menu.Add(L.T("Ajuster ce graphe en Y"), plot =>
         {
             if (_graphs.FirstOrDefault(g => g.Plot == plot) is { } graph)
@@ -123,6 +138,16 @@ public sealed class PlotController : IPlotView
         menu.AddSeparator();
         menu.Add(L.T("Copier l'image"), WpfPlotMenu.CopyImageToClipboard);
         menu.Add(L.T("Enregistrer l'image…"), menu.OpenSaveImageDialog);
+    }
+
+    /// <summary>A Y axis back to automatic (manual bounds dropped) and fitted to the visible data.</summary>
+    private void SetAxisAuto(GraphRender g, AxisRender a)
+    {
+        var before = Capture();
+        a.Spec.Settings.IsAuto = true; // no change event when it already was: the fit below covers that case
+        FitGraphY(g);
+        Record(before);
+        _view.Refresh();
     }
 
     /// <summary>Left drag zooms on a rectangle and wheel-button drag pans, or the reverse (Paramètres).</summary>
@@ -958,6 +983,8 @@ public sealed class PlotController : IPlotView
                 break;
             case MouseButton.Right:
                 _lastMenuPixel = ToPixel(e);
+                var (axisGraph, axisUnder) = AxisAt(_lastMenuPixel);
+                SetupContextMenu(axisGraph, axisUnder);
                 break;
         }
 
@@ -1222,17 +1249,22 @@ public sealed class PlotController : IPlotView
         if (e.ChangedButton != MouseButton.Left)
             return;
         var pixel = ToPixel(e);
+        if (AxisAt(pixel) is ({ } g, { } axis))
+            _axisClick = (g, axis, pixel);
+    }
+
+    /// <summary>The Y axis, or the X axis, under a pixel outside the data areas (else nulls).</summary>
+    private (GraphRender? Graph, IAxis? Axis) AxisAt(Pixel pixel)
+    {
         foreach (var g in _graphs)
         {
             var r = g.Plot.LastRender.DataRect;
             if (pixel.X >= r.Left && pixel.X <= r.Right && pixel.Y >= r.Top && pixel.Y <= r.Bottom)
-                return;
+                return (null, null);
             if (g.Plot.GetAxis(pixel) is { } axis && (axis is IYAxis || axis == g.Plot.Axes.Bottom))
-            {
-                _axisClick = (g, axis, pixel);
-                return;
-            }
+                return (g, axis);
         }
+        return (null, null);
     }
 
     /// <summary>Click on the upper (or right) half of an axis: edit its maximum; lower (or left) half: its minimum.</summary>

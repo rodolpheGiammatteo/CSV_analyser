@@ -276,6 +276,28 @@ public partial class MainViewModel
         StatusText = L.T("Mise en page réinitialisée (Ctrl+Z pour annuler)");
     }
 
+    /// <summary>Every Y axis of every graph back to automatic (typed bounds dropped), then everything fitted (right-click on the fit buttons).</summary>
+    [RelayCommand]
+    private void AutoAllAxes()
+    {
+        if (Dataset is null)
+            return;
+        _suppressPlotEvents = true;
+        try
+        {
+            foreach (var graph in Graphs)
+            {
+                foreach (var (_, settings) in graph.AxisSettings)
+                    settings.IsAuto = true;
+            }
+        }
+        finally
+        {
+            _suppressPlotEvents = false;
+        }
+        RaisePlotChanged(PlotChange.AutoScale); // one fit (and one undo step)
+    }
+
     // ---------------------------------------------------------------- session (per file)
 
     /// <summary>Remembers the layout of the open file (before opening another one, and when the app closes).</summary>
