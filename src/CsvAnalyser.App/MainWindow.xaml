@@ -19,6 +19,7 @@
                  Icon="Assets/app.ico"
                  AllowDrop="True"
                  DragOver="OnDragOver"
+                 DragLeave="OnWindowDragLeave"
                  Drop="OnDrop">
     <ui:FluentWindow.Resources>
         <!-- Undo/redo stay enabled; Tag = "something to undo". The WPF-UI disabled look is semi-transparent,
@@ -67,7 +68,7 @@
                        Command="{Binding OpenCommand}" />
             <TextBlock DockPanel.Dock="Left" Margin="20,0,8,0" VerticalAlignment="Center" Text="Axe X" />
             <ComboBox DockPanel.Dock="Left"
-                      Width="280"
+                      Width="240"
                       ItemsSource="{Binding XAxisOptions}"
                       DisplayMemberPath="Label"
                       SelectedItem="{Binding SelectedXAxis}"
@@ -76,8 +77,18 @@
                        Margin="12,0,0,0"
                        Content="Ajuster"
                        Icon="{ui:SymbolIcon ArrowMaximize24}"
-                       ToolTip="Recadrer sur l'ensemble des données"
+                       ToolTip="Tout ajuster : X sur l'ensemble des données, Y de tous les graphes (aussi : clic molette)"
                        Command="{Binding AutoScaleCommand}" />
+            <ui:Button DockPanel.Dock="Left"
+                       Margin="4,0,0,0"
+                       Icon="{ui:SymbolIcon ArrowAutofitWidth24}"
+                       ToolTip="Ajuster X seulement (le zoom vertical est gardé)"
+                       Command="{Binding AutoScaleXCommand}" />
+            <ui:Button DockPanel.Dock="Left"
+                       Margin="4,0,0,0"
+                       Icon="{ui:SymbolIcon ArrowAutofitHeight24}"
+                       ToolTip="Ajuster Y de tous les graphes sur la plage X visible. Pour un seul graphe : clic droit sur ce graphe"
+                       Command="{Binding AutoScaleYCommand}" />
             <ui:Button DockPanel.Dock="Left"
                        Margin="8,0,0,0"
                        Icon="{ui:SymbolIcon ArrowUndo24}"
@@ -94,14 +105,14 @@
                        Command="{Binding RedoViewCommand}" />
             <ui:Button DockPanel.Dock="Left"
                        Margin="12,0,0,0"
-                       Content="Axes"
+                       Content="Graphes"
                        Icon="{ui:SymbolIcon DataLine24}"
-                       ToolTip="Axes Y automatiques ou manuels, alignement des zéros (aussi : clic droit sur un graphe)"
+                       ToolTip="Titre et légende des graphes, axes Y automatiques ou manuels, alignement des zéros (aussi : clic droit sur un graphe)"
                        Command="{Binding EditAxesCommand}" />
             <ui:Button DockPanel.Dock="Left"
                        Margin="8,0,0,0"
-                       Content="Tout désélectionner"
                        Icon="{ui:SymbolIcon Eraser24}"
+                       ToolTip="Tout désélectionner (masquer toutes les courbes)"
                        Command="{Binding ClearSelectionCommand}" />
 
             <ui:Button DockPanel.Dock="Right"
@@ -115,6 +126,7 @@
                 <ColumnDefinition Width="330" MinWidth="200" />
                 <ColumnDefinition Width="8" />
                 <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
 
             <!-- Panneau gauche : courbes + curseur -->
@@ -196,50 +208,105 @@
                     </ListBox.ItemTemplate>
                 </ListBox>
 
-                <Border Grid.Row="2"
-                        Margin="0,8,0,8"
-                        Padding="12,10"
-                        CornerRadius="6"
-                        BorderThickness="1"
-                        Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
-                        BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}">
-                    <StackPanel>
-                        <TextBlock FontWeight="SemiBold" Text="Curseur" />
-                        <TextBlock Margin="0,4,0,6" Foreground="{DynamicResource AppSecondaryTextBrush}" TextWrapping="Wrap" Text="{Binding CursorXText}" />
-                        <ItemsControl ItemsSource="{Binding PlottedChannels}"
-                                      Cursor="SizeAll"
-                                      ToolTip="Faites glisser une courbe vers un autre graphe"
-                                      PreviewMouseLeftButtonDown="OnCurvePreviewMouseDown"
-                                      PreviewMouseMove="OnCurvePreviewMouseMove">
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate DataType="{x:Type vm:ChannelItemViewModel}">
-                                    <Grid Margin="0,2">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="Auto" />
-                                            <ColumnDefinition Width="*" />
-                                            <ColumnDefinition Width="Auto" />
-                                        </Grid.ColumnDefinitions>
-                                        <Rectangle Width="10" Height="10" Margin="0,0,8,0" RadiusX="2" RadiusY="2" Fill="{Binding Brush}" />
-                                        <TextBlock Grid.Column="1" TextTrimming="CharacterEllipsis" Text="{Binding Name}" ToolTip="{Binding Name}" />
-                                        <TextBlock Grid.Column="2" Margin="10,0,0,0" FontFamily="Consolas" Text="{Binding CursorText}" />
-                                    </Grid>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-                    </StackPanel>
-                </Border>
+                <!-- The cursor card lives in one of three hosts (left, right, bottom): see MainWindow.PlaceCursorCard. -->
+                <ContentControl x:Name="CursorHostLeft" Grid.Row="2" Margin="0,8,0,8" Focusable="False">
+                    <Border x:Name="CursorCard"
+                            Padding="12,10"
+                            CornerRadius="6"
+                            BorderThickness="1"
+                            Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+                            BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}">
+                        <StackPanel>
+                            <TextBlock FontWeight="SemiBold" Text="Curseur" />
+                            <TextBlock Margin="0,4,0,6" Foreground="{DynamicResource AppSecondaryTextBrush}" TextWrapping="Wrap" Text="{Binding CursorXText}" />
+                            <ItemsControl ItemsSource="{Binding CursorGroups}" Focusable="False">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <WrapPanel Orientation="{Binding CursorGroupsOrientation}" />
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate DataType="{x:Type vm:CursorGroup}">
+                                        <StackPanel MinWidth="220" Margin="0,0,20,8">
+                                            <TextBlock Margin="0,0,0,2" FontSize="12" FontWeight="SemiBold"
+                                                       Foreground="{DynamicResource AppSecondaryTextBrush}"
+                                                       Text="{Binding Graph.Title}"
+                                                       Visibility="{Binding ShowTitle, Converter={StaticResource BoolToVisibility}}" />
+                                            <ItemsControl ItemsSource="{Binding Curves}"
+                                                          Cursor="SizeAll"
+                                                          ToolTip="Faites glisser une courbe vers un autre graphe"
+                                                          PreviewMouseLeftButtonDown="OnCurvePreviewMouseDown"
+                                                          PreviewMouseMove="OnCurvePreviewMouseMove">
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate DataType="{x:Type vm:ChannelItemViewModel}">
+                                                        <Grid Margin="0,2" Background="Transparent">
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="Auto" />
+                                                                <ColumnDefinition Width="*" />
+                                                                <ColumnDefinition Width="Auto" />
+                                                            </Grid.ColumnDefinitions>
+                                                            <Rectangle Width="10" Height="10" Margin="0,0,8,0" RadiusX="2" RadiusY="2" Fill="{Binding Brush}" />
+                                                            <TextBlock Grid.Column="1" TextTrimming="CharacterEllipsis" Text="{Binding Name}" ToolTip="{Binding Name}" />
+                                                            <TextBlock Grid.Column="2" Margin="10,0,0,0" FontFamily="Consolas" Text="{Binding CursorText}" />
+                                                        </Grid>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                    </Border>
+                </ContentControl>
             </Grid>
 
             <GridSplitter Grid.Column="1" HorizontalAlignment="Stretch" Background="Transparent" />
 
-            <!-- Graphe -->
-            <Border Grid.Column="2" Margin="0,0,0,8" CornerRadius="6" ClipToBounds="True">
+            <!-- Graphe (+ emplacement du curseur sous le graphe) -->
+            <Grid Grid.Column="2">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+            <Border Grid.Row="0" Margin="0,0,0,8" CornerRadius="6" ClipToBounds="True">
                 <Grid AllowDrop="True"
                       DragEnter="OnPlotDragOver"
                       DragOver="OnPlotDragOver"
                       DragLeave="OnPlotDragLeave"
                       Drop="OnPlotDrop">
-                    <scottplot:WpfPlot x:Name="PlotView" />
+                    <scottplot:WpfPlot x:Name="PlotView">
+                        <scottplot:WpfPlot.Style>
+                            <Style TargetType="scottplot:WpfPlot">
+                                <Style.Triggers>
+                                    <!-- No empty axes before a file is open: the drop zone takes the place. -->
+                                    <DataTrigger Binding="{Binding HasData}" Value="False">
+                                        <Setter Property="Visibility" Value="Hidden" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </scottplot:WpfPlot.Style>
+                    </scottplot:WpfPlot>
+
+                    <!-- Startup: drop zone for a CSV file (click = open dialog) -->
+                    <Grid x:Name="FileDropZone"
+                          Background="Transparent"
+                          Cursor="Hand"
+                          MouseLeftButtonUp="OnFileDropZoneClick"
+                          Visibility="{Binding ShowFileDropZone, Converter={StaticResource BoolToVisibility}}">
+                        <Rectangle x:Name="FileDropFrame" Margin="24" RadiusX="14" RadiusY="14"
+                                   StrokeThickness="2" StrokeDashArray="6 4"
+                                   Stroke="{DynamicResource AppSecondaryTextBrush}" />
+                        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                            <ui:SymbolIcon HorizontalAlignment="Center" Symbol="DocumentAdd24" FontSize="64"
+                                           Foreground="{DynamicResource AppSecondaryTextBrush}" />
+                            <TextBlock Margin="0,12,0,0" HorizontalAlignment="Center" FontSize="22" FontWeight="SemiBold"
+                                       Text="Glissez un fichier CSV ici" />
+                            <TextBlock Margin="0,6,0,0" HorizontalAlignment="Center" FontSize="14"
+                                       Foreground="{DynamicResource AppSecondaryTextBrush}"
+                                       Text="ou cliquez pour en choisir un (Ctrl+O)" />
+                        </StackPanel>
+                    </Grid>
 
                     <!-- Drop targets, shown while a curve is dragged -->
                     <Canvas IsHitTestVisible="False">
@@ -270,6 +337,19 @@
                                Visibility="{Binding ShowPlotHint, Converter={StaticResource BoolToVisibility}}" />
                 </Grid>
             </Border>
+                <ContentControl x:Name="CursorHostBottom" Grid.Row="1" Margin="0,0,0,8" Focusable="False" Visibility="Collapsed">
+                    <ContentControl.LayoutTransform>
+                        <ScaleTransform ScaleX="{Binding UiScale}" ScaleY="{Binding UiScale}" />
+                    </ContentControl.LayoutTransform>
+                </ContentControl>
+            </Grid>
+
+            <ContentControl x:Name="CursorHostRight" Grid.Column="3" Margin="8,0,0,8" MaxWidth="340"
+                            VerticalAlignment="Top" Focusable="False" Visibility="Collapsed">
+                <ContentControl.LayoutTransform>
+                    <ScaleTransform ScaleX="{Binding UiScale}" ScaleY="{Binding UiScale}" />
+                </ContentControl.LayoutTransform>
+            </ContentControl>
         </Grid>
 
         <!-- Barre d'état -->

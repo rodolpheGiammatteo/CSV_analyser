@@ -64,6 +64,15 @@
                     TickFrequency="0.1"
                     IsSnapToTickEnabled="True"
                     Value="{Binding PlotFontScale}" />
+
+            <TextBlock Margin="0,12,0,0" FontWeight="SemiBold" Text="Panneau Curseur" />
+            <TextBlock Margin="0,2,0,0" Foreground="{DynamicResource AppSecondaryTextBrush}"
+                       Text="Les valeurs des courbes sous le curseur, groupées par graphe." />
+            <ComboBox Margin="0,6,0,8"
+                      ItemsSource="{x:Static vm:MainViewModel.CursorPanelChoices}"
+                      SelectedValuePath="Value"
+                      DisplayMemberPath="Label"
+                      SelectedValue="{Binding CursorPanelPlacement}" />
         </StackPanel>
 
         <DockPanel Grid.Row="2" Margin="24,16,24,20" LastChildFill="False">

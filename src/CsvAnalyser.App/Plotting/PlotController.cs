@@ -94,8 +94,20 @@ public sealed class PlotController
         if (_view.Menu is not WpfPlotMenu menu)
             return;
         menu.Clear();
-        menu.Add("Réglages des axes…", plot => _vm.EditAxesCommand.Execute(GraphOf(plot)));
-        menu.Add("Ajuster", _ => _vm.AutoScaleCommand.Execute(null));
+        menu.Add("Ajuster ce graphe en Y", plot =>
+        {
+            if (_graphs.FirstOrDefault(g => g.Plot == plot) is { } graph)
+            {
+                var before = Capture();
+                FitGraphY(graph);
+                Record(before);
+                _view.Refresh();
+            }
+        });
+        menu.Add("Ajuster X", _ => AutoScaleWithHistory(x: true, y: false));
+        menu.Add("Tout ajuster (X et Y)", _ => AutoScaleWithHistory(x: true, y: true));
+        menu.AddSeparator();
+        menu.Add("Titre, légende et axes…", plot => _vm.EditAxesCommand.Execute(GraphOf(plot)));
         menu.AddSeparator();
         menu.Add("Copier l'image", WpfPlotMenu.CopyImageToClipboard);
         menu.Add("Enregistrer l'image…", menu.OpenSaveImageDialog);
@@ -142,7 +154,18 @@ public sealed class PlotController
                 _view.Refresh();
                 break;
             case PlotChange.AutoScale:
-                AutoScaleWithHistory();
+                AutoScaleWithHistory(x: true, y: true);
+                break;
+            case PlotChange.AutoScaleX:
+                AutoScaleWithHistory(x: true, y: false);
+                break;
+            case PlotChange.AutoScaleY:
+                AutoScaleWithHistory(x: false, y: true);
+                break;
+            case PlotChange.GraphAppearance:
+                foreach (var g in _graphs)
+                    ApplyGraphAppearance(g);
+                _view.Refresh();
                 break;
             case PlotChange.UndoView:
                 Undo();
@@ -163,7 +186,7 @@ public sealed class PlotController
 
         var specs = _vm.BuildLayout();
         if (specs.Count == 0)
-            specs = [new GraphSpec(new GraphViewModel(0, () => { }), [])];
+            specs = [new GraphSpec(new GraphViewModel(0, () => { }, () => { }), [])];
         _layoutSignature = GraphLayout.Signature(specs);
         _axisMembers = specs.SelectMany(g => g.Axes.Select(a => (Key: AxisId(g.Graph, a.Key), Members: string.Join("+", a.Curves.Select(c => c.Channel.SourceName)))))
             .ToDictionary(x => x.Key, x => x.Members);
@@ -273,8 +296,117 @@ public sealed class PlotController
         // Only the bottom graph shows the X axis; the others share it.
         plot.Axes.Bottom.Label.Text = isBottom ? _vm.XAxisLabel : "";
         plot.Axes.Bottom.TickLabelStyle.IsVisible = isBottom;
-        plot.Legend.IsVisible = spec.Axes.Count > 0;
-        plot.Legend.Alignment = Alignment.UpperRight;
+        ApplyGraphAppearance(render);
+    }
+
+    /// <summary>Title and legend placement of a graph.</summary>
+    private void ApplyGraphAppearance(GraphRender g)
+    {
+        var plot = g.Plot;
+        string title = g.Graph.Name.Trim();
+        plot.Axes.Title.Label.Text = title;
+        plot.Axes.Title.IsVisible = title.Length > 0;
+        plot.Axes.Title.Label.FontSize = 15 * FontScale;
+        plot.Axes.Title.Label.ForeColor = ScottPlot.Color.FromHex(_vm.SelectedTheme.AxisColor);
+
+        var corner = g.Graph.LegendCorner;
+        plot.Legend.IsVisible = g.Axes.Count > 0 && corner != LegendCorner.Hidden;
+        plot.Legend.Alignment = corner switch
+        {
+            LegendCorner.UpperLeft => Alignment.UpperLeft,
+            LegendCorner.LowerRight => Alignment.LowerRight,
+            LegendCorner.LowerLeft => Alignment.LowerLeft,
+            _ => Alignment.UpperRight,
+        };
+        if (g.Graph.LegendOffset is { } offset)
+        {
+            float dx = (float)(offset.X * _view.DisplayScale), dy = (float)(offset.Y * _view.DisplayScale);
+            bool right = plot.Legend.Alignment is Alignment.UpperRight or Alignment.LowerRight;
+            bool upper = plot.Legend.Alignment is Alignment.UpperRight or Alignment.UpperLeft;
+            plot.Legend.Margin = new PixelPadding(right ? 0 : dx, right ? dx : 0, upper ? 0 : dy, upper ? dy : 0);
+        }
+        else
+        {
+            plot.Legend.Margin = new PixelPadding(DefaultLegendMargin * _scale);
+        }
+    }
+
+    private const float DefaultLegendMargin = 8;
+
+    // ---------------------------------------------------------------- legend dragging
+
+    private (GraphRender Graph, Pixel Start, PixelRect Rect)? _legendDrag;
+
+    /// <summary>Where the legend of a graph was drawn (pixels), assuming ScottPlot places it in the data area inset by its margin.</summary>
+    private static PixelRect? LegendRect(GraphRender g)
+    {
+        var legend = g.Plot.Legend;
+        var size = legend.LastRenderSize;
+        if (!legend.IsVisible || size.Width <= 0 || size.Height <= 0)
+            return null;
+        var data = g.Plot.LastRender.DataRect;
+        var m = legend.Margin;
+        bool right = legend.Alignment is Alignment.UpperRight or Alignment.LowerRight;
+        bool upper = legend.Alignment is Alignment.UpperRight or Alignment.UpperLeft;
+        float left = right ? data.Right - m.Right - size.Width : data.Left + m.Left;
+        float top = upper ? data.Top + m.Top : data.Bottom - m.Bottom - size.Height;
+        return new PixelRect(left, left + size.Width, top + size.Height, top);
+    }
+
+    private GraphRender? LegendAt(Pixel pixel) => _graphs.FirstOrDefault(g =>
+        LegendRect(g) is { } r && pixel.X >= r.Left && pixel.X <= r.Right && pixel.Y >= r.Top && pixel.Y <= r.Bottom);
+
+    private Pixel ToPixel(MouseEventArgs e)
+    {
+        var p = e.GetPosition(_view);
+        return new Pixel((float)(p.X * _view.DisplayScale), (float)(p.Y * _view.DisplayScale));
+    }
+
+    private bool TryStartLegendDrag(MouseButtonEventArgs e)
+    {
+        if (e.ChangedButton != MouseButton.Left)
+            return false;
+        var pixel = ToPixel(e);
+        if (LegendAt(pixel) is not { } g || LegendRect(g) is not { } rect)
+            return false;
+        _legendDrag = (g, pixel, rect);
+        _view.CaptureMouse();
+        e.Handled = true; // No pan while moving the legend.
+        return true;
+    }
+
+    /// <summary>Moves the legend with the mouse; it is anchored to the nearest corner of the data area.</summary>
+    private void DragLegend(MouseEventArgs e)
+    {
+        var (g, start, rect) = _legendDrag!.Value;
+        var pixel = ToPixel(e);
+        var data = g.Plot.LastRender.DataRect;
+        float width = rect.Width, height = rect.Height;
+        float left = Math.Clamp(rect.Left + pixel.X - start.X, data.Left, Math.Max(data.Left, data.Right - width));
+        float top = Math.Clamp(rect.Top + pixel.Y - start.Y, data.Top, Math.Max(data.Top, data.Bottom - height));
+
+        bool right = left + width / 2 > (data.Left + data.Right) / 2;
+        bool upper = top + height / 2 < (data.Top + data.Bottom) / 2;
+        float dx = right ? data.Right - (left + width) : left - data.Left;
+        float dy = upper ? top - data.Top : data.Bottom - (top + height);
+
+        // Stored in device-independent units so it survives a rebuild or a DPI change.
+        g.Graph.LegendCorner = (upper, right) switch
+        {
+            (true, true) => LegendCorner.UpperRight,
+            (true, false) => LegendCorner.UpperLeft,
+            (false, true) => LegendCorner.LowerRight,
+            _ => LegendCorner.LowerLeft,
+        };
+        g.Graph.LegendOffset = (dx / _view.DisplayScale, dy / _view.DisplayScale);
+        ApplyGraphAppearance(g);
+        _view.Refresh();
+    }
+
+    private void EndLegendDrag()
+    {
+        _legendDrag = null;
+        _view.ReleaseMouseCapture();
     }
 
     private static string AxisId(GraphViewModel graph, string axisKey) => $"{graph.Id}|{axisKey}";
@@ -397,12 +529,17 @@ public sealed class PlotController
 
     // ---------------------------------------------------------------- scaling
 
-    private void AutoScaleWithHistory()
+    /// <summary>Fits X (whole data), Y (all graphs, in the visible X range) or both.</summary>
+    private void AutoScaleWithHistory(bool x, bool y)
     {
         var before = Capture();
-        SetFullX();
-        foreach (var g in _graphs)
-            FitGraphY(g);
+        if (x)
+            SetFullX();
+        if (y)
+        {
+            foreach (var g in _graphs)
+                FitGraphY(g);
+        }
         Record(before);
         _view.Refresh();
     }
@@ -633,6 +770,9 @@ public sealed class PlotController
                 break;
         }
 
+        if (TryStartLegendDrag(e))
+            return;
+
         if (_wheelTimer.IsEnabled)
         {
             _wheelTimer.Stop();
@@ -643,6 +783,11 @@ public sealed class PlotController
 
     private void OnMouseUpAfterPlot(object sender, MouseButtonEventArgs e)
     {
+        if (_legendDrag is not null)
+        {
+            EndLegendDrag();
+            return;
+        }
         if (e.ChangedButton == MouseButton.Middle && (e.GetPosition(_view) - _middleDownPosition).Length < 4)
         {
             // Middle click without dragging: fit everything (a middle drag is ScottPlot's zoom rectangle).
@@ -719,11 +864,16 @@ public sealed class PlotController
 
     private void OnMouseMove(object sender, MouseEventArgs e)
     {
+        if (_legendDrag is not null)
+        {
+            DragLegend(e);
+            return;
+        }
         if (_xs is null || _series.Count == 0)
             return;
 
-        var position = e.GetPosition(_view);
-        var pixel = new Pixel((float)(position.X * _view.DisplayScale), (float)(position.Y * _view.DisplayScale));
+        var pixel = ToPixel(e);
+        _view.Cursor = LegendAt(pixel) is not null ? Cursors.SizeAll : null;
         var plot = _graphs.Select(g => g.Plot).FirstOrDefault(p =>
         {
             var r = p.LastRender.DataRect;

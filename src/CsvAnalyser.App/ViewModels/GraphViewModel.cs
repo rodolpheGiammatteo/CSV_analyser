@@ -3,28 +3,71 @@ using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace CsvAnalyser.App.ViewModels;
 
+public enum LegendCorner
+{
+    UpperRight,
+    UpperLeft,
+    LowerRight,
+    LowerLeft,
+    Hidden,
+}
+
 /// <summary>One of the stacked graphs. Curves point to their graph (<see cref="ChannelItemViewModel.Graph"/>).</summary>
 public sealed partial class GraphViewModel : ObservableObject
 {
     private readonly Action _onSettingsChanged;
+    private readonly Action _onAppearanceChanged;
     private readonly Dictionary<string, AxisRangeSettings> _axes = [];
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(Title))]
     private int _number;
+
+    /// <summary>Title given by the user, drawn above the graph (empty = none, "Graphe n" in lists).</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(Title))]
+    private string _name = "";
 
     [ObservableProperty]
     private bool _alignZeros;
 
-    public GraphViewModel(int id, Action onSettingsChanged)
+    [ObservableProperty]
+    private LegendCorner _legendCorner = LegendCorner.UpperRight;
+
+    /// <summary>
+    /// Distance of the legend from its corner (device-independent units), set by dragging it;
+    /// null = ScottPlot's default margin.
+    /// </summary>
+    public (double X, double Y)? LegendOffset { get; set; }
+
+    public GraphViewModel(int id, Action onSettingsChanged, Action onAppearanceChanged)
     {
         Id = id;
         _onSettingsChanged = onSettingsChanged;
+        _onAppearanceChanged = onAppearanceChanged;
     }
 
     /// <summary>Stable identity (the number changes when an upper graph is removed).</summary>
     public int Id { get; }
 
-    public string Title => $"Graphe {Number}";
+    public string Title => string.IsNullOrWhiteSpace(Name) ? $"Graphe {Number}" : Name.Trim();
+
+    public static IReadOnlyList<StyleChoice<LegendCorner>> LegendChoices { get; } =
+    [
+        new(LegendCorner.UpperRight, "En haut à droite"),
+        new(LegendCorner.UpperLeft, "En haut à gauche"),
+        new(LegendCorner.LowerRight, "En bas à droite"),
+        new(LegendCorner.LowerLeft, "En bas à gauche"),
+        new(LegendCorner.Hidden, "Masquée"),
+    ];
+
+    partial void OnNameChanged(string value) => _onAppearanceChanged();
+
+    partial void OnLegendCornerChanged(LegendCorner value)
+    {
+        LegendOffset = null; // A corner picked from the list starts at the default margin.
+        _onAppearanceChanged();
+    }
 
     /// <summary>Range settings of the axis <paramref name="key"/> (see <see cref="GraphLayout.AxisKey"/>), created on first use.</summary>
     public AxisRangeSettings GetAxisSettings(string key)
@@ -35,8 +78,6 @@ public sealed partial class GraphViewModel : ObservableObject
     }
 
     public bool TryGetAxisSettings(string key, out AxisRangeSettings settings) => _axes.TryGetValue(key, out settings!);
-
-    partial void OnNumberChanged(int value) => OnPropertyChanged(nameof(Title));
 
     partial void OnAlignZerosChanged(bool value) => _onSettingsChanged();
 }

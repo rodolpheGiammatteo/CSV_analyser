@@ -17,6 +17,8 @@ public sealed class AppSettings
 
     public double PlotFontScale { get; set; } = 1;
 
+    public CsvAnalyser.App.ViewModels.CursorPanelPlacement CursorPanel { get; set; }
+
     public static AppSettings Load()
     {
         try

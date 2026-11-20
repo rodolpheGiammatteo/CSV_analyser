@@ -194,9 +194,12 @@
 
             <!-- Axe Y -->
             <TextBlock Margin="0,18,0,6" FontWeight="SemiBold" Text="Axe Y" />
-            <CheckBox Content="Axe Y séparé" IsChecked="{Binding OwnAxis}" />
-            <TextBlock Margin="0,2,0,0" Foreground="{DynamicResource AppSecondaryTextBrush}" TextWrapping="Wrap"
-                       Text="Sinon, la courbe partage l'axe des courbes de même unité dans son graphe. Bornes et alignement des zéros : bouton Axes." />
+            <ComboBox x:Name="AxisCombo"
+                      SelectedValuePath="Value"
+                      DisplayMemberPath="Label"
+                      SelectedValue="{Binding AxisChoice}" />
+            <TextBlock Margin="0,4,0,0" Foreground="{DynamicResource AppSecondaryTextBrush}" TextWrapping="Wrap"
+                       Text="Automatique : même axe que les courbes de même unité. Partager un autre axe permet de mettre des unités différentes sur un seul axe. Bornes et alignement des zéros : bouton Graphes." />
         </StackPanel>
 
         <DockPanel Grid.Row="2" Margin="24,20,24,20" LastChildFill="False">

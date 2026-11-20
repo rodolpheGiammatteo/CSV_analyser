@@ -11,6 +11,9 @@ public sealed class AxisRowViewModel(AxisSpec spec)
 
     public string Side => spec.IsRight ? "droite" : "gauche";
 
+    /// <summary>"à gauche — courbe A, courbe B".</summary>
+    public string Description => $"à {Side} — {Curves}";
+
     public Brush Brush { get; } = MakeBrush(spec.Color);
 
     public AxisRangeSettings Settings => spec.Settings;

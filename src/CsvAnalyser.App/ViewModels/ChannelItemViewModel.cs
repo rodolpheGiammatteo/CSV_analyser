@@ -60,9 +60,15 @@ public partial class ChannelItemViewModel : ObservableObject
     [ObservableProperty]
     private GraphViewModel? _graph;
 
-    /// <summary>Draw against a Y axis of its own instead of sharing one with the curves of the same unit.</summary>
+    /// <summary>
+    /// Which Y axis of its graph the curve uses: <see cref="AutoAxis"/> (shared with the curves of the same unit),
+    /// <see cref="OwnAxisChoice"/> (an axis of its own), or the key of another axis (to share it whatever the units).
+    /// </summary>
     [ObservableProperty]
-    private bool _ownAxis;
+    private string _axisChoice = AutoAxis;
+
+    public const string AutoAxis = "";
+    public const string OwnAxisChoice = "own";
 
     public ChannelItemViewModel(Channel channel, IChannelHost host)
     {
@@ -165,7 +171,7 @@ public partial class ChannelItemViewModel : ObservableObject
         LineWidth = CurveStyleChoices.DefaultLineWidth;
         Marker = CurveMarker.None;
         MarkerSize = CurveStyleChoices.DefaultMarkerSize;
-        OwnAxis = false;
+        AxisChoice = AutoAxis;
         UseAutoColor();
     }
 
@@ -191,5 +197,5 @@ public partial class ChannelItemViewModel : ObservableObject
 
     partial void OnMarkerSizeChanged(double value) => _host.OnAppearanceChanged(this);
 
-    partial void OnOwnAxisChanged(bool value) => _host.OnAppearanceChanged(this);
+    partial void OnAxisChoiceChanged(string value) => _host.OnAppearanceChanged(this);
 }

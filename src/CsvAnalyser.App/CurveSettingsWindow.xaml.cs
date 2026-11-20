@@ -10,9 +10,10 @@ public partial class CurveSettingsWindow : FluentWindow
 {
     private readonly ChannelItemViewModel _item;
 
-    public CurveSettingsWindow(ChannelItemViewModel item)
+    public CurveSettingsWindow(ChannelItemViewModel item, IReadOnlyList<StyleChoice<string>> axisChoices)
     {
         InitializeComponent();
+        AxisCombo.ItemsSource = axisChoices;
         DataContext = _item = item;
         Loaded += (_, _) =>
         {

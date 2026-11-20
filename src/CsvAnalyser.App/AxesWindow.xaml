@@ -3,10 +3,10 @@
                  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                  xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
                  xmlns:vm="clr-namespace:CsvAnalyser.App.ViewModels"
-                 Title="Axes"
-                 Width="640"
+                 Title="Graphes et axes"
+                 Width="720"
                  SizeToContent="Height"
-                 MaxHeight="760"
+                 MaxHeight="780"
                  ResizeMode="NoResize"
                  ShowInTaskbar="False"
                  WindowStartupLocation="CenterOwner"
@@ -14,6 +14,13 @@
                  WindowBackdropType="None"
                  Background="{DynamicResource ApplicationBackgroundBrush}"
                  WindowCornerPreference="Round">
+    <ui:FluentWindow.Resources>
+        <Style x:Key="Hint" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{DynamicResource AppSecondaryTextBrush}" />
+            <Setter Property="TextWrapping" Value="Wrap" />
+        </Style>
+    </ui:FluentWindow.Resources>
+
     <Grid Background="{DynamicResource ApplicationBackgroundBrush}">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
@@ -22,63 +29,102 @@
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
-        <ui:TitleBar Grid.Row="0" Title="Axes" ShowMinimize="False" ShowMaximize="False" />
+        <ui:TitleBar Grid.Row="0" Title="Graphes et axes" ShowMinimize="False" ShowMaximize="False" />
 
-        <StackPanel Grid.Row="1" Margin="24,4,24,12">
-            <TextBlock FontSize="18" FontWeight="SemiBold" Text="Axes Y" />
-            <TextBlock Margin="0,4,0,0" TextWrapping="Wrap" Foreground="{DynamicResource AppSecondaryTextBrush}"
-                       Text="Automatique : l'axe s'ajuste aux courbes visibles (bouton Ajuster, clic molette). Manuel : ces bornes sont reprises à chaque ajustement ; le zoom à la souris reste possible." />
-            <TextBlock Margin="0,4,0,0" TextWrapping="Wrap" Foreground="{DynamicResource AppSecondaryTextBrush}"
-                       Text="Dans un graphe, les courbes de même unité partagent un axe. Pour donner un axe à part à une courbe : Réglages de la courbe → Axe Y séparé." />
-        </StackPanel>
+        <!-- Aide : deux lignes alignées en colonnes -->
+        <Grid Grid.Row="1" Margin="24,0,24,14">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+            <TextBlock Grid.Row="0" Grid.Column="0" Margin="0,0,14,4" FontWeight="SemiBold" Text="Auto" />
+            <TextBlock Grid.Row="0" Grid.Column="1" Margin="0,0,0,4" Style="{StaticResource Hint}"
+                       Text="L'axe s'ajuste aux courbes visibles (Ajuster, clic molette)." />
+            <TextBlock Grid.Row="1" Grid.Column="0" Margin="0,0,14,4" FontWeight="SemiBold" Text="Manuel" />
+            <TextBlock Grid.Row="1" Grid.Column="1" Margin="0,0,0,4" Style="{StaticResource Hint}"
+                       Text="Les bornes saisies sont reprises à chaque ajustement ; le zoom à la souris reste possible." />
+            <TextBlock Grid.Row="2" Grid.Column="0" Margin="0,0,14,0" FontWeight="SemiBold" Text="Unités" />
+            <TextBlock Grid.Row="2" Grid.Column="1" Style="{StaticResource Hint}"
+                       Text="Un axe par unité. Pour regrouper ou séparer : Réglages de la courbe → Axe Y." />
+        </Grid>
 
-        <ScrollViewer Grid.Row="2" x:Name="Scroller" Margin="24,0,12,0" Padding="0,0,12,0" VerticalScrollBarVisibility="Auto">
+        <ScrollViewer Grid.Row="2" Margin="24,0,12,0" Padding="0,0,12,0" VerticalScrollBarVisibility="Auto">
             <ItemsControl x:Name="GraphList">
                 <ItemsControl.ItemTemplate>
                     <DataTemplate DataType="{x:Type vm:GraphAxesViewModel}">
-                        <Border Margin="0,0,0,12" Padding="14,10" CornerRadius="6" BorderThickness="1"
+                        <Border Margin="0,0,0,12" Padding="16,12" CornerRadius="6" BorderThickness="1"
                                 Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
                                 BorderBrush="{DynamicResource AppDisabledTextBrush}">
                             <StackPanel>
-                                <DockPanel>
-                                    <CheckBox DockPanel.Dock="Right"
-                                              Content="Aligner les zéros"
+                                <!-- Graphe : titre, légende, zéros -->
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="90" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="16" />
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="190" />
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="8" />
+                                        <RowDefinition Height="Auto" />
+                                    </Grid.RowDefinitions>
+                                    <TextBlock Grid.Row="0" Grid.Column="0" VerticalAlignment="Center" FontSize="15" FontWeight="SemiBold"
+                                               Text="{Binding Graph.Number, StringFormat=Graphe {0}}" />
+                                    <ui:TextBox Grid.Row="0" Grid.Column="1" Grid.ColumnSpan="4"
+                                                PlaceholderText="Titre (facultatif, affiché au-dessus du graphe)"
+                                                Text="{Binding Graph.Name, UpdateSourceTrigger=PropertyChanged}" />
+                                    <!-- Hidden rather than disabled: disabled WPF-UI controls are invisible here. -->
+                                    <CheckBox Grid.Row="2" Grid.Column="1" VerticalAlignment="Center"
+                                              Content="Aligner les zéros des axes Y"
                                               ToolTip="Le zéro de chaque axe Y est placé à la même hauteur"
                                               IsChecked="{Binding Graph.AlignZeros}"
-                                              IsEnabled="{Binding CanAlignZeros}" />
-                                    <TextBlock VerticalAlignment="Center" FontSize="15" FontWeight="SemiBold" Text="{Binding Graph.Title}" />
-                                </DockPanel>
-                                <TextBlock Margin="0,6,0,0" Foreground="{DynamicResource AppSecondaryTextBrush}" Text="Aucune courbe"
+                                              Visibility="{Binding CanAlignZeros, Converter={StaticResource BoolToVisibility}}" />
+                                    <TextBlock Grid.Row="2" Grid.Column="3" Margin="0,0,10,0" VerticalAlignment="Center" Text="Légende" />
+                                    <ComboBox Grid.Row="2" Grid.Column="4"
+                                              ToolTip="Position de la légende (on peut aussi la faire glisser sur le graphe)"
+                                              ItemsSource="{x:Static vm:GraphViewModel.LegendChoices}"
+                                              SelectedValuePath="Value"
+                                              DisplayMemberPath="Label"
+                                              SelectedValue="{Binding Graph.LegendCorner}" />
+                                </Grid>
+
+                                <TextBlock Margin="0,10,0,0" Style="{StaticResource Hint}" Text="Aucune courbe"
                                            Visibility="{Binding IsEmpty, Converter={StaticResource BoolToVisibility}}" />
+
+                                <!-- Axes Y : colonnes de largeur fixe pour que tout soit aligné -->
                                 <ItemsControl ItemsSource="{Binding Axes}">
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate DataType="{x:Type vm:AxisRowViewModel}">
-                                            <Grid Margin="0,10,0,0">
+                                            <Grid Margin="0,12,0,0">
                                                 <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="Auto" />
+                                                    <ColumnDefinition Width="14" />
                                                     <ColumnDefinition Width="*" />
-                                                    <ColumnDefinition Width="Auto" />
-                                                    <ColumnDefinition Width="Auto" />
+                                                    <ColumnDefinition Width="160" />
+                                                    <ColumnDefinition Width="210" />
                                                 </Grid.ColumnDefinitions>
-                                                <Rectangle Grid.Column="0" Width="4" Margin="0,2,10,2" RadiusX="2" RadiusY="2" Fill="{Binding Brush}" />
-                                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                                    <TextBlock FontWeight="SemiBold" TextTrimming="CharacterEllipsis">
-                                                        <Run Text="{Binding Label, Mode=OneWay}" />
-                                                        <Run Foreground="{DynamicResource AppSecondaryTextBrush}" FontWeight="Normal" Text="{Binding Side, StringFormat=— à {0}, Mode=OneWay}" />
-                                                    </TextBlock>
-                                                    <TextBlock Foreground="{DynamicResource AppSecondaryTextBrush}" TextTrimming="CharacterEllipsis"
-                                                               Text="{Binding Curves}" ToolTip="{Binding Curves}" />
+                                                <Rectangle Grid.Column="0" Width="4" HorizontalAlignment="Left" Margin="0,2" RadiusX="2" RadiusY="2" Fill="{Binding Brush}" />
+                                                <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,12,0">
+                                                    <TextBlock FontWeight="SemiBold" TextTrimming="CharacterEllipsis" Text="{Binding Label}" ToolTip="{Binding Label}" />
+                                                    <TextBlock Style="{StaticResource Hint}" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis"
+                                                               Text="{Binding Description}" ToolTip="{Binding Curves}" />
                                                 </StackPanel>
-                                                <StackPanel Grid.Column="2" Margin="12,0" Orientation="Horizontal" VerticalAlignment="Center">
-                                                    <RadioButton MinWidth="0" Margin="0,0,8,0" Content="Auto" IsChecked="{Binding Settings.IsAuto}" />
+                                                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                                                    <RadioButton MinWidth="0" Margin="0,0,10,0" Content="Auto" IsChecked="{Binding Settings.IsAuto}" />
                                                     <RadioButton MinWidth="0" Content="Manuel" IsChecked="{Binding Settings.IsManual}" />
                                                 </StackPanel>
-                                                <!-- Not disabled in auto mode (disabled WPF-UI boxes are invisible here): typing a bound switches to manual. -->
+                                                <!-- Never disabled (disabled WPF-UI boxes are invisible here): typing a bound switches to manual. -->
                                                 <StackPanel Grid.Column="3" VerticalAlignment="Center">
                                                     <StackPanel Orientation="Horizontal">
-                                                        <ui:TextBox Width="96" PlaceholderText="min" ToolTip="Minimum (Entrée pour appliquer)"
+                                                        <ui:TextBox Width="100" PlaceholderText="min" ToolTip="Minimum (Entrée pour appliquer)"
                                                                     Text="{Binding Settings.MinText}" KeyDown="OnBoundKeyDown" />
-                                                        <ui:TextBox Width="96" Margin="6,0,0,0" PlaceholderText="max" ToolTip="Maximum (Entrée pour appliquer)"
+                                                        <ui:TextBox Width="100" Margin="8,0,0,0" PlaceholderText="max" ToolTip="Maximum (Entrée pour appliquer)"
                                                                     Text="{Binding Settings.MaxText}" KeyDown="OnBoundKeyDown" />
                                                     </StackPanel>
                                                     <TextBlock Margin="0,2,0,0" Foreground="#D13438" Text="Bornes invalides (min &lt; max)"

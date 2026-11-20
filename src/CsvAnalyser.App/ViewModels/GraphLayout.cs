@@ -19,10 +19,43 @@ public sealed record GraphSpec(GraphViewModel Graph, IReadOnlyList<AxisSpec> Axe
 public static class GraphLayout
 {
     /// <summary>
-    /// Curves of a graph share an axis when they have the same unit, unless they ask for their own axis.
+    /// Curves of a graph share an axis when they have the same unit, unless they ask for their own axis
+    /// or for the axis of other curves (whatever the units).
     /// </summary>
-    public static string AxisKey(ChannelItemViewModel item) =>
-        item.OwnAxis ? $"curve:{item.Channel.SourceName}" : $"unit:{item.Unit}";
+    public static string AxisKey(ChannelItemViewModel item) => item.AxisChoice switch
+    {
+        ChannelItemViewModel.AutoAxis => UnitKey(item),
+        ChannelItemViewModel.OwnAxisChoice => $"curve:{item.Channel.SourceName}",
+        var key => key,
+    };
+
+    public static string UnitKey(ChannelItemViewModel item) => $"unit:{item.Unit}";
+
+    /// <summary>The axis choices offered for a curve in its settings: automatic, own axis, or one of the other axes of its graph.</summary>
+    public static IReadOnlyList<StyleChoice<string>> AxisChoices(ChannelItemViewModel item, IReadOnlyList<GraphSpec> layout)
+    {
+        string unit = string.IsNullOrEmpty(item.Unit) ? "sans unité" : item.Unit;
+        var choices = new List<StyleChoice<string>>
+        {
+            new(ChannelItemViewModel.AutoAxis, $"Automatique (axe « {unit} »)"),
+            new(ChannelItemViewModel.OwnAxisChoice, "Axe séparé"),
+        };
+        var graph = layout.FirstOrDefault(g => g.Graph == item.Graph);
+        string ownKey = $"curve:{item.Channel.SourceName}";
+        foreach (var axis in graph?.Axes ?? [])
+        {
+            if (axis.Key == UnitKey(item) || axis.Key == ownKey)
+                continue;
+            var others = axis.Curves.Where(c => c != item).ToList();
+            if (others.Count == 0)
+                continue;
+            choices.Add(new(axis.Key, $"Partager l'axe « {AxisLabel(others)} »"));
+        }
+        // Keep the current choice selectable even if its axis has no other curve any more.
+        if (choices.All(c => c.Value != item.AxisChoice))
+            choices.Add(new(item.AxisChoice, $"Axe partagé ({item.AxisChoice.Split(':').Last()})"));
+        return choices;
+    }
 
     public static IReadOnlyList<GraphSpec> Build(IEnumerable<GraphViewModel> graphs, IEnumerable<ChannelItemViewModel> plotted)
     {
@@ -52,11 +85,11 @@ public static class GraphLayout
         string.Join(";", specs.Select(g => $"{g.Graph.Id}:" + string.Join(",", g.Axes.Select(a =>
             a.Key + "=" + string.Join("+", a.Curves.Select(c => c.Channel.SourceName))))));
 
-    private static string AxisLabel(List<ChannelItemViewModel> curves)
+    /// <summary>The curve name for a single curve, else its unit(s): "rpm", or "rpm · °C" for an axis shared across units.</summary>
+    public static string AxisLabel(IReadOnlyList<ChannelItemViewModel> curves)
     {
         if (curves.Count == 1)
             return curves[0].LegendText;
-        string unit = curves[0].Unit;
-        return string.IsNullOrEmpty(unit) ? "" : unit;
+        return string.Join(" · ", curves.Select(c => c.Unit).Where(u => !string.IsNullOrEmpty(u)).Distinct());
     }
 }

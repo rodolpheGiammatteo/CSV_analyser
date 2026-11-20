@@ -21,6 +21,10 @@ public enum PlotChange
     XAxis,
     Theme,
     PlotFont,
+    /// <summary>Title or legend of a graph.</summary>
+    GraphAppearance,
+    AutoScaleX,
+    AutoScaleY,
     /// <summary>Name, unit, color or style of a curve: updated in place, the view is kept.</summary>
     Appearance,
     /// <summary>Auto/manual range of an axis or zero alignment of a graph: Y ranges are recomputed.</summary>
@@ -39,6 +43,7 @@ public partial class MainViewModel : ObservableObject, IChannelHost
     [NotifyPropertyChangedFor(nameof(HasData))]
     [NotifyPropertyChangedFor(nameof(ShowPlotHint))]
     [NotifyPropertyChangedFor(nameof(PlotHint))]
+    [NotifyPropertyChangedFor(nameof(ShowFileDropZone))]
     private Dataset? _dataset;
 
     [ObservableProperty]
@@ -90,6 +95,7 @@ public partial class MainViewModel : ObservableObject, IChannelHost
         _selectedTheme = PlotThemes.ByName(settings.ThemeName);
         _uiScale = ClampOrDefault(settings.UiScale, MinUiScale, MaxUiScale);
         _plotFontScale = ClampOrDefault(settings.PlotFontScale, MinPlotFontScale, MaxPlotFontScale);
+        _cursorPanelPlacement = Enum.IsDefined(settings.CursorPanel) ? settings.CursorPanel : CursorPanelPlacement.Left;
         ChannelsView = CollectionViewSource.GetDefaultView(Channels);
         ChannelsView.Filter = o => MatchesSearch((ChannelItemViewModel)o);
         PlottedChannels.CollectionChanged += (_, _) =>
@@ -113,11 +119,12 @@ public partial class MainViewModel : ObservableObject, IChannelHost
 
     public bool HasData => Dataset is not null;
 
-    public bool ShowPlotHint => PlottedChannels.Count == 0;
+    public bool ShowPlotHint => HasData && PlottedChannels.Count == 0;
 
-    public string PlotHint => HasData
-        ? "Cochez des courbes dans la liste pour les afficher"
-        : "Ouvrez un fichier CSV ou glissez-le ici";
+    /// <summary>Before any file is open, the plot area is a drop zone.</summary>
+    public bool ShowFileDropZone => !HasData;
+
+    public string PlotHint => "Cochez des courbes dans la liste pour les afficher, ou faites-les glisser sur le graphe";
 
     public string XAxisLabel
     {
@@ -280,7 +287,27 @@ public partial class MainViewModel : ObservableObject, IChannelHost
 
     public IReadOnlyList<GraphSpec> BuildLayout() => GraphLayout.Build(Graphs, PlottedChannels);
 
-    private GraphViewModel NewGraph() => new(++_nextGraphId, () => RaisePlotChanged(PlotChange.AxisSettings)) { Number = Graphs.Count + 1 };
+    private GraphViewModel NewGraph() => new(
+        ++_nextGraphId,
+        onSettingsChanged: () => RaisePlotChanged(PlotChange.AxisSettings),
+        onAppearanceChanged: () => RaisePlotChanged(PlotChange.GraphAppearance))
+    {
+        Number = Graphs.Count + 1,
+    };
+
+    /// <summary>The plotted curves grouped by graph, for the cursor card.</summary>
+    public ObservableCollection<CursorGroup> CursorGroups { get; } = [];
+
+    private void RefreshCursorGroups()
+    {
+        CursorGroups.Clear();
+        foreach (var graph in Graphs)
+        {
+            var curves = PlottedChannels.Where(c => c.Graph == graph).ToList();
+            if (curves.Count > 0)
+                CursorGroups.Add(new CursorGroup(graph, curves, ShowTitle: Graphs.Count > 1));
+        }
+    }
 
     /// <summary>Puts a curve in a graph (null = a new graph at the bottom) and plots it if needed.</summary>
     public void MoveChannelToGraph(ChannelItemViewModel item, GraphViewModel? target)
@@ -420,6 +447,12 @@ public partial class MainViewModel : ObservableObject, IChannelHost
     private void AutoScale() => RaisePlotChanged(PlotChange.AutoScale);
 
     [RelayCommand]
+    private void AutoScaleX() => RaisePlotChanged(PlotChange.AutoScaleX);
+
+    [RelayCommand]
+    private void AutoScaleY() => RaisePlotChanged(PlotChange.AutoScaleY);
+
+    [RelayCommand]
     private void UndoView() => RaisePlotChanged(PlotChange.UndoView);
 
     [RelayCommand]
@@ -450,7 +483,34 @@ public partial class MainViewModel : ObservableObject, IChannelHost
 
     private void RaisePlotChanged(PlotChange change)
     {
+        if (change is PlotChange.Curves or PlotChange.Dataset)
+            RefreshCursorGroups();
         if (!_suppressPlotEvents)
             PlotChanged?.Invoke(this, change);
+    }
+
+    // ---- Cursor panel placement ----
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CursorGroupsOrientation))]
+    private CursorPanelPlacement _cursorPanelPlacement;
+
+    /// <summary>Groups side by side when the panel is under the plot, stacked otherwise.</summary>
+    public System.Windows.Controls.Orientation CursorGroupsOrientation =>
+        CursorPanelPlacement == CursorPanelPlacement.Bottom
+            ? System.Windows.Controls.Orientation.Horizontal
+            : System.Windows.Controls.Orientation.Vertical;
+
+    public static IReadOnlyList<StyleChoice<CursorPanelPlacement>> CursorPanelChoices { get; } =
+    [
+        new(CursorPanelPlacement.Left, "À gauche, sous la liste des courbes"),
+        new(CursorPanelPlacement.Right, "À droite du graphe"),
+        new(CursorPanelPlacement.Bottom, "Sous le graphe"),
+    ];
+
+    partial void OnCursorPanelPlacementChanged(CursorPanelPlacement value)
+    {
+        _settings.CursorPanel = value;
+        _settings.Save();
     }
 }
