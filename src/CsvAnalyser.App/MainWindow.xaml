@@ -116,6 +116,16 @@
                             <MenuItem Header="Ouvrir un projet…"
                                       Icon="{ui:SymbolIcon FolderOpen24}"
                                       Command="{Binding OpenProjectCommand}" />
+                            <MenuItem Header="Ouvrir l'emplacement du fichier"
+                                      ToolTip="Ouvre l'Explorateur sur le dossier du fichier CSV"
+                                      Icon="{ui:SymbolIcon Folder24}"
+                                      Visibility="{Binding HasData, Converter={StaticResource BoolToVisibility}}"
+                                      Command="{Binding ShowFileInExplorerCommand}" />
+                            <MenuItem Header="Ouvrir l'emplacement du projet"
+                                      ToolTip="Ouvre l'Explorateur sur le dossier du fichier projet"
+                                      Icon="{ui:SymbolIcon Folder24}"
+                                      Visibility="{Binding HasProject, Converter={StaticResource BoolToVisibility}}"
+                                      Command="{Binding ShowProjectInExplorerCommand}" />
                             <Separator />
                             <MenuItem Header="Appliquer une mise en page au fichier ouvert…"
                                       Icon="{ui:SymbolIcon DocumentArrowLeft24}"

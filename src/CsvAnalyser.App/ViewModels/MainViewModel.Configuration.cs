@@ -318,7 +318,47 @@ public partial class MainViewModel
     // ---------------------------------------------------------------- projects
 
     /// <summary>The project file being edited (null until saved or opened).</summary>
-    public string? ProjectPath { get; private set; }
+    public string? ProjectPath
+    {
+        get => _projectPath;
+        private set
+        {
+            if (SetProperty(ref _projectPath, value))
+                OnPropertyChanged(nameof(HasProject));
+        }
+    }
+
+    private string? _projectPath;
+
+    public bool HasProject => ProjectPath is not null;
+
+    /// <summary>Opens the Explorer on the folder of the CSV file, with the file selected.</summary>
+    [RelayCommand]
+    private void ShowFileInExplorer() => ShowInExplorer(Dataset?.FilePath);
+
+    /// <summary>Opens the Explorer on the folder of the project file, with the file selected.</summary>
+    [RelayCommand]
+    private void ShowProjectInExplorer() => ShowInExplorer(ProjectPath);
+
+    private void ShowInExplorer(string? path)
+    {
+        if (string.IsNullOrEmpty(path))
+            return;
+        try
+        {
+            if (File.Exists(path))
+                System.Diagnostics.Process.Start("explorer.exe", $"/select,\"{path}\"");
+            else if (ExistingFolder(Path.GetDirectoryName(path)) is { } folder)
+                System.Diagnostics.Process.Start("explorer.exe", $"\"{folder}\"");
+            else
+                MessageBox.Show(L.F("Le dossier de « {0} » n'existe plus.", path), L.T("Ouvrir l'emplacement du fichier"),
+                    MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(ex.Message, L.T("Ouvrir l'emplacement du fichier"), MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
+    }
 
     /// <summary>Ctrl+S: saves the project (CSV path + layout) where it was, or asks where the first time.</summary>
     [RelayCommand]
