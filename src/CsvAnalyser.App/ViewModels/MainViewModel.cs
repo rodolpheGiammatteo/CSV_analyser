@@ -32,6 +32,8 @@ public enum PlotChange
     AutoScale,
     UndoView,
     RedoView,
+    /// <summary>Measurement cursors shown or hidden.</summary>
+    Measure,
 }
 
 public partial class MainViewModel : ObservableObject, IChannelHost
@@ -234,6 +236,7 @@ public partial class MainViewModel : ObservableObject, IChannelHost
             foreach (var channel in dataset.Channels.Where(c => c != dataset.Time?.Channel))
                 XAxisOptions.Add(new XAxisOption(channel));
 
+            ForgetMeasureCursors();
             Dataset = dataset;
             SelectedXAxis = timeOption ?? rowOption;
             Title = $"{Path.GetFileName(dataset.FilePath)} — {AppInfo.FullTitle}";
@@ -405,6 +408,7 @@ public partial class MainViewModel : ObservableObject, IChannelHost
 
     partial void OnSelectedXAxisChanged(XAxisOption? value)
     {
+        ForgetMeasureCursors();
         OnPropertyChanged(nameof(XAxisLabel));
         RaisePlotChanged(PlotChange.XAxis);
     }
@@ -489,6 +493,8 @@ public partial class MainViewModel : ObservableObject, IChannelHost
     {
         if (change is PlotChange.Curves or PlotChange.Dataset)
             RefreshCursorGroups();
+        if (IsMeasuring && change is PlotChange.Curves or PlotChange.Dataset or PlotChange.Appearance or PlotChange.XAxis)
+            ScheduleMeasurements();
         if (!_suppressPlotEvents)
             PlotChanged?.Invoke(this, change);
     }

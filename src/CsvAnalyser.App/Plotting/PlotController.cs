@@ -59,6 +59,8 @@ public sealed class PlotController : IPlotView
         public Plot Plot { get; } = plot;
         public List<AxisRender> Axes { get; } = [];
         public VerticalLine? Cursor { get; set; }
+        public VerticalLine? LineA { get; set; }
+        public VerticalLine? LineB { get; set; }
     }
 
     public PlotController(WpfPlot view, MainViewModel vm)
@@ -108,6 +110,9 @@ public sealed class PlotController : IPlotView
         });
         menu.Add("Ajuster X", _ => AutoScaleWithHistory(x: true, y: false));
         menu.Add("Tout ajuster (X et Y)", _ => AutoScaleWithHistory(x: true, y: true));
+        menu.AddSeparator();
+        menu.Add("Placer le curseur A ici", plot => PlaceMeasureCursorAtMenu(plot, 'A'));
+        menu.Add("Placer le curseur B ici", plot => PlaceMeasureCursorAtMenu(plot, 'B'));
         menu.AddSeparator();
         menu.Add("Titre, légende et axes…", plot => _vm.EditAxesCommand.Execute(GraphOf(plot)));
         menu.AddSeparator();
@@ -175,6 +180,10 @@ public sealed class PlotController : IPlotView
             case PlotChange.RedoView:
                 Redo();
                 break;
+            case PlotChange.Measure:
+                UpdateMeasureLines();
+                _view.Refresh();
+                break;
         }
     }
 
@@ -205,7 +214,7 @@ public sealed class PlotController : IPlotView
             var spec = specs[gi];
             var render = new GraphRender(spec.Graph, new Plot());
             _graphs.Add(render);
-            BuildGraph(render, spec, isBottom: gi == specs.Count - 1);
+            BuildGraph(render, spec, isBottom: gi == specs.Count - 1, isTop: gi == 0);
         }
 
         var plots = _graphs.Select(g => g.Plot).ToArray();
@@ -242,10 +251,11 @@ public sealed class PlotController : IPlotView
                 FitGraphY(g);
         }
 
+        UpdateMeasureLines();
         _view.Refresh();
     }
 
-    private void BuildGraph(GraphRender render, GraphSpec spec, bool isBottom)
+    private void BuildGraph(GraphRender render, GraphSpec spec, bool isBottom, bool isTop)
     {
         var plot = render.Plot;
         ApplyTheme(plot);
@@ -306,6 +316,8 @@ public sealed class PlotController : IPlotView
             cursor.LineWidth = _scale;
             cursor.IsVisible = false;
             render.Cursor = cursor;
+            render.LineA = AddMeasureLine(plot, "A", MeasureColorA, labelled: isTop);
+            render.LineB = AddMeasureLine(plot, "B", MeasureColorB, labelled: isTop);
         }
 
         // Only the bottom graph shows the X axis; the others share it.
@@ -873,9 +885,12 @@ public sealed class PlotController : IPlotView
             case MouseButton.Middle:
                 _middleDownPosition = e.GetPosition(_view);
                 break;
+            case MouseButton.Right:
+                _lastMenuPixel = ToPixel(e);
+                break;
         }
 
-        if (TryStartLegendDrag(e))
+        if (TryStartLegendDrag(e) || TryStartMeasureDrag(e))
             return;
 
         RememberInteractionAxis(e);
@@ -892,6 +907,11 @@ public sealed class PlotController : IPlotView
         if (_legendDrag is not null)
         {
             EndLegendDrag();
+            return;
+        }
+        if (_measureDrag is not null)
+        {
+            EndMeasureDrag();
             return;
         }
         if (e.ChangedButton == MouseButton.Middle && (e.GetPosition(_view) - _middleDownPosition).Length < 4)
@@ -972,6 +992,132 @@ public sealed class PlotController : IPlotView
         _vm.CanRedoView = _history.CanRedo;
     }
 
+    // ---------------------------------------------------------------- measurement cursors A and B
+
+    private static readonly ScottPlot.Color MeasureColorA = ScottPlot.Color.FromHex("#D6336C");
+    private static readonly ScottPlot.Color MeasureColorB = ScottPlot.Color.FromHex("#0C8599");
+
+    private char? _measureDrag;
+    private Pixel _lastMenuPixel;
+
+    private VerticalLine AddMeasureLine(Plot plot, string name, ScottPlot.Color color, bool labelled)
+    {
+        var line = plot.Add.VerticalLine(0);
+        line.Color = color;
+        line.LineWidth = 1.5f * _scale;
+        line.IsVisible = false;
+        if (labelled)
+        {
+            // The name at the top of the upper graph, so it is clear which line is which.
+            line.LabelText = name;
+            line.LabelOppositeAxis = true;
+            line.LabelFontSize = 12 * FontScale;
+            line.LabelBackgroundColor = color;
+            line.LabelFontColor = ScottPlot.Colors.White;
+        }
+        return line;
+    }
+
+    /// <summary>Shows or hides the lines A and B; places them in the visible range when they have no position yet.</summary>
+    private void UpdateMeasureLines()
+    {
+        bool on = _vm.IsMeasuring && _xs is not null && _series.Count > 0;
+        if (on && (_vm.MeasureA is null || _vm.MeasureB is null))
+        {
+            var x = _graphs[0].Plot.Axes.Bottom.Range;
+            double a = Snap(x.Min + (x.Max - x.Min) / 3), b = Snap(x.Min + 2 * (x.Max - x.Min) / 3);
+            _vm.SetMeasureCursors(a, b);
+        }
+        // Room above the upper graph for the "A" and "B" labels.
+        if (_graphs.Count > 0)
+            _graphs[0].Plot.Axes.Top.MinimumSize = on ? 22 * FontScale : 0;
+        foreach (var g in _graphs)
+        {
+            if (g.LineA is { } la && g.LineB is { } lb)
+            {
+                la.IsVisible = lb.IsVisible = on;
+                if (on)
+                {
+                    la.X = _vm.MeasureA!.Value;
+                    lb.X = _vm.MeasureB!.Value;
+                }
+            }
+        }
+    }
+
+    /// <summary>The X of the sample nearest to <paramref name="x"/>.</summary>
+    private double Snap(double x)
+    {
+        if (_xs is null || _xs.Length == 0)
+            return x;
+        int i = _xSorted ? NearestSorted(_xs, x) : NearestUnsorted(_xs, x);
+        return i >= 0 ? _xs[i] : x;
+    }
+
+    /// <summary>"A" or "B" when the pixel is on (or within a few pixels of) that line in a graph.</summary>
+    private char? MeasureLineAt(Pixel pixel)
+    {
+        if (!_vm.IsMeasuring || _vm.MeasureA is not { } a || _vm.MeasureB is not { } b)
+            return null;
+        float tolerance = 6 * _scale;
+        foreach (var g in _graphs)
+        {
+            var r = g.Plot.LastRender.DataRect;
+            // The labels of the upper graph are just above its data area.
+            if (pixel.Y < r.Top - 24 * _scale || pixel.Y > r.Bottom)
+                continue;
+            float pa = g.Plot.GetPixel(new Coordinates(a, 0), g.Plot.Axes.Bottom, g.Plot.Axes.Left).X;
+            float pb = g.Plot.GetPixel(new Coordinates(b, 0), g.Plot.Axes.Bottom, g.Plot.Axes.Left).X;
+            float da = Math.Abs(pixel.X - pa), db = Math.Abs(pixel.X - pb);
+            if (Math.Min(da, db) <= tolerance)
+                return da <= db ? 'A' : 'B';
+        }
+        return null;
+    }
+
+    private bool TryStartMeasureDrag(MouseButtonEventArgs e)
+    {
+        if (e.ChangedButton != MouseButton.Left || MeasureLineAt(ToPixel(e)) is not { } which)
+            return false;
+        _measureDrag = which;
+        _view.CaptureMouse();
+        e.Handled = true; // no pan while moving a cursor
+        return true;
+    }
+
+    private void DragMeasure(MouseEventArgs e)
+    {
+        var plot = _graphs[0].Plot;
+        double x = Snap(plot.GetCoordinates(ToPixel(e), plot.Axes.Bottom, plot.Axes.Left).X);
+        if (_measureDrag == 'A')
+            _vm.SetMeasureCursors(x, _vm.MeasureB ?? x);
+        else
+            _vm.SetMeasureCursors(_vm.MeasureA ?? x, x);
+        UpdateMeasureLines();
+        _view.Refresh();
+    }
+
+    private void EndMeasureDrag()
+    {
+        _measureDrag = null;
+        _view.ReleaseMouseCapture();
+    }
+
+    /// <summary>Context menu: puts cursor A or B where the menu was opened (and turns the measurements on).</summary>
+    private void PlaceMeasureCursorAtMenu(Plot plot, char which)
+    {
+        double x = Snap(plot.GetCoordinates(_lastMenuPixel, plot.Axes.Bottom, plot.Axes.Left).X);
+        bool wasOn = _vm.IsMeasuring;
+        if (!wasOn)
+            _vm.IsMeasuring = true; // places both cursors in the visible range
+        if (which == 'A')
+            _vm.SetMeasureCursors(x, _vm.MeasureB ?? x);
+        else
+            _vm.SetMeasureCursors(_vm.MeasureA ?? x, x);
+        UpdateMeasureLines();
+        _view.Refresh();
+    }
+
     // ---------------------------------------------------------------- cursor
 
     private void OnMouseMove(object sender, MouseEventArgs e)
@@ -983,9 +1129,13 @@ public sealed class PlotController : IPlotView
         }
         if (_xs is null || _series.Count == 0)
             return;
+        if (_measureDrag is not null)
+            DragMeasure(e); // the hover cursor below follows the dragged line
 
         var pixel = ToPixel(e);
-        _view.Cursor = LegendAt(pixel) is not null ? Cursors.SizeAll : null;
+        _view.Cursor = _measureDrag is not null || MeasureLineAt(pixel) is not null ? Cursors.SizeWE
+            : LegendAt(pixel) is not null ? Cursors.SizeAll
+            : null;
         var plot = _graphs.Select(g => g.Plot).FirstOrDefault(p =>
         {
             var r = p.LastRender.DataRect;

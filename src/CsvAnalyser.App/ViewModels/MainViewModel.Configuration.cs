@@ -65,6 +65,8 @@ public partial class MainViewModel
 
         foreach (var item in PlottedChannels.Concat(Channels.Where(c => !c.IsPlotted && !c.IsDefaultAppearance)))
             config.Curves.Add(ToConfig(item));
+        if (IsMeasuring || MeasureA is not null)
+            config.Measure = new MeasureConfig { Enabled = IsMeasuring, A = MeasureA, B = MeasureB };
         return config;
     }
 
@@ -186,6 +188,16 @@ public partial class MainViewModel
                 }
             }
             view.SetView(config.XRange is { IsValid: true } x ? (x.Min, x.Max) : null, y);
+        }
+
+        if (config.Measure is { } measure)
+        {
+            if (restoreView && measure.A is { } a && measure.B is { } b && double.IsFinite(a) && double.IsFinite(b))
+                SetMeasureCursors(a, b);
+            if (IsMeasuring == measure.Enabled)
+                RaisePlotChanged(PlotChange.Measure);
+            else
+                IsMeasuring = measure.Enabled;
         }
         return missing;
     }

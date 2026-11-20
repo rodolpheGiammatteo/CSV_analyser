@@ -32,6 +32,9 @@ public sealed class ViewConfiguration
     /// <summary>Plotted curves (in legend order) and other curves whose settings were changed.</summary>
     public List<CurveConfig> Curves { get; set; } = [];
 
+    /// <summary>Measurement cursors A and B (positions restored only on the same file).</summary>
+    public MeasureConfig? Measure { get; set; }
+
     /// <summary>Columns used by the configuration that are not in <paramref name="available"/>.</summary>
     public IReadOnlyList<string> MissingColumns(IEnumerable<string> available)
     {
@@ -97,6 +100,15 @@ public sealed class RangeConfig
 
     [JsonIgnore]
     public bool IsValid => double.IsFinite(Min) && double.IsFinite(Max) && Min < Max;
+}
+
+public sealed class MeasureConfig
+{
+    public bool Enabled { get; set; }
+
+    public double? A { get; set; }
+
+    public double? B { get; set; }
 }
 
 public sealed class GraphConfig

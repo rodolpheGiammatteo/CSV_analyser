@@ -42,6 +42,7 @@
         <KeyBinding Modifiers="Ctrl+Shift" Key="Z" Command="{Binding RedoViewCommand}" />
         <KeyBinding Modifiers="Ctrl" Key="S" Command="{Binding SaveConfigurationCommand}" />
         <KeyBinding Modifiers="Ctrl" Key="E" Command="{Binding ExportCommand}" />
+        <KeyBinding Modifiers="Ctrl" Key="M" Command="{Binding ToggleMeasureCommand}" />
     </ui:FluentWindow.InputBindings>
     <Grid Background="{DynamicResource ApplicationBackgroundBrush}">
         <Grid.RowDefinitions>
@@ -134,6 +135,16 @@
                            Icon="{ui:SymbolIcon DataLine24}"
                            ToolTip="Titre et légende des graphes, axes Y automatiques ou manuels, alignement des zéros (aussi : clic droit sur un graphe)"
                            Command="{Binding EditAxesCommand}" />
+                <ToggleButton Margin="12,2,0,2"
+                              Padding="11,5"
+                              ToolTip="Deux curseurs A et B à faire glisser sur le graphe : valeurs, écart, min, max, moyenne et valeur efficace entre les deux (Ctrl+M)"
+                              IsChecked="{Binding IsMeasuring}"
+                              IsEnabled="{Binding HasData}">
+                    <StackPanel Orientation="Horizontal">
+                        <ui:SymbolIcon Margin="0,0,8,0" Symbol="Ruler24" />
+                        <TextBlock VerticalAlignment="Center" Text="Mesures" />
+                    </StackPanel>
+                </ToggleButton>
                 <ui:Button Margin="8,2,0,2"
                            Icon="{ui:SymbolIcon Eraser24}"
                            ToolTip="Tout désélectionner (masquer toutes les courbes)"
@@ -290,6 +301,7 @@
                 <Grid.RowDefinitions>
                     <RowDefinition Height="*" />
                     <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
             <Border Grid.Row="0" Margin="0,0,0,8" CornerRadius="6" ClipToBounds="True">
                 <Grid AllowDrop="True"
@@ -359,7 +371,99 @@
                                Visibility="{Binding ShowPlotHint, Converter={StaticResource BoolToVisibility}}" />
                 </Grid>
             </Border>
-                <ContentControl x:Name="CursorHostBottom" Grid.Row="1" Margin="0,0,0,8" Focusable="False" Visibility="Collapsed">
+                <!-- Mesures entre les curseurs A et B -->
+                <Border Grid.Row="1" Margin="0,0,0,8" Padding="12,8" CornerRadius="6" BorderThickness="1"
+                        Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+                        BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
+                        Visibility="{Binding IsMeasuring, Converter={StaticResource BoolToVisibility}}">
+                    <Border.LayoutTransform>
+                        <ScaleTransform ScaleX="{Binding UiScale}" ScaleY="{Binding UiScale}" />
+                    </Border.LayoutTransform>
+                    <Border.Resources>
+                        <Style x:Key="MeasureCell" TargetType="TextBlock">
+                            <Setter Property="Margin" Value="14,0,0,0" />
+                            <Setter Property="TextAlignment" Value="Right" />
+                            <Setter Property="FontFamily" Value="Consolas" />
+                        </Style>
+                        <Style x:Key="MeasureHead" TargetType="TextBlock">
+                            <Setter Property="Margin" Value="14,0,0,2" />
+                            <Setter Property="TextAlignment" Value="Right" />
+                            <Setter Property="FontWeight" Value="SemiBold" />
+                            <Setter Property="Foreground" Value="{DynamicResource AppSecondaryTextBrush}" />
+                        </Style>
+                    </Border.Resources>
+                    <DockPanel Grid.IsSharedSizeScope="True">
+                        <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
+                            <ui:Button DockPanel.Dock="Right" Padding="4" MinHeight="0"
+                                       Appearance="Transparent" BorderThickness="0"
+                                       Icon="{ui:SymbolIcon Dismiss16}"
+                                       ToolTip="Masquer les curseurs de mesure (Ctrl+M)"
+                                       Command="{Binding ToggleMeasureCommand}" />
+                            <TextBlock VerticalAlignment="Center" FontWeight="SemiBold" Text="Mesures entre A et B" />
+                            <TextBlock Margin="16,0,8,0" VerticalAlignment="Center" FontFamily="Consolas"
+                                       Foreground="{DynamicResource AppSecondaryTextBrush}"
+                                       TextWrapping="Wrap" Text="{Binding MeasureSummary}" />
+                        </DockPanel>
+                        <ScrollViewer MaxHeight="190" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">
+                        <StackPanel>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" SharedSizeGroup="MName" />
+                                <ColumnDefinition Width="Auto" SharedSizeGroup="M1" />
+                                <ColumnDefinition Width="Auto" SharedSizeGroup="M2" />
+                                <ColumnDefinition Width="Auto" SharedSizeGroup="M3" />
+                                <ColumnDefinition Width="Auto" SharedSizeGroup="M4" />
+                                <ColumnDefinition Width="Auto" SharedSizeGroup="M5" />
+                                <ColumnDefinition Width="Auto" SharedSizeGroup="M6" />
+                                <ColumnDefinition Width="Auto" SharedSizeGroup="M7" />
+                                <ColumnDefinition Width="Auto" SharedSizeGroup="M8" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" MinWidth="160" Margin="0,0,0,2" FontWeight="SemiBold" Foreground="{DynamicResource AppSecondaryTextBrush}" Text="Courbe" />
+                            <TextBlock Grid.Column="1" MinWidth="70" Style="{StaticResource MeasureHead}" Foreground="#D6336C" Text="en A" />
+                            <TextBlock Grid.Column="2" MinWidth="70" Style="{StaticResource MeasureHead}" Foreground="#0C8599" Text="en B" />
+                            <TextBlock Grid.Column="3" MinWidth="70" Style="{StaticResource MeasureHead}" Text="B − A" />
+                            <TextBlock Grid.Column="4" MinWidth="70" Style="{StaticResource MeasureHead}" Text="Min" />
+                            <TextBlock Grid.Column="5" MinWidth="70" Style="{StaticResource MeasureHead}" Text="Max" />
+                            <TextBlock Grid.Column="6" MinWidth="70" Style="{StaticResource MeasureHead}" Text="Moyenne" />
+                            <TextBlock Grid.Column="7" MinWidth="70" Style="{StaticResource MeasureHead}" Text="Efficace" ToolTip="Valeur efficace (RMS)" />
+                            <TextBlock Grid.Column="8" MinWidth="70" Style="{StaticResource MeasureHead}" Text="Crête-crête" />
+                        </Grid>
+                            <ItemsControl ItemsSource="{Binding MeasureRows}" Focusable="False">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate DataType="{x:Type vm:MeasureRow}">
+                                        <Grid Margin="0,1">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto" SharedSizeGroup="MName" />
+                                                <ColumnDefinition Width="Auto" SharedSizeGroup="M1" />
+                                                <ColumnDefinition Width="Auto" SharedSizeGroup="M2" />
+                                                <ColumnDefinition Width="Auto" SharedSizeGroup="M3" />
+                                                <ColumnDefinition Width="Auto" SharedSizeGroup="M4" />
+                                                <ColumnDefinition Width="Auto" SharedSizeGroup="M5" />
+                                                <ColumnDefinition Width="Auto" SharedSizeGroup="M6" />
+                                                <ColumnDefinition Width="Auto" SharedSizeGroup="M7" />
+                                                <ColumnDefinition Width="Auto" SharedSizeGroup="M8" />
+                                            </Grid.ColumnDefinitions>
+                                            <StackPanel Grid.Column="0" MaxWidth="260" Orientation="Horizontal">
+                                                <Rectangle Width="10" Height="10" Margin="0,0,8,0" RadiusX="2" RadiusY="2" Fill="{Binding Brush}" />
+                                                <TextBlock TextTrimming="CharacterEllipsis" Text="{Binding Name}" ToolTip="{Binding Name}" />
+                                            </StackPanel>
+                                            <TextBlock Grid.Column="1" Style="{StaticResource MeasureCell}" Text="{Binding A}" />
+                                            <TextBlock Grid.Column="2" Style="{StaticResource MeasureCell}" Text="{Binding B}" />
+                                            <TextBlock Grid.Column="3" Style="{StaticResource MeasureCell}" Text="{Binding Delta}" />
+                                            <TextBlock Grid.Column="4" Style="{StaticResource MeasureCell}" Text="{Binding Min}" />
+                                            <TextBlock Grid.Column="5" Style="{StaticResource MeasureCell}" Text="{Binding Max}" />
+                                            <TextBlock Grid.Column="6" Style="{StaticResource MeasureCell}" Text="{Binding Mean}" />
+                                            <TextBlock Grid.Column="7" Style="{StaticResource MeasureCell}" Text="{Binding Rms}" />
+                                            <TextBlock Grid.Column="8" Style="{StaticResource MeasureCell}" Text="{Binding PeakToPeak}" />
+                                        </Grid>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                        </ScrollViewer>
+                    </DockPanel>
+                </Border>
+                <ContentControl x:Name="CursorHostBottom" Grid.Row="2" Margin="0,0,0,8" Focusable="False" Visibility="Collapsed">
                     <ContentControl.LayoutTransform>
                         <ScaleTransform ScaleX="{Binding UiScale}" ScaleY="{Binding UiScale}" />
                     </ContentControl.LayoutTransform>

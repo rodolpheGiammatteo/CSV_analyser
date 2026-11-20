@@ -22,6 +22,7 @@ public class ViewConfigurationTests
             new CurveConfig { Column = "Courant", Name = "I moteur", Unit = "A", Plotted = true, Graph = 0, Axis = "", Color = "#FF0000", Line = "Dashed", LineWidth = 2 },
             new CurveConfig { Column = "Température", Plotted = false },
         ],
+        Measure = new MeasureConfig { Enabled = true, A = 1.5, B = 4 },
     };
 
     [Fact]
@@ -46,6 +47,8 @@ public class ViewConfigurationTests
         Assert.Equal("#FF0000", back.Curves[0].Color);
         Assert.Equal("Dashed", back.Curves[0].Line);
         Assert.Null(back.Curves[1].Color);
+        Assert.True(back.Measure!.Enabled);
+        Assert.Equal(4, back.Measure.B);
     }
 
     [Fact]

@@ -8,6 +8,7 @@ public enum ExportRangeKind
 {
     All,
     Visible,
+    BetweenCursors,
 }
 
 /// <summary>Choices of the CSV export window.</summary>
@@ -45,6 +46,12 @@ public sealed partial class ExportViewModel : ObservableObject
         {
             ranges.Add(new(ExportRangeKind.Visible,
                 $"Plage visible ({MainViewModel.FormatValue(x.Min, "")} → {MainViewModel.FormatValue(x.Max, "")})"));
+        }
+        if (main.IsMeasuring && main.MeasureA is { } a && main.MeasureB is { } b)
+        {
+            ranges.Add(new(ExportRangeKind.BetweenCursors,
+                $"Entre les curseurs A et B ({MainViewModel.FormatValue(Math.Min(a, b), "")} → {MainViewModel.FormatValue(Math.Max(a, b), "")})"));
+            _range = ExportRangeKind.BetweenCursors;
         }
         RangeChoices = ranges;
 
@@ -99,6 +106,7 @@ public sealed partial class ExportViewModel : ObservableObject
     public ExportRows Rows => Range switch
     {
         ExportRangeKind.Visible when _main.PlotView?.XRange is { } x => _main.RowsInXRange(x.Min, x.Max),
+        ExportRangeKind.BetweenCursors when _main.RowsBetweenCursors is { } rows => rows,
         _ => ExportRows.All(_main.Dataset?.RowCount ?? 0),
     };
 
