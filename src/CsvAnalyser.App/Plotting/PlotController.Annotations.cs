@@ -28,7 +28,7 @@ public sealed partial class PlotController
 
     private sealed record AnnotationLabel(AnnotationViewModel Annotation, GraphRender Graph, Text Text);
 
-    private sealed record NoteRender(AnnotationViewModel Annotation, Series Series, Marker Marker, Text Text, Arrow Arrow);
+    private sealed record NoteRender(AnnotationViewModel Annotation, Series Series, Marker Marker, Text Text, LinePlot Leader);
 
     private readonly List<(Plot Plot, IPlottable Plottable)> _annotationPlottables = [];
     private readonly List<AnnotationLabel> _annotationLabels = [];
@@ -139,20 +139,18 @@ public sealed partial class PlotController
         text.LabelStyle.BorderWidth = (float)Math.Max(1, a.LineWidth) * _scale;
         text.LabelStyle.BorderRadius = 4 * _scale;
         text.LabelStyle.Padding = 4 * _scale;
-        // From the bubble to the point when the bubble was dragged away (placed before each render).
-        var arrow = plot.Add.Arrow(new Coordinates(x, y), new Coordinates(x, y));
-        arrow.Axes.YAxis = series.Axis;
-        arrow.ArrowLineWidth = 0;
-        arrow.ArrowFillColor = color;
-        arrow.ArrowWidth = (float)Math.Max(1, a.LineWidth) * _scale;
-        arrow.ArrowheadWidth = 9 * _scale;
-        arrow.ArrowheadLength = 10 * _scale;
-        arrow.IsVisible = false;
-        arrow.LegendText = "";
+        // A thin line from the bubble's edge to the circle when the bubble was dragged away (placed before each render).
+        var leader = plot.Add.Line(x, y, x, y);
+        leader.Axes.YAxis = series.Axis;
+        leader.LineColor = color;
+        leader.LineWidth = (float)Math.Max(1, a.LineWidth) * _scale;
+        leader.MarkerSize = 0;
+        leader.IsVisible = false;
+        leader.LegendText = "";
+        _annotationPlottables.Add((plot, leader));
         _annotationPlottables.Add((plot, marker));
-        _annotationPlottables.Add((plot, arrow));
         _annotationPlottables.Add((plot, text));
-        _notes.Add(new NoteRender(a, series, marker, text, arrow));
+        _notes.Add(new NoteRender(a, series, marker, text, leader));
     }
 
     private static LinePattern Pattern(CurveLine line) => line switch
@@ -225,7 +223,7 @@ public sealed partial class PlotController
         return plot.GetPixel(note.Marker.Location, plot.Axes.Bottom, note.Series.Axis);
     }
 
-    /// <summary>Before each render: an arrow from the bubble's nearest edge to the point, when they are apart.</summary>
+    /// <summary>Before each render: a line from the bubble's nearest edge to the edge of the circle, when they are apart.</summary>
     private void PlaceNoteArrows()
     {
         foreach (var note in _notes)
@@ -239,13 +237,13 @@ public sealed partial class PlotController
             var q = new Pixel(Math.Clamp(p.X, left, left + width), Math.Clamp(p.Y, bottom - height, bottom));
             float dx = p.X - q.X, dy = p.Y - q.Y;
             float distance = MathF.Sqrt(dx * dx + dy * dy);
-            float radius = note.Marker.MarkerSize / 2 + 2 * _scale;
-            note.Arrow.IsVisible = distance > radius + 12 * _scale;
-            if (!note.Arrow.IsVisible)
+            float radius = note.Marker.MarkerSize / 2;
+            note.Leader.IsVisible = distance > radius + 3 * _scale;
+            if (!note.Leader.IsVisible)
                 continue;
-            var tip = new Pixel(p.X - dx / distance * radius, p.Y - dy / distance * radius); // stops at the circle
-            note.Arrow.Base = plot.GetCoordinates(q, plot.Axes.Bottom, note.Series.Axis);
-            note.Arrow.Tip = plot.GetCoordinates(tip, plot.Axes.Bottom, note.Series.Axis);
+            var end = new Pixel(p.X - dx / distance * radius, p.Y - dy / distance * radius); // stops at the circle
+            note.Leader.Start = plot.GetCoordinates(q, plot.Axes.Bottom, note.Series.Axis);
+            note.Leader.End = plot.GetCoordinates(end, plot.Axes.Bottom, note.Series.Axis);
         }
     }
 
