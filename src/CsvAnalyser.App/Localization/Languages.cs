@@ -6,48 +6,72 @@ using System.Windows.Documents;
 
 namespace CsvAnalyser.App.Localization;
 
-/// <summary>A language the interface can use: French (built in) or a file of the Languages folder.</summary>
-public sealed record LanguageInfo(string Code, string Name, string? FilePath)
+/// <summary>A language the interface can use: French (no table), or a JSON table read by <see cref="ReadJson"/>.</summary>
+public sealed record LanguageInfo(string Code, string Name, Func<string>? ReadJson)
 {
     public override string ToString() => Name;
 }
 
 /// <summary>
-/// The interface is written in French; another language is a JSON file in <c>Languages\</c> next to the program:
+/// The interface is written in French; another language is a JSON table:
 /// <code>{ "code": "en", "name": "English", "strings": { "Ouvrir…": "Open…", … } }</code>
-/// To add a language, copy <c>en.json</c>, change code and name, and translate the values (a missing or empty
-/// value shows the French text). The language is chosen in Paramètres and applies at the next start.
+/// The files of <c>Languages\</c> in the source are built into the program (nothing to copy beside it). A file put in
+/// <c>%APPDATA%\CsvAnalyser\Languages</c> adds a language, or replaces the built-in one with the same code, without
+/// rebuilding. To add a language, copy <c>en.json</c>, change code and name, and translate the values (a missing or
+/// empty value shows the French text). The language is chosen in Paramètres and applies at the next start.
 /// </summary>
 public static class Languages
 {
     public const string French = "fr";
 
-    public static string Folder => Path.Combine(AppContext.BaseDirectory, "Languages");
+    /// <summary>Extra or replacement languages of the user (beside the settings).</summary>
+    public static string UserFolder => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "CsvAnalyser", "Languages");
+
+    private const string ResourcePrefix = "Languages.";
 
     /// <summary>The language loaded at startup.</summary>
     public static string Current { get; private set; } = French;
 
     public static IReadOnlyList<LanguageInfo> Available()
     {
-        var list = new List<LanguageInfo> { new(French, "Français", null) };
-        if (!Directory.Exists(Folder))
-            return list;
-        foreach (var file in Directory.GetFiles(Folder, "*.json").Order())
+        var byCode = new Dictionary<string, LanguageInfo>(StringComparer.OrdinalIgnoreCase);
+
+        // Built in (embedded resources "Languages.xx.json"), then the user's files, which win.
+        var assembly = typeof(Languages).Assembly;
+        foreach (var resource in assembly.GetManifestResourceNames().Where(r => r.StartsWith(ResourcePrefix, StringComparison.Ordinal) && r.EndsWith(".json", StringComparison.Ordinal)).Order())
         {
-            try
+            Add(byCode, () =>
             {
-                using var doc = JsonDocument.Parse(File.ReadAllText(file));
-                string code = doc.RootElement.GetProperty("code").GetString() ?? Path.GetFileNameWithoutExtension(file);
-                string name = doc.RootElement.TryGetProperty("name", out var n) ? n.GetString() ?? code : code;
-                if (code != French)
-                    list.Add(new LanguageInfo(code, name, file));
-            }
-            catch (Exception ex) when (ex is IOException or JsonException or KeyNotFoundException or InvalidOperationException)
-            {
-                // A broken language file is simply not offered.
-            }
+                using var stream = assembly.GetManifestResourceStream(resource)!;
+                using var reader = new StreamReader(stream);
+                return reader.ReadToEnd();
+            });
         }
+        if (Directory.Exists(UserFolder))
+        {
+            foreach (var file in Directory.GetFiles(UserFolder, "*.json").Order())
+                Add(byCode, () => File.ReadAllText(file));
+        }
+
+        var list = new List<LanguageInfo> { new(French, "Français", null) };
+        list.AddRange(byCode.Values.OrderBy(l => l.Name, StringComparer.CurrentCulture));
         return list;
+    }
+
+    private static void Add(Dictionary<string, LanguageInfo> byCode, Func<string> read)
+    {
+        try
+        {
+            using var doc = JsonDocument.Parse(read());
+            string code = doc.RootElement.GetProperty("code").GetString() ?? "";
+            string name = doc.RootElement.TryGetProperty("name", out var n) ? n.GetString() ?? code : code;
+            if (code.Length > 0 && code != French)
+                byCode[code] = new LanguageInfo(code, name, read);
+        }
+        catch (Exception ex) when (ex is IOException or JsonException or KeyNotFoundException or InvalidOperationException or UnauthorizedAccessException)
+        {
+            // A broken language file is simply not offered.
+        }
     }
 
     /// <summary>Loads a language (unknown or unreadable = French) and translates every window as it opens.</summary>
@@ -57,11 +81,11 @@ public static class Languages
         if (string.IsNullOrEmpty(code) || code == French)
             return;
         var info = Available().FirstOrDefault(l => l.Code == code);
-        if (info?.FilePath is not { } path)
+        if (info?.ReadJson is not { } read)
             return;
         try
         {
-            using var doc = JsonDocument.Parse(File.ReadAllText(path));
+            using var doc = JsonDocument.Parse(read());
             var table = new Dictionary<string, string>(StringComparer.Ordinal);
             foreach (var entry in doc.RootElement.GetProperty("strings").EnumerateObject())
             {
@@ -71,7 +95,7 @@ public static class Languages
             L.Use(table);
             Current = code;
         }
-        catch (Exception ex) when (ex is IOException or JsonException or KeyNotFoundException or InvalidOperationException)
+        catch (Exception ex) when (ex is IOException or JsonException or KeyNotFoundException or InvalidOperationException or UnauthorizedAccessException)
         {
             return;
         }

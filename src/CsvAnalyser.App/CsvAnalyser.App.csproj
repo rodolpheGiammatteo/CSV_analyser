@@ -27,8 +27,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <!-- One file per language besides French (see Localization/Languages.cs). -->
-    <Content Include="Languages\*.json" CopyToOutputDirectory="PreserveNewest" />
+    <!-- One file per language besides French, built into the program (see Localization/Languages.cs). -->
+    <EmbeddedResource Include="Languages\*.json" LogicalName="Languages.%(Filename)%(Extension)" />
   </ItemGroup>
 
   <ItemGroup>
