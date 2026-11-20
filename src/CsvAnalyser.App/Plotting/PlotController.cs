@@ -373,6 +373,19 @@ public sealed class PlotController : IPlotView
                     axisOf[item] = axis;
             }
 
+            // Every axis on the right: the plot's own left axis would stay as an empty 0–1 scale.
+            if (rightUsed && !leftUsed)
+            {
+                var left = plot.Axes.Left;
+                left.TickLabelStyle.IsVisible = false;
+                left.MajorTickStyle.Length = 0;
+                left.MinorTickStyle.Length = 0;
+                left.Label.Text = "";
+            }
+            // The horizontal grid lines follow the first axis (by default they follow the left one, maybe empty).
+            if (render.Axes.Count > 0)
+                plot.Grid.YAxis = render.Axes[0].Axis;
+
             // Drawing order = order of the plotted list: the last curve is drawn on top (and listed last in the legend).
             foreach (var item in spec.Curves.OrderBy(c => _vm.PlottedChannels.IndexOf(c)))
             {
