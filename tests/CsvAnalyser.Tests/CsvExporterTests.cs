@@ -42,6 +42,21 @@ public class CsvExporterTests
     }
 
     [Fact]
+    public void ZoneColumn_NameOfTheZonesContainingEachRow()
+    {
+        var zones = CsvAnalyser.Core.Configuration.AnnotationConfig.ZoneNames(
+        [
+            new() { Kind = "Zone", Text = "chauffe", Row = 1, EndRow = 2 },
+            new() { Kind = "Zone", Text = "palier; 2", Row = 4, EndRow = 2 }, // drawn backwards: still rows 2..4
+            new() { Kind = "Marker", Text = "pas une zone", Row = 0 },
+        ]);
+        var text = Export([new("x", [0, 1, 2, 3, 4, 5])], ExportRows.All(6),
+            new CsvExportOptions { TextColumns = [new ExportTextColumn("zone", zones)] });
+
+        Assert.Equal("x;zone\r\n0;\r\n1;chauffe\r\n2;\"chauffe / palier; 2\"\r\n3;\"palier; 2\"\r\n4;\"palier; 2\"\r\n5;\r\n", text);
+    }
+
+    [Fact]
     public void DateColumn_AbsoluteTimeFromOrigin()
     {
         var origin = new DateTime(2024, 3, 1, 12, 0, 0);

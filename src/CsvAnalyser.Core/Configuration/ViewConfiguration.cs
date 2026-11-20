@@ -44,6 +44,9 @@ public sealed class ViewConfiguration
     /// <summary>Computed curves, in creation order (one may use the previous ones).</summary>
     public List<ComputedCurveConfig> Computed { get; set; } = [];
 
+    /// <summary>Markers, highlighted zones and notes on a point (restored only on the same file).</summary>
+    public List<AnnotationConfig>? Annotations { get; set; }
+
     /// <summary>Columns used by the configuration's curves that are neither in <paramref name="available"/> nor computed.</summary>
     public IReadOnlyList<string> MissingColumns(IEnumerable<string> available)
     {
@@ -237,4 +240,70 @@ public sealed class CurveConfig
 
     /// <summary>0.1 to 1; null = opaque.</summary>
     public double? Opacity { get; set; }
+}
+
+/// <summary>
+/// An annotation, anchored to rows of the file (so it stays at the same samples whatever the X axis):
+/// a marker at one row, a zone between two rows, or a note on a curve at one row.
+/// </summary>
+public sealed class AnnotationConfig
+{
+    public const string Marker = "Marker", Zone = "Zone", Note = "Note";
+
+    /// <summary>Marker, Zone or Note.</summary>
+    public string Kind { get; set; } = Marker;
+
+    public string Text { get; set; } = "";
+
+    /// <summary>Row of a marker or a note; first row of a zone.</summary>
+    public int Row { get; set; }
+
+    /// <summary>Last row of a zone.</summary>
+    public int? EndRow { get; set; }
+
+    /// <summary>Column of the curve a note points at.</summary>
+    public string? Curve { get; set; }
+
+    /// <summary>Index of the only graph showing a marker or zone (null = every graph).</summary>
+    public int? Graph { get; set; }
+
+    /// <summary>"#RRGGBB".</summary>
+    public string? Color { get; set; }
+
+    public double? FontSize { get; set; }
+
+    public double? LineWidth { get; set; }
+
+    /// <summary>Solid, Dashed, DenselyDashed or Dotted.</summary>
+    public string? Line { get; set; }
+
+    /// <summary>Fill opacity of a zone.</summary>
+    public double? Opacity { get; set; }
+
+    public bool Hidden { get; set; }
+
+    /// <summary>
+    /// For each row, the text of the zones that contain it (" / " between overlapping zones; "" outside):
+    /// the "zone" column of the CSV export.
+    /// </summary>
+    public static Func<int, string?> ZoneNames(IEnumerable<AnnotationConfig> annotations)
+    {
+        var zones = annotations
+            .Where(a => a.Kind == Zone && a.EndRow is not null)
+            .Select(a => (Start: Math.Min(a.Row, a.EndRow!.Value), End: Math.Max(a.Row, a.EndRow!.Value), a.Text))
+            .OrderBy(z => z.Start)
+            .ToList();
+        return row =>
+        {
+            string? result = null;
+            foreach (var (start, end, text) in zones)
+            {
+                if (start > row)
+                    break;
+                if (row <= end)
+                    result = result is null ? text : result + " / " + text;
+            }
+            return result;
+        };
+    }
 }

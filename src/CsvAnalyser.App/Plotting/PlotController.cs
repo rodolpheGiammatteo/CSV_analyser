@@ -16,7 +16,7 @@ namespace CsvAnalyser.App.Plotting;
 /// (shared X axis), one Y axis per unit (or per curve that asks for its own), the vertical cursor, the
 /// NaN-aware autoscale and the zoom history. This is the only class that touches ScottPlot.
 /// </summary>
-public sealed class PlotController : IPlotView
+public sealed partial class PlotController : IPlotView
 {
     private const double Margin = 0.04;
     private const string XKey = "X";
@@ -130,6 +130,7 @@ public sealed class PlotController : IPlotView
         menu.AddSeparator();
         if (axisGraph is null) // "here" means a point of the graph, not of an axis
         {
+            AddAnnotationMenuItems(menu);
             menu.Add(L.T("Placer le curseur A ici"), plot => PlaceMeasureCursorAtMenu(plot, 'A'));
             menu.Add(L.T("Placer le curseur B ici"), plot => PlaceMeasureCursorAtMenu(plot, 'B'));
             menu.Add(L.T("Placer le curseur Y1 ici"), plot => PlaceMeasureYAtMenu(plot, '1'));
@@ -274,6 +275,10 @@ public sealed class PlotController : IPlotView
                 UpdateMeasureLines();
                 _view.Refresh();
                 break;
+            case PlotChange.Annotations:
+                UpdateAnnotations();
+                _view.Refresh();
+                break;
         }
     }
 
@@ -347,6 +352,7 @@ public sealed class PlotController : IPlotView
         }
 
         UpdateMeasureLines();
+        UpdateAnnotations();
         _view.Refresh();
     }
 
@@ -840,6 +846,7 @@ public sealed class PlotController : IPlotView
         {
             owner.KeepZerosAligned();
             owner.PlaceMeasureMarks();
+            owner.PlaceAnnotationLabels();
             owner.MatchPaddings();
         }
     }
@@ -1039,7 +1046,7 @@ public sealed class PlotController : IPlotView
                 break;
         }
 
-        if (TryStartLegendDrag(e) || TryStartMeasureDrag(e))
+        if (TryStartLegendDrag(e) || TryStartMeasureDrag(e) || TryStartAnnotationDrag(e))
             return;
         RememberAxisClick(e);
         if (_axisClick is not null && _vm.LeftDragZooms)
@@ -1067,6 +1074,11 @@ public sealed class PlotController : IPlotView
         if (_measureDrag is not null)
         {
             EndMeasureDrag();
+            return;
+        }
+        if (_annotationDrag is not null)
+        {
+            EndAnnotationDrag();
             return;
         }
         if (_axisPanGesture)
@@ -1582,11 +1594,15 @@ public sealed class PlotController : IPlotView
             return;
         if (_measureDrag is not null)
             DragMeasure(e); // the hover cursor below follows the dragged line
+        else if (_annotationDrag is not null)
+            DragAnnotation(e);
 
         var pixel = ToPixel(e);
         var lineUnder = _measureDrag ?? MeasureLineAt(pixel);
+        var annotationUnder = lineUnder is null ? _annotationDrag ?? AnnotationAt(pixel) : null;
         _view.Cursor = lineUnder is '1' or '2' ? Cursors.SizeNS
             : lineUnder is not null ? Cursors.SizeWE
+            : annotationUnder is { } hit && IsDraggable(hit.Part) ? Cursors.SizeWE
             : LegendAt(pixel) is not null ? Cursors.SizeAll
             : null;
         var plot = _graphs.Select(g => g.Plot).FirstOrDefault(p =>

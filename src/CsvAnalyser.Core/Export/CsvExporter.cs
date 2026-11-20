@@ -8,6 +8,9 @@ public sealed record ExportColumn(string Header, double[] Values);
 /// <summary>A first column with the absolute date and time of each row: <c>Origin + Seconds[row]</c>.</summary>
 public sealed record ExportDateColumn(string Header, DateTime Origin, double[] Seconds);
 
+/// <summary>A text column written after the numbers (e.g. the annotation zone of each row); null or "" = empty field.</summary>
+public sealed record ExportTextColumn(string Header, Func<int, string?> Value);
+
 /// <summary>The rows to write: <c>[Start, End)</c>, optionally filtered (unsorted X axis).</summary>
 public sealed record ExportRows(int Start, int End, Func<int, bool>? Filter = null)
 {
@@ -21,6 +24,8 @@ public sealed record CsvExportOptions
     public char DecimalSeparator { get; init; } = ',';
 
     public ExportDateColumn? DateColumn { get; init; }
+
+    public IReadOnlyList<ExportTextColumn> TextColumns { get; init; } = [];
 }
 
 /// <summary>Writes columns of numbers as CSV (empty field for a missing value, quoted headers when needed).</summary>
@@ -50,6 +55,7 @@ public static class CsvExporter
         if (date is not null)
             header.Add(date.Header);
         header.AddRange(columns.Select(c => c.Header));
+        header.AddRange(options.TextColumns.Select(c => c.Header));
         writer.Write(string.Join(delimiter, header.Select(h => Quote(h, delimiter))));
         writer.Write("\r\n");
 
@@ -83,6 +89,14 @@ public static class CsvExporter
                 if (double.IsFinite(v) && v.TryFormat(buffer, out int written, "R", number))
                     line.Append(buffer[..written]);
             }
+            foreach (var text in options.TextColumns)
+            {
+                if (!first)
+                    line.Append(delimiter);
+                first = false;
+                if (text.Value(row) is { Length: > 0 } value)
+                    line.Append(Quote(value, delimiter));
+            }
             line.Append("\r\n");
             writer.Write(line);
 
@@ -96,7 +110,7 @@ public static class CsvExporter
         progress?.Report(1);
     }
 
-    /// <summary>Quotes a header that contains the delimiter, a quote or a line break.</summary>
+    /// <summary>Quotes a header or text that contains the delimiter, a quote or a line break.</summary>
     private static string Quote(string text, char delimiter) =>
         text.IndexOfAny([delimiter, '"', '\r', '\n']) >= 0 ? "\"" + text.Replace("\"", "\"\"") + "\"" : text;
 }

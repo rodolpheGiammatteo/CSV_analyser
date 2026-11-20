@@ -79,4 +79,26 @@ public class ViewConfigurationTests
         Assert.Throws<InvalidDataException>(() =>
             ViewConfiguration.FromJson($"{{\"format\":\"{ViewConfiguration.FormatName}\",\"version\":99}}"));
     }
+
+    [Fact]
+    public void Annotations_RoundTrip_AndOmittedWhenNone()
+    {
+        var config = Sample();
+        Assert.DoesNotContain("annotations", config.ToJson());
+
+        config.Annotations =
+        [
+            new AnnotationConfig { Kind = AnnotationConfig.Zone, Text = "Essai pleine charge", Row = 120, EndRow = 410, Color = "#1D9E75", Opacity = 0.2 },
+            new AnnotationConfig { Kind = AnnotationConfig.Note, Text = "Pic", Row = 215, Curve = "Courant", FontSize = 14 },
+            new AnnotationConfig { Kind = AnnotationConfig.Marker, Text = "Arrêt", Row = 585, Graph = 0, Line = "Dotted", LineWidth = 2, Hidden = true },
+        ];
+        var back = ViewConfiguration.FromJson(config.ToJson());
+
+        Assert.Equal(3, back.Annotations!.Count);
+        var zone = back.Annotations[0];
+        Assert.Equal((AnnotationConfig.Zone, "Essai pleine charge", 120, 410, 0.2), (zone.Kind, zone.Text, zone.Row, zone.EndRow!.Value, zone.Opacity!.Value));
+        Assert.Equal(("Courant", 14.0), (back.Annotations[1].Curve, back.Annotations[1].FontSize!.Value));
+        var marker = back.Annotations[2];
+        Assert.Equal((0, "Dotted", 2.0, true), (marker.Graph!.Value, marker.Line, marker.LineWidth!.Value, marker.Hidden));
+    }
 }

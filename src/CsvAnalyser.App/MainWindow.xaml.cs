@@ -21,6 +21,8 @@ public partial class MainWindow : FluentWindow
         _plotController = new PlotController(PlotView, viewModel);
 
         ApplyAppTheme();
+        viewModel.EditAnnotationRequested += (_, annotation) =>
+            new AnnotationSettingsWindow(annotation, viewModel) { Owner = this }.ShowDialog();
         viewModel.EditChannelRequested += (_, item) =>
             new CurveSettingsWindow(item, GraphLayout.AxisChoices(item, viewModel.BuildLayout())) { Owner = this }.ShowDialog();
         PlaceCursorCard();

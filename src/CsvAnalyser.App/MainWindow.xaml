@@ -216,6 +216,16 @@
                         <TextBlock VerticalAlignment="Center" Text="Mesures Y" />
                     </StackPanel>
                 </ToggleButton>
+                <ToggleButton Margin="4,2,0,2"
+                              Padding="11,5"
+                              ToolTip="Afficher ou masquer les annotations (repères, zones surlignées, notes). Pour en ajouter : clic droit dans un graphe"
+                              IsChecked="{Binding ShowAnnotations}"
+                              IsEnabled="{Binding HasData}">
+                    <StackPanel Orientation="Horizontal">
+                        <ui:SymbolIcon Margin="0,0,8,0" Symbol="Highlight24" />
+                        <TextBlock VerticalAlignment="Center" Text="Annotations" />
+                    </StackPanel>
+                </ToggleButton>
                 <ui:Button Margin="8,2,0,2"
                            Icon="{ui:SymbolIcon Eraser24}"
                            ToolTip="Tout désélectionner (masquer toutes les courbes). Clic droit : réinitialiser la mise en page"
@@ -250,6 +260,7 @@
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="*" MinHeight="120" />
+                    <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
 
@@ -339,8 +350,82 @@
                     </ListBox.ItemTemplate>
                 </ListBox>
 
+                <!-- Annotations : liste par ordre de création ; clic = y aller, double-clic = réglages, clic droit = menu -->
+                <Border Grid.Row="2" Margin="0,8,0,0" Padding="10,8" CornerRadius="6" BorderThickness="1"
+                        Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+                        BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
+                        Visibility="{Binding HasAnnotations, Converter={StaticResource BoolToVisibility}}">
+                    <DockPanel>
+                        <DockPanel DockPanel.Dock="Top" Margin="0,0,0,4">
+                            <ui:Button DockPanel.Dock="Right" Padding="4" MinHeight="0"
+                                       Appearance="Transparent" BorderThickness="0"
+                                       Icon="{ui:SymbolIcon Delete16}"
+                                       ToolTip="Supprimer toutes les annotations"
+                                       Command="{Binding DeleteAllAnnotationsCommand}" />
+                            <TextBlock VerticalAlignment="Center" FontWeight="SemiBold" Text="Annotations" />
+                        </DockPanel>
+                        <ScrollViewer MaxHeight="180" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Focusable="False">
+                            <ItemsControl ItemsSource="{Binding Annotations}" Focusable="False">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate DataType="{x:Type vm:AnnotationViewModel}">
+                                        <!-- Tag carries the main view model to the context menu, which is outside the visual tree. -->
+                                        <Grid Margin="0,2" Background="Transparent" Cursor="Hand"
+                                              Tag="{Binding DataContext, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                              ToolTip="Clic : afficher cette annotation. Double-clic : réglages. Clic droit : menu"
+                                              ToolTipService.InitialShowDelay="1200">
+                                            <Grid.InputBindings>
+                                                <MouseBinding MouseAction="LeftClick"
+                                                              Command="{Binding DataContext.GoToAnnotationCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                              CommandParameter="{Binding}" />
+                                                <MouseBinding MouseAction="LeftDoubleClick"
+                                                              Command="{Binding DataContext.EditAnnotationCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                              CommandParameter="{Binding}" />
+                                            </Grid.InputBindings>
+                                            <Grid.ContextMenu>
+                                                <ContextMenu>
+                                                    <MenuItem Header="Afficher dans le graphe"
+                                                              Icon="{ui:SymbolIcon ZoomFit16}"
+                                                              Command="{Binding PlacementTarget.Tag.GoToAnnotationCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                                              CommandParameter="{Binding}" />
+                                                    <MenuItem Header="Réglages de l'annotation…"
+                                                              Icon="{ui:SymbolIcon Edit16}"
+                                                              Command="{Binding PlacementTarget.Tag.EditAnnotationCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                                              CommandParameter="{Binding}" />
+                                                    <MenuItem Header="Mesurer cette zone (curseurs A et B)"
+                                                              Icon="{ui:SymbolIcon Ruler24}"
+                                                              Visibility="{Binding IsZone, Converter={StaticResource BoolToVisibility}}"
+                                                              Command="{Binding PlacementTarget.Tag.MeasureZoneCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                                              CommandParameter="{Binding}" />
+                                                    <MenuItem Header="Supprimer l'annotation"
+                                                              Icon="{ui:SymbolIcon Delete16}"
+                                                              Command="{Binding PlacementTarget.Tag.DeleteAnnotationCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                                              CommandParameter="{Binding}" />
+                                                </ContextMenu>
+                                            </Grid.ContextMenu>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <Rectangle Width="10" Height="10" Margin="0,4,8,0" VerticalAlignment="Top" RadiusX="2" RadiusY="2" Fill="{Binding Brush}" />
+                                            <StackPanel Grid.Column="1">
+                                                <TextBlock TextTrimming="CharacterEllipsis" Text="{Binding ListText}" />
+                                                <TextBlock FontSize="11" Foreground="{DynamicResource AppSecondaryTextBrush}"
+                                                           TextTrimming="CharacterEllipsis" Text="{Binding PositionText}" />
+                                            </StackPanel>
+                                            <CheckBox Grid.Column="2" MinWidth="0" Margin="6,0,0,0" Padding="0" VerticalAlignment="Center"
+                                                      ToolTip="Afficher ou masquer cette annotation"
+                                                      IsChecked="{Binding IsVisible}" />
+                                        </Grid>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
+                    </DockPanel>
+                </Border>
+
                 <!-- The cursor card lives in one of three hosts (left, right, bottom): see MainWindow.PlaceCursorCard. -->
-                <ContentControl x:Name="CursorHostLeft" Grid.Row="2" Margin="0,8,0,8" Focusable="False">
+                <ContentControl x:Name="CursorHostLeft" Grid.Row="3" Margin="0,8,0,8" Focusable="False">
                     <Border x:Name="CursorCard"
                             Padding="12,10"
                             CornerRadius="6"
@@ -544,6 +629,11 @@
                                        Icon="{ui:SymbolIcon Dismiss16}"
                                        ToolTip="Masquer les curseurs A et B (Ctrl+M)"
                                        Command="{Binding ToggleMeasureCommand}" />
+                            <ui:Button DockPanel.Dock="Right" Margin="0,0,6,0" Padding="8,3" MinHeight="0"
+                                       Icon="{ui:SymbolIcon Highlight16}"
+                                       Content="Zone A–B"
+                                       ToolTip="Créer une zone surlignée entre les curseurs A et B (annotation)"
+                                       Command="{Binding ZoneFromMeasureCommand}" />
                             <TextBlock VerticalAlignment="Center" FontWeight="SemiBold" Text="Mesures entre A et B" />
                             <TextBlock Margin="16,0,8,0" VerticalAlignment="Center" FontFamily="Consolas"
                                        Foreground="{DynamicResource AppSecondaryTextBrush}"

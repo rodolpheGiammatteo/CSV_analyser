@@ -74,6 +74,10 @@
                       Content="Ajouter une colonne avec la date et l'heure de chaque ligne"
                       IsChecked="{Binding IncludeDate}"
                       Visibility="{Binding CanIncludeDate, Converter={StaticResource BoolToVisibility}}" />
+            <CheckBox Margin="0,0,0,12"
+                      Content="Ajouter une colonne « zone » (nom des zones surlignées)"
+                      IsChecked="{Binding IncludeZones}"
+                      Visibility="{Binding CanIncludeZones, Converter={StaticResource BoolToVisibility}}" />
 
             <TextBlock Foreground="{DynamicResource AppSecondaryTextBrush}" TextWrapping="Wrap" Text="{Binding Summary}" />
             <TextBlock Margin="0,6,0,0" Foreground="#D13438" TextWrapping="Wrap" Text="{Binding Error}" />

@@ -40,6 +40,8 @@ public enum PlotChange
     MouseButtons,
     /// <summary>Background grid settings (applied in place).</summary>
     Grid,
+    /// <summary>Annotations added, moved, edited, shown or hidden (redrawn in place).</summary>
+    Annotations,
 }
 
 public partial class MainViewModel : ObservableObject, IChannelHost
@@ -272,7 +274,10 @@ public partial class MainViewModel : ObservableObject, IChannelHost
 
             ForgetMeasureCursors();
             ForgetMeasureY();
+            Annotations.Clear(); // they belong to the previous file (its session keeps them)
             Dataset = dataset;
+            OnPropertyChanged(nameof(HasAnnotations));
+            OnPropertyChanged(nameof(HasZones));
             SelectedXAxis = timeOption ?? rowOption;
             Title = $"{Path.GetFileName(dataset.FilePath)} — {AppInfo.FullTitle}";
             StatusText = BuildStatus(dataset);
@@ -445,6 +450,7 @@ public partial class MainViewModel : ObservableObject, IChannelHost
     partial void OnSelectedXAxisChanged(XAxisOption? value)
     {
         ForgetMeasureCursors();
+        RefreshAnnotationPositions();
         OnPropertyChanged(nameof(XAxisLabel));
         RaisePlotChanged(PlotChange.XAxis);
     }
@@ -559,7 +565,7 @@ public partial class MainViewModel : ObservableObject, IChannelHost
         {
             PlotChanged?.Invoke(this, change);
             if (change is PlotChange.Curves or PlotChange.Appearance or PlotChange.AxisSettings or PlotChange.GraphAppearance
-                or PlotChange.Layout or PlotChange.XAxis or PlotChange.Measure)
+                or PlotChange.Layout or PlotChange.XAxis or PlotChange.Measure or PlotChange.Annotations)
                 ScheduleCommit();
         }
     }

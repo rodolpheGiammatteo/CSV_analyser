@@ -76,6 +76,7 @@ public partial class MainViewModel
         foreach (var item in PlottedChannels.Concat(Channels.Where(c => !c.IsPlotted && !c.IsDefaultAppearance)))
             config.Curves.Add(ToConfig(item));
         config.Computed.AddRange(ComputedChannels.Select(c => c.Definition!.Clone()));
+        config.Annotations = CaptureAnnotations();
         if (IsMeasuring || MeasureA is not null || IsMeasuringY)
         {
             int yGraph = MeasureYGraph is { } mg ? Graphs.IndexOf(mg) : -1;
@@ -214,6 +215,10 @@ public partial class MainViewModel
             if (xOption is not null)
                 SelectedXAxis = xOption;
             GraphColumns = Math.Clamp(config.GraphColumns ?? 1, 1, 4);
+            // Annotations belong to the file: restored with its view (session, project, undo), kept when only a
+            // layout is applied.
+            if (restoreView)
+                LoadAnnotations(config.Annotations);
             RemoveEmptyGraphs();
         }
         finally
@@ -271,6 +276,7 @@ public partial class MainViewModel
         var defaultX = XAxisOptions.FirstOrDefault();
         IsMeasuring = false;
         IsMeasuringY = false;
+        LoadAnnotations(null);
         ApplyConfiguration(new ViewConfiguration { XAxis = defaultX?.Channel?.SourceName ?? "" }, restoreView: false);
         CommitNow();
         StatusText = L.T("Mise en page réinitialisée (Ctrl+Z pour annuler)");
@@ -680,7 +686,7 @@ public partial class MainViewModel
                 using var writer = new StreamWriter(path, false, new UTF8Encoding(encoderShouldEmitUTF8Identifier: true), 1 << 16);
                 CsvExporter.Write(writer, columns, rows, options, progress);
             });
-            StatusText = L.F("Exporté : {0} — {1:N0} lignes × {2} colonnes", Path.GetFileName(path), CountRows(rows), columns.Count + (options.DateColumn is null ? 0 : 1));
+            StatusText = L.F("Exporté : {0} — {1:N0} lignes × {2} colonnes", Path.GetFileName(path), CountRows(rows), columns.Count + (options.DateColumn is null ? 0 : 1) + options.TextColumns.Count);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException)
         {

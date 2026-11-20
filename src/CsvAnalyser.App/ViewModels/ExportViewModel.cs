@@ -38,6 +38,11 @@ public sealed partial class ExportViewModel : ObservableObject
     [NotifyPropertyChangedFor(nameof(Summary))]
     private bool _includeDate;
 
+    /// <summary>A last column with the name of the annotation zone(s) containing each row.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(Summary))]
+    private bool _includeZones;
+
     public ExportViewModel(MainViewModel main)
     {
         _main = main;
@@ -66,6 +71,8 @@ public sealed partial class ExportViewModel : ObservableObject
         _decimal = DecimalChoices.Any(c => c.Value == main.ExportDecimal) ? main.ExportDecimal : ",";
         CanIncludeDate = main.Dataset?.Time?.Origin is not null;
         _includeDate = CanIncludeDate;
+        CanIncludeZones = main.HasZones;
+        _includeZones = CanIncludeZones;
     }
 
     public IReadOnlyList<StyleChoice<ExportRangeKind>> RangeChoices { get; }
@@ -87,6 +94,8 @@ public sealed partial class ExportViewModel : ObservableObject
 
     public bool CanIncludeDate { get; }
 
+    public bool CanIncludeZones { get; }
+
     public string? Error => Delimiter == Decimal ? L.T("Le séparateur de colonnes et la décimale doivent être différents.") : null;
 
     public bool CanExport => Error is null;
@@ -95,7 +104,7 @@ public sealed partial class ExportViewModel : ObservableObject
     {
         get
         {
-            int columns = Columns.Count + (IncludeDate && CanIncludeDate ? 1 : 0);
+            int columns = Columns.Count + (IncludeDate && CanIncludeDate ? 1 : 0) + (IncludeZones && CanIncludeZones ? 1 : 0);
             return L.F("{0:N0} lignes × {1} colonnes (la colonne X en premier)", MainViewModel.CountRows(Rows), columns);
         }
     }
@@ -119,6 +128,7 @@ public sealed partial class ExportViewModel : ObservableObject
         DateColumn = IncludeDate && _main.Dataset?.Time is { Origin: { } origin } time
             ? new ExportDateColumn(L.T("Date et heure"), origin, time.Channel.Values)
             : null,
+        TextColumns = IncludeZones && CanIncludeZones ? [_main.ZoneExportColumn()] : [],
     };
 
     /// <summary>Remembers the separators for the next export.</summary>
