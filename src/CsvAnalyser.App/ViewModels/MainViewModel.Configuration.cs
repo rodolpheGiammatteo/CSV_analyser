@@ -35,6 +35,7 @@ public partial class MainViewModel
         {
             SourceFile = Dataset is { } ds ? Path.GetFileName(ds.FilePath) : null,
             XAxis = SelectedXAxis?.Channel?.SourceName ?? "",
+            GraphColumns = GraphColumns > 1 ? GraphColumns : null,
         };
         if (PlottedChannels.Count > 0 && PlotView?.XRange is { } x)
             config.XRange = new RangeConfig(x.Min, x.Max);
@@ -66,8 +67,19 @@ public partial class MainViewModel
         foreach (var item in PlottedChannels.Concat(Channels.Where(c => !c.IsPlotted && !c.IsDefaultAppearance)))
             config.Curves.Add(ToConfig(item));
         config.Computed.AddRange(ComputedChannels.Select(c => c.Definition!.Clone()));
-        if (IsMeasuring || MeasureA is not null)
-            config.Measure = new MeasureConfig { Enabled = IsMeasuring, A = MeasureA, B = MeasureB };
+        if (IsMeasuring || MeasureA is not null || IsMeasuringY)
+        {
+            int yGraph = MeasureYGraph is { } mg ? Graphs.IndexOf(mg) : -1;
+            config.Measure = new MeasureConfig
+            {
+                Enabled = IsMeasuring, A = MeasureA, B = MeasureB,
+                YEnabled = IsMeasuringY,
+                YGraph = yGraph >= 0 ? yGraph : null,
+                YAxis = yGraph >= 0 ? MeasureYAxisKey : null,
+                Y1 = yGraph >= 0 ? MeasureY1 : null,
+                Y2 = yGraph >= 0 ? MeasureY2 : null,
+            };
+        }
         return config;
     }
 
@@ -181,6 +193,7 @@ public partial class MainViewModel
             };
             if (xOption is not null)
                 SelectedXAxis = xOption;
+            GraphColumns = Math.Clamp(config.GraphColumns ?? 1, 1, 4);
             RemoveEmptyGraphs();
         }
         finally
@@ -209,6 +222,15 @@ public partial class MainViewModel
         {
             if (restoreView && measure.A is { } a && measure.B is { } b && double.IsFinite(a) && double.IsFinite(b))
                 SetMeasureCursors(a, b);
+            if (measure.YGraph is { } yg && yg >= 0 && yg < created.Count && Graphs.Contains(created[yg]) && measure.YAxis is { } yAxis)
+            {
+                MeasureYGraph = created[yg];
+                MeasureYAxisKey = yAxis;
+                MeasureY1 = restoreView ? measure.Y1 : null;
+                MeasureY2 = restoreView ? measure.Y2 : null;
+            }
+            if (IsMeasuringY != measure.YEnabled)
+                IsMeasuringY = measure.YEnabled;
             if (IsMeasuring == measure.Enabled)
                 RaisePlotChanged(PlotChange.Measure);
             else

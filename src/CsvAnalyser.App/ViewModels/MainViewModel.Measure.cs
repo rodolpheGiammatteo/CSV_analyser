@@ -21,6 +21,7 @@ public partial class MainViewModel
 
     /// <summary>The two measurement cursors are shown (toolbar "Mesures", Ctrl+M).</summary>
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowMeasurePanel))]
     private bool _isMeasuring;
 
     [ObservableProperty]
@@ -138,4 +139,128 @@ public partial class MainViewModel
     }
 
     private static string Number(double v) => double.IsFinite(v) ? v.ToString("G6", CultureInfo.CurrentCulture) : "—";
+
+    // ---------------------------------------------------------------- Y1 and Y2 (horizontal cursors)
+
+    private bool _settingMeasureYAxis;
+
+    /// <summary>Two horizontal cursors Y1 and Y2 on one Y axis of one graph (toolbar "Mesures Y", Ctrl+Shift+M).</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowMeasurePanel))]
+    private bool _isMeasuringY;
+
+    [ObservableProperty]
+    private string _measureYSummary = "";
+
+    /// <summary>The axis measured by Y1 and Y2, as "graphId|axisKey" (see <see cref="MeasureYAxisChoices"/>).</summary>
+    [ObservableProperty]
+    private string? _measureYAxisId;
+
+    public bool ShowMeasurePanel => IsMeasuring || IsMeasuringY;
+
+    public GraphViewModel? MeasureYGraph { get; private set; }
+
+    public string? MeasureYAxisKey { get; private set; }
+
+    public double? MeasureY1 { get; private set; }
+
+    public double? MeasureY2 { get; private set; }
+
+    /// <summary>Every Y axis of every graph: "Graphe 1 — A".</summary>
+    public ObservableCollection<StyleChoice<string>> MeasureYAxisChoices { get; } = [];
+
+    partial void OnIsMeasuringYChanged(bool value)
+    {
+        RefreshMeasureYChoices();
+        RaisePlotChanged(PlotChange.Measure);
+        UpdateMeasureYSummary();
+    }
+
+    [RelayCommand]
+    private void ToggleMeasureY()
+    {
+        if (HasData)
+            IsMeasuringY = !IsMeasuringY;
+    }
+
+    partial void OnMeasureYAxisIdChanged(string? value)
+    {
+        if (_settingMeasureYAxis || value is null)
+            return;
+        var parts = value.Split('|', 2);
+        if (parts.Length != 2 || !int.TryParse(parts[0], out int id) || Graphs.FirstOrDefault(g => g.Id == id) is not { } graph)
+            return;
+        // Another axis: the cursors are placed again in its visible range.
+        MeasureYGraph = graph;
+        MeasureYAxisKey = parts[1];
+        MeasureY1 = MeasureY2 = null;
+        RaisePlotChanged(PlotChange.Measure);
+    }
+
+    /// <summary>Called by the plot controller when Y1/Y2 are placed or dragged.</summary>
+    public void SetMeasureY(GraphViewModel graph, string axisKey, double y1, double y2)
+    {
+        MeasureYGraph = graph;
+        MeasureYAxisKey = axisKey;
+        MeasureY1 = y1;
+        MeasureY2 = y2;
+        SelectMeasureYAxis();
+        UpdateMeasureYSummary();
+    }
+
+    private void ForgetMeasureY()
+    {
+        MeasureYGraph = null;
+        MeasureYAxisKey = null;
+        MeasureY1 = MeasureY2 = null;
+    }
+
+    private void RefreshMeasureYChoices()
+    {
+        _settingMeasureYAxis = true;
+        try
+        {
+            MeasureYAxisChoices.Clear();
+            foreach (var spec in BuildLayout())
+            {
+                foreach (var axis in spec.Axes)
+                {
+                    string label = string.IsNullOrEmpty(axis.Label) ? "(sans unité)" : axis.Label;
+                    MeasureYAxisChoices.Add(new($"{spec.Graph.Id}|{axis.Key}", Graphs.Count > 1 ? $"{spec.Graph.Title} — {label}" : label));
+                }
+            }
+        }
+        finally
+        {
+            _settingMeasureYAxis = false;
+        }
+        SelectMeasureYAxis();
+    }
+
+    private void SelectMeasureYAxis()
+    {
+        _settingMeasureYAxis = true;
+        try
+        {
+            MeasureYAxisId = MeasureYGraph is { } g && MeasureYAxisKey is { } k ? $"{g.Id}|{k}" : null;
+            OnPropertyChanged(nameof(MeasureYAxisId)); // the combo may have lost it while its list was rebuilt
+        }
+        finally
+        {
+            _settingMeasureYAxis = false;
+        }
+    }
+
+    private void UpdateMeasureYSummary()
+    {
+        if (!IsMeasuringY || MeasureY1 is not { } y1 || MeasureY2 is not { } y2)
+        {
+            MeasureYSummary = IsMeasuringY ? "Cochez des courbes pour placer Y1 et Y2." : "";
+            return;
+        }
+        var axis = BuildLayout().FirstOrDefault(g => g.Graph == MeasureYGraph)?.Axes.FirstOrDefault(a => a.Key == MeasureYAxisKey);
+        var units = axis?.Curves.Select(c => c.Unit).Where(u => u.Length > 0).Distinct().ToList() ?? [];
+        string unit = units.Count == 1 ? " " + units[0] : "";
+        MeasureYSummary = $"Y1 = {Number(y1)}{unit}    Y2 = {Number(y2)}{unit}    Y2 − Y1 = {Number(y2 - y1)}{unit}";
+    }
 }

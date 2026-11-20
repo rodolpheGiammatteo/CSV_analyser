@@ -34,6 +34,8 @@ public enum PlotChange
     RedoView,
     /// <summary>Measurement cursors shown or hidden.</summary>
     Measure,
+    /// <summary>Number of columns of graphs.</summary>
+    Layout,
 }
 
 public partial class MainViewModel : ObservableObject, IChannelHost
@@ -237,6 +239,7 @@ public partial class MainViewModel : ObservableObject, IChannelHost
                 XAxisOptions.Add(new XAxisOption(channel));
 
             ForgetMeasureCursors();
+            ForgetMeasureY();
             Dataset = dataset;
             SelectedXAxis = timeOption ?? rowOption;
             Title = $"{Path.GetFileName(dataset.FilePath)} — {AppInfo.FullTitle}";
@@ -349,7 +352,7 @@ public partial class MainViewModel : ObservableObject, IChannelHost
         for (int i = Graphs.Count - 1; i >= 0 && Graphs.Count > 1; i--)
         {
             var graph = Graphs[i];
-            if (!PlottedChannels.Any(c => c.Graph == graph))
+            if (!graph.KeepWhenEmpty && !PlottedChannels.Any(c => c.Graph == graph))
                 Graphs.RemoveAt(i);
         }
         for (int i = 0; i < Graphs.Count; i++)
@@ -495,6 +498,11 @@ public partial class MainViewModel : ObservableObject, IChannelHost
             RefreshCursorGroups();
         if (IsMeasuring && change is PlotChange.Curves or PlotChange.Dataset or PlotChange.Appearance or PlotChange.XAxis)
             ScheduleMeasurements();
+        if (IsMeasuringY && change is PlotChange.Curves or PlotChange.Dataset or PlotChange.Appearance)
+        {
+            RefreshMeasureYChoices();
+            UpdateMeasureYSummary();
+        }
         if (!_suppressPlotEvents)
             PlotChanged?.Invoke(this, change);
     }

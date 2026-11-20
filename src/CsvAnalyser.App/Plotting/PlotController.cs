@@ -61,6 +61,8 @@ public sealed class PlotController : IPlotView
         public VerticalLine? Cursor { get; set; }
         public VerticalLine? LineA { get; set; }
         public VerticalLine? LineB { get; set; }
+        public int Column { get; set; }
+        public bool IsTop { get; set; }
     }
 
     public PlotController(WpfPlot view, MainViewModel vm)
@@ -113,6 +115,8 @@ public sealed class PlotController : IPlotView
         menu.AddSeparator();
         menu.Add("Placer le curseur A ici", plot => PlaceMeasureCursorAtMenu(plot, 'A'));
         menu.Add("Placer le curseur B ici", plot => PlaceMeasureCursorAtMenu(plot, 'B'));
+        menu.Add("Placer le curseur Y1 ici", plot => PlaceMeasureYAtMenu(plot, '1'));
+        menu.Add("Placer le curseur Y2 ici", plot => PlaceMeasureYAtMenu(plot, '2'));
         menu.AddSeparator();
         menu.Add("Spectre (FFT) de ce graphe…", plot => _vm.ShowSpectrumCommand.Execute(GraphOf(plot)));
         menu.Add("Titre, légende et axes…", plot => _vm.EditAxesCommand.Execute(GraphOf(plot)));
@@ -181,6 +185,9 @@ public sealed class PlotController : IPlotView
             case PlotChange.RedoView:
                 Redo();
                 break;
+            case PlotChange.Layout:
+                Rebuild(resetView: false);
+                break;
             case PlotChange.Measure:
                 UpdateMeasureLines();
                 _view.Refresh();
@@ -217,7 +224,10 @@ public sealed class PlotController : IPlotView
             var spec = specs[gi];
             var render = new GraphRender(spec.Graph, new Plot());
             _graphs.Add(render);
-            BuildGraph(render, spec, isBottom: gi == specs.Count - 1, isTop: gi == 0);
+            var cell = MainViewModel.GraphCell(gi, specs.Count, _vm.GraphColumns);
+            render.Column = cell.Column;
+            render.IsTop = cell.Row == 0;
+            BuildGraph(render, spec, isBottom: cell.Row == cell.RowsInColumn - 1, isTop: cell.Row == 0);
         }
 
         var plots = _graphs.Select(g => g.Plot).ToArray();
@@ -225,7 +235,7 @@ public sealed class PlotController : IPlotView
         _view.Multiplot.Reset(plots[0]);
         for (int i = 1; i < plots.Length; i++)
             _view.Multiplot.AddPlot(plots[i]);
-        _view.Multiplot.Layout = new ScottPlot.MultiplotLayouts.Rows();
+        _view.Multiplot.Layout = new ColumnsLayout(this);
         if (plots.Length > 1)
             _view.Multiplot.SharedAxes.ShareX(plots);
         if (!_view.Multiplot.PreRenderActions.Contains(_paddingMatcher))
@@ -730,6 +740,7 @@ public sealed class PlotController : IPlotView
         public void Invoke()
         {
             owner.KeepZerosAligned();
+            owner.PlaceMeasureYLabels();
             owner.MatchPaddings();
         }
     }
@@ -785,6 +796,30 @@ public sealed class PlotController : IPlotView
         }
     }
 
+    /// <summary>
+    /// Graphs in <see cref="MainViewModel.GraphColumns"/> columns: the first column top to bottom, then the next one;
+    /// each column shares its height equally between its graphs.
+    /// </summary>
+    private sealed class ColumnsLayout(PlotController owner) : IMultiplotLayout
+    {
+        public PixelRect[] GetSubplotRectangles(SubplotCollection subplots, PixelRect figureRect)
+        {
+            int count = subplots.Count;
+            var rects = new PixelRect[count];
+            int columns = Math.Clamp(owner._vm.GraphColumns, 1, Math.Max(1, count));
+            float width = figureRect.Width / columns;
+            for (int i = 0; i < count; i++)
+            {
+                var (column, row, rows) = MainViewModel.GraphCell(i, count, columns);
+                float height = figureRect.Height / rows;
+                float left = figureRect.Left + column * width;
+                float top = figureRect.Top + row * height;
+                rects[i] = new PixelRect(left, left + width, top + height, top);
+            }
+            return rects;
+        }
+    }
+
     private void MatchPaddings()
     {
         var plots = _view.Multiplot.GetPlots();
@@ -794,6 +829,8 @@ public sealed class PlotController : IPlotView
                 p.Layout.Default();
             return;
         }
+        if (plots.Length != _graphs.Count)
+            return;
 
         float width = (float)(_view.ActualWidth * _view.DisplayScale);
         float height = (float)(_view.ActualHeight * _view.DisplayScale);
@@ -804,18 +841,22 @@ public sealed class PlotController : IPlotView
         var engine = new ScottPlot.LayoutEngines.Automatic();
         using var paint = Paint.NewDisposablePaint();
         var layouts = new Layout[plots.Length];
-        float left = 0, right = 0;
+        // Same left and right padding inside each column, so the data areas of a column line up.
+        var left = new Dictionary<int, float>();
+        var right = new Dictionary<int, float>();
         for (int i = 0; i < plots.Length; i++)
         {
             layouts[i] = engine.GetLayout(rects[i], plots[i], paint);
-            left = Math.Max(left, layouts[i].DataRect.Left - rects[i].Left);
-            right = Math.Max(right, rects[i].Right - layouts[i].DataRect.Right);
+            int column = _graphs[i].Column;
+            left[column] = Math.Max(left.GetValueOrDefault(column), layouts[i].DataRect.Left - rects[i].Left);
+            right[column] = Math.Max(right.GetValueOrDefault(column), rects[i].Right - layouts[i].DataRect.Right);
         }
         for (int i = 0; i < plots.Length; i++)
         {
             float bottom = rects[i].Bottom - layouts[i].DataRect.Bottom;
             float top = layouts[i].DataRect.Top - rects[i].Top;
-            plots[i].Layout.Fixed(new PixelPadding(left, right, bottom, top));
+            int column = _graphs[i].Column;
+            plots[i].Layout.Fixed(new PixelPadding(left[column], right[column], bottom, top));
         }
     }
 
@@ -1031,9 +1072,9 @@ public sealed class PlotController : IPlotView
             double a = Snap(x.Min + (x.Max - x.Min) / 3), b = Snap(x.Min + 2 * (x.Max - x.Min) / 3);
             _vm.SetMeasureCursors(a, b);
         }
-        // Room above the upper graph for the "A" and "B" labels.
-        if (_graphs.Count > 0)
-            _graphs[0].Plot.Axes.Top.MinimumSize = on ? 22 * FontScale : 0;
+        // Room above the upper graph of each column for the "A" and "B" labels.
+        foreach (var g in _graphs.Where(g => g.IsTop))
+            g.Plot.Axes.Top.MinimumSize = on ? 22 * FontScale : 0;
         foreach (var g in _graphs)
         {
             if (g.LineA is { } la && g.LineB is { } lb)
@@ -1046,6 +1087,7 @@ public sealed class PlotController : IPlotView
                 }
             }
         }
+        UpdateMeasureYLines();
     }
 
     /// <summary>The X of the sample nearest to <paramref name="x"/>.</summary>
@@ -1060,6 +1102,8 @@ public sealed class PlotController : IPlotView
     /// <summary>"A" or "B" when the pixel is on (or within a few pixels of) that line in a graph.</summary>
     private char? MeasureLineAt(Pixel pixel)
     {
+        if (MeasureYLineAt(pixel) is { } y)
+            return y;
         if (!_vm.IsMeasuring || _vm.MeasureA is not { } a || _vm.MeasureB is not { } b)
             return null;
         float tolerance = 6 * _scale;
@@ -1090,6 +1134,11 @@ public sealed class PlotController : IPlotView
 
     private void DragMeasure(MouseEventArgs e)
     {
+        if (_measureDrag is '1' or '2')
+        {
+            DragMeasureY(e);
+            return;
+        }
         var plot = _graphs[0].Plot;
         double x = Snap(plot.GetCoordinates(ToPixel(e), plot.Axes.Bottom, plot.Axes.Left).X);
         if (_measureDrag == 'A')
@@ -1121,6 +1170,149 @@ public sealed class PlotController : IPlotView
         _view.Refresh();
     }
 
+    // ---------------------------------------------------------------- measurement cursors Y1 and Y2
+
+    private static readonly ScottPlot.Color MeasureColorY1 = ScottPlot.Color.FromHex("#E8590C");
+    private static readonly ScottPlot.Color MeasureColorY2 = ScottPlot.Color.FromHex("#6741D9");
+
+    private sealed record YCursors(GraphRender Graph, AxisRender Axis, HorizontalLine Line1, HorizontalLine Line2, Text Label1, Text Label2);
+
+    private YCursors? _yCursors;
+
+    /// <summary>
+    /// Draws Y1 and Y2 on the chosen axis (or the first axis of the first graph); places them at a third and two thirds of
+    /// the axis range when they have no position yet.
+    /// </summary>
+    private void UpdateMeasureYLines()
+    {
+        if (_yCursors is { } old)
+        {
+            foreach (var p in new IPlottable[] { old.Line1, old.Line2, old.Label1, old.Label2 })
+                old.Graph.Plot.Remove(p);
+            _yCursors = null;
+        }
+        if (!_vm.IsMeasuringY || _xs is null || _series.Count == 0)
+            return;
+
+        var graph = _graphs.FirstOrDefault(g => g.Graph == _vm.MeasureYGraph && g.Axes.Any(a => a.Key == _vm.MeasureYAxisKey));
+        var axis = graph?.Axes.First(a => a.Key == _vm.MeasureYAxisKey);
+        bool place = graph is null || _vm.MeasureY1 is null || _vm.MeasureY2 is null;
+        if (graph is null || axis is null)
+        {
+            graph = _graphs.FirstOrDefault(g => g.Axes.Count > 0);
+            if (graph is null)
+                return;
+            axis = graph.Axes[0];
+        }
+        double y1, y2;
+        if (place)
+        {
+            var r = axis.Axis.Range;
+            y1 = r.Min + (r.Max - r.Min) / 3;
+            y2 = r.Min + 2 * (r.Max - r.Min) / 3;
+        }
+        else
+        {
+            y1 = _vm.MeasureY1!.Value;
+            y2 = _vm.MeasureY2!.Value;
+        }
+        _vm.SetMeasureY(graph.Graph, axis.Key, y1, y2);
+
+        _yCursors = new YCursors(graph, axis,
+            AddMeasureYLine(graph.Plot, axis.Axis, y1, MeasureColorY1),
+            AddMeasureYLine(graph.Plot, axis.Axis, y2, MeasureColorY2),
+            AddMeasureYLabel(graph.Plot, axis.Axis, "Y1", MeasureColorY1),
+            AddMeasureYLabel(graph.Plot, axis.Axis, "Y2", MeasureColorY2));
+        PlaceMeasureYLabels();
+    }
+
+    private HorizontalLine AddMeasureYLine(Plot plot, IYAxis axis, double y, ScottPlot.Color color)
+    {
+        var line = plot.Add.HorizontalLine(y);
+        line.Axes.YAxis = axis;
+        line.Color = color;
+        line.LineWidth = 1.5f * _scale;
+        return line;
+    }
+
+    private Text AddMeasureYLabel(Plot plot, IYAxis axis, string name, ScottPlot.Color color)
+    {
+        var text = plot.Add.Text(name, 0, 0);
+        text.Axes.YAxis = axis;
+        text.Alignment = Alignment.LowerRight;
+        text.LabelStyle.FontSize = 11 * FontScale;
+        text.LabelStyle.Bold = true;
+        text.LabelStyle.ForeColor = ScottPlot.Colors.White;
+        text.LabelStyle.BackgroundColor = color;
+        text.LabelStyle.Padding = 2 * _scale;
+        text.LabelStyle.BorderRadius = 3 * _scale;
+        return text;
+    }
+
+    /// <summary>Before each render: the names Y1/Y2 sit at the right end of their line, whatever the X zoom.</summary>
+    private void PlaceMeasureYLabels()
+    {
+        if (_yCursors is not { } y)
+            return;
+        double right = y.Graph.Plot.Axes.Bottom.Range.Max;
+        y.Label1.Location = new Coordinates(right, y.Line1.Y);
+        y.Label2.Location = new Coordinates(right, y.Line2.Y);
+        y.Label1.OffsetX = y.Label2.OffsetX = -4 * _scale;
+    }
+
+    /// <summary>'1' or '2' when the pixel is on Y1 or Y2 (within a few pixels).</summary>
+    private char? MeasureYLineAt(Pixel pixel)
+    {
+        if (_yCursors is not { } y)
+            return null;
+        var plot = y.Graph.Plot;
+        var r = plot.LastRender.DataRect;
+        if (pixel.X < r.Left || pixel.X > r.Right)
+            return null;
+        float p1 = plot.GetPixel(new Coordinates(0, y.Line1.Y), plot.Axes.Bottom, y.Axis.Axis).Y;
+        float p2 = plot.GetPixel(new Coordinates(0, y.Line2.Y), plot.Axes.Bottom, y.Axis.Axis).Y;
+        float d1 = Math.Abs(pixel.Y - p1), d2 = Math.Abs(pixel.Y - p2);
+        if (Math.Min(d1, d2) > 6 * _scale)
+            return null;
+        return d1 <= d2 ? '1' : '2';
+    }
+
+    private void DragMeasureY(MouseEventArgs e)
+    {
+        if (_yCursors is not { } y)
+            return;
+        var plot = y.Graph.Plot;
+        double value = plot.GetCoordinates(ToPixel(e), plot.Axes.Bottom, y.Axis.Axis).Y;
+        if (_measureDrag == '1')
+            y.Line1.Y = value;
+        else
+            y.Line2.Y = value;
+        _vm.SetMeasureY(y.Graph.Graph, y.Axis.Key, y.Line1.Y, y.Line2.Y);
+        _view.Refresh();
+    }
+
+    /// <summary>Context menu: puts Y1 or Y2 where the menu was opened, on that graph (its measured axis, else its first axis).</summary>
+    private void PlaceMeasureYAtMenu(Plot plot, char which)
+    {
+        var g = _graphs.FirstOrDefault(x => x.Plot == plot);
+        if (g is null || g.Axes.Count == 0)
+            return;
+        var axis = g.Graph == _vm.MeasureYGraph && g.Axes.FirstOrDefault(a => a.Key == _vm.MeasureYAxisKey) is { } current
+            ? current
+            : g.Axes[0];
+        double value = plot.GetCoordinates(_lastMenuPixel, plot.Axes.Bottom, axis.Axis).Y;
+        bool sameAxis = g.Graph == _vm.MeasureYGraph && axis.Key == _vm.MeasureYAxisKey && _vm.MeasureY1 is not null;
+        var r = axis.Axis.Range;
+        double other1 = sameAxis ? _vm.MeasureY1!.Value : r.Min + (r.Max - r.Min) / 3;
+        double other2 = sameAxis ? _vm.MeasureY2!.Value : r.Min + 2 * (r.Max - r.Min) / 3;
+        _vm.SetMeasureY(g.Graph, axis.Key, which == '1' ? value : other1, which == '2' ? value : other2);
+        if (!_vm.IsMeasuringY)
+            _vm.IsMeasuringY = true; // draws the lines at the positions just set
+        else
+            UpdateMeasureYLines();
+        _view.Refresh();
+    }
+
     // ---------------------------------------------------------------- cursor
 
     private void OnMouseMove(object sender, MouseEventArgs e)
@@ -1136,7 +1328,9 @@ public sealed class PlotController : IPlotView
             DragMeasure(e); // the hover cursor below follows the dragged line
 
         var pixel = ToPixel(e);
-        _view.Cursor = _measureDrag is not null || MeasureLineAt(pixel) is not null ? Cursors.SizeWE
+        var lineUnder = _measureDrag ?? MeasureLineAt(pixel);
+        _view.Cursor = lineUnder is '1' or '2' ? Cursors.SizeNS
+            : lineUnder is not null ? Cursors.SizeWE
             : LegendAt(pixel) is not null ? Cursors.SizeAll
             : null;
         var plot = _graphs.Select(g => g.Plot).FirstOrDefault(p =>

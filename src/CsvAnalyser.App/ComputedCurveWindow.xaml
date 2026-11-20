@@ -5,6 +5,7 @@
                  xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
                  xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
                  xmlns:vm="clr-namespace:CsvAnalyser.App.ViewModels"
+                 xmlns:controls="clr-namespace:CsvAnalyser.App.Controls"
                  mc:Ignorable="d"
                  d:DataContext="{d:DesignInstance Type=vm:ComputedCurveViewModel}"
                  Title="{Binding Title}"
@@ -47,14 +48,14 @@
             <!-- Formule -->
             <StackPanel Margin="0,16,0,0" Visibility="{Binding IsFormula, Converter={StaticResource BoolToVisibility}}">
                 <DockPanel Margin="0,0,0,6">
-                    <ComboBox x:Name="InsertCombo" DockPanel.Dock="Right" Width="220"
-                              ItemsSource="{Binding Curves}"
-                              DisplayMemberPath="LegendText"
-                              ToolTip="Insère la courbe choisie dans la formule"
-                              SelectionChanged="OnInsertCurve" />
+                    <controls:SearchPicker DockPanel.Dock="Right" Width="240"
+                                           ItemsSource="{Binding Curves}"
+                                           DisplayMemberPath="LegendText"
+                                           Placeholder="Insérer une courbe…"
+                                           KeepSelection="False"
+                                           ToolTip="Insère la courbe choisie dans la formule, à la position du curseur"
+                                           Picked="OnInsertCurve" />
                     <TextBlock VerticalAlignment="Center" FontWeight="SemiBold" Text="Formule" />
-                    <TextBlock Margin="12,0,8,0" VerticalAlignment="Center" HorizontalAlignment="Right"
-                               Foreground="{DynamicResource AppSecondaryTextBrush}" Text="Insérer une courbe" />
                 </DockPanel>
                 <TextBox x:Name="ExpressionBox"
                          MinHeight="64"
@@ -63,15 +64,97 @@
                          TextWrapping="Wrap"
                          Text="{Binding Expression, UpdateSourceTrigger=PropertyChanged}" />
                 <TextBlock Style="{StaticResource Help}" FontFamily="Consolas" Text="{Binding FormulaCheck}" />
-                <TextBlock Style="{StaticResource Help}" Text="{Binding FormulaHelp}" />
+                <!-- Aide sur l'écriture des formules -->
+                <Border Margin="0,10,0,0" Padding="14,10" CornerRadius="6" BorderThickness="1"
+                        Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+                        BorderBrush="{DynamicResource AppDisabledTextBrush}">
+                    <Grid>
+                        <Grid.Resources>
+                            <Style x:Key="Term" TargetType="TextBlock">
+                                <Setter Property="Margin" Value="0,3,16,3" />
+                                <Setter Property="FontWeight" Value="SemiBold" />
+                                <Setter Property="VerticalAlignment" Value="Top" />
+                            </Style>
+                            <Style x:Key="Code" TargetType="TextBlock">
+                                <Setter Property="Margin" Value="0,3,0,3" />
+                                <Setter Property="FontFamily" Value="Consolas" />
+                                <Setter Property="TextWrapping" Value="Wrap" />
+                            </Style>
+                            <Style x:Key="Note" TargetType="Run">
+                                <Setter Property="FontFamily" Value="Segoe UI" />
+                                <Setter Property="Foreground" Value="{DynamicResource AppSecondaryTextBrush}" />
+                            </Style>
+                        </Grid.Resources>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+
+                        <TextBlock Grid.Row="0" Style="{StaticResource Term}" Text="Courbes" />
+                        <TextBlock Grid.Row="0" Grid.Column="1" Style="{StaticResource Code}">
+                            <Run Text="[Nom de la courbe]" /><Run Style="{StaticResource Note}" Text="   entre crochets (ou « Insérer une courbe »)" />
+                        </TextBlock>
+
+                        <TextBlock Grid.Row="1" Style="{StaticResource Term}" Text="Opérations" />
+                        <TextBlock Grid.Row="1" Grid.Column="1" Style="{StaticResource Code}">
+                            <Run Text="+  -  *  /  ^  ( )" /><Run Style="{StaticResource Note}" Text="   ^ = puissance" />
+                        </TextBlock>
+
+                        <TextBlock Grid.Row="2" Style="{StaticResource Term}" Text="Comparaisons" />
+                        <TextBlock Grid.Row="2" Grid.Column="1" Style="{StaticResource Code}">
+                            <Run Text="&lt;  &gt;  &lt;=  &gt;=  ==  !=" /><Run Style="{StaticResource Note}" Text="   donnent 1 si vrai, 0 sinon" />
+                        </TextBlock>
+
+                        <TextBlock Grid.Row="3" Style="{StaticResource Term}" Text="Condition" />
+                        <TextBlock Grid.Row="3" Grid.Column="1" Style="{StaticResource Code}" Text="if(condition ; si vrai ; si faux)" />
+
+                        <TextBlock Grid.Row="4" Style="{StaticResource Term}" Text="Fonctions" />
+                        <TextBlock Grid.Row="4" Grid.Column="1" Style="{StaticResource Code}"
+                                   Text="abs  sqrt  exp  ln  log10  sin  cos  tan  asin  acos  atan  atan2  pow  min  max  round  floor  ceil  sign" />
+
+                        <TextBlock Grid.Row="5" Style="{StaticResource Term}" Text="Valeurs" />
+                        <TextBlock Grid.Row="5" Grid.Column="1" Style="{StaticResource Code}">
+                            <Run Text="t" /><Run Style="{StaticResource Note}" Text=" = temps   " /><Run Text="pi  e" /><Run Style="{StaticResource Note}" Text="   décimales avec un point : " /><Run Text="1.5" />
+                        </TextBlock>
+
+                        <TextBlock Grid.Row="6" Style="{StaticResource Term}" Text="Arguments" />
+                        <TextBlock Grid.Row="6" Grid.Column="1" Style="{StaticResource Code}">
+                            <Run Text="max([A] ; [B])" /><Run Style="{StaticResource Note}" Text="   séparés par ; ou ," />
+                        </TextBlock>
+
+                        <TextBlock Grid.Row="7" Margin="0,8,16,3" Style="{StaticResource Term}" Text="Exemples" />
+                        <StackPanel Grid.Row="7" Grid.Column="1" Margin="0,5,0,0">
+                            <TextBlock Style="{StaticResource Code}">
+                                <Run Text="[Courant] * [Tension] / 1000" /><Run Style="{StaticResource Note}" Text="   puissance en kW" />
+                            </TextBlock>
+                            <TextBlock Style="{StaticResource Code}">
+                                <Run Text="sqrt([X]^2 + [Y]^2)" /><Run Style="{StaticResource Note}" Text="   norme" />
+                            </TextBlock>
+                            <TextBlock Style="{StaticResource Code}">
+                                <Run Text="if([P] &gt; 0 ; [P] ; 0)" /><Run Style="{StaticResource Note}" Text="   valeurs négatives mises à 0" />
+                            </TextBlock>
+                        </StackPanel>
+                    </Grid>
+                </Border>
             </StackPanel>
 
             <!-- Filtres -->
             <StackPanel Margin="0,16,0,0" Visibility="{Binding IsFilter, Converter={StaticResource BoolToVisibility}}">
                 <TextBlock Style="{StaticResource SectionTitle}" Text="Courbe à traiter" />
-                <ComboBox ItemsSource="{Binding Curves}"
-                          DisplayMemberPath="LegendText"
-                          SelectedItem="{Binding Source}" />
+                <controls:SearchPicker ItemsSource="{Binding Curves}"
+                                       DisplayMemberPath="LegendText"
+                                       Placeholder="Choisir une courbe…"
+                                       SelectedItem="{Binding Source}" />
                 <TextBlock Style="{StaticResource Help}" Text="{Binding KindHelp}" />
                 <StackPanel Margin="0,12,0,0" Visibility="{Binding HasParameter, Converter={StaticResource BoolToVisibility}}">
                     <TextBlock Style="{StaticResource SectionTitle}" Text="{Binding ParameterLabel}" />

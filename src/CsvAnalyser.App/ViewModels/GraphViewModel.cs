@@ -47,6 +47,9 @@ public sealed partial class GraphViewModel : ObservableObject
         _onAppearanceChanged = onAppearanceChanged;
     }
 
+    /// <summary>Not removed when it has no curve (set while the graphs window is open).</summary>
+    public bool KeepWhenEmpty { get; set; }
+
     /// <summary>Stable identity (the number changes when an upper graph is removed).</summary>
     public int Id { get; }
 

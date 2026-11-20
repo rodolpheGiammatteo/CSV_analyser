@@ -29,6 +29,9 @@ public sealed class ViewConfiguration
 
     public List<GraphConfig> Graphs { get; set; } = [];
 
+    /// <summary>Number of columns of graphs (null = 1).</summary>
+    public int? GraphColumns { get; set; }
+
     /// <summary>Plotted curves (in legend order) and other curves whose settings were changed.</summary>
     public List<CurveConfig> Curves { get; set; } = [];
 
@@ -143,6 +146,18 @@ public sealed class MeasureConfig
     public double? A { get; set; }
 
     public double? B { get; set; }
+
+    /// <summary>Horizontal cursors Y1 and Y2 shown.</summary>
+    public bool YEnabled { get; set; }
+
+    /// <summary>Index of the graph measured by Y1/Y2, and the key of its axis.</summary>
+    public int? YGraph { get; set; }
+
+    public string? YAxis { get; set; }
+
+    public double? Y1 { get; set; }
+
+    public double? Y2 { get; set; }
 }
 
 public sealed class GraphConfig

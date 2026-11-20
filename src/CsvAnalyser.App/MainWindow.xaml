@@ -6,6 +6,7 @@
                  xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
                  xmlns:scottplot="clr-namespace:ScottPlot.WPF;assembly=ScottPlot.WPF"
                  xmlns:vm="clr-namespace:CsvAnalyser.App.ViewModels"
+                 xmlns:controls="clr-namespace:CsvAnalyser.App.Controls"
                  xmlns:sys="clr-namespace:System;assembly=System.Runtime"
                  mc:Ignorable="d"
                  d:DataContext="{d:DesignInstance Type=vm:MainViewModel}"
@@ -43,6 +44,7 @@
         <KeyBinding Modifiers="Ctrl" Key="S" Command="{Binding SaveConfigurationCommand}" />
         <KeyBinding Modifiers="Ctrl" Key="E" Command="{Binding ExportCommand}" />
         <KeyBinding Modifiers="Ctrl" Key="M" Command="{Binding ToggleMeasureCommand}" />
+        <KeyBinding Modifiers="Ctrl+Shift" Key="M" Command="{Binding ToggleMeasureYCommand}" />
     </ui:FluentWindow.InputBindings>
     <Grid Background="{DynamicResource ApplicationBackgroundBrush}">
         <Grid.RowDefinitions>
@@ -101,11 +103,11 @@
                 </ui:Button>
                 <StackPanel Margin="16,2,0,2" Orientation="Horizontal">
                     <TextBlock Margin="0,0,8,0" VerticalAlignment="Center" Text="Axe X" />
-                    <ComboBox Width="220"
-                              ItemsSource="{Binding XAxisOptions}"
-                              DisplayMemberPath="Label"
-                              SelectedItem="{Binding SelectedXAxis}"
-                              IsEnabled="{Binding HasData}" />
+                    <controls:SearchPicker Width="220"
+                                           ItemsSource="{Binding XAxisOptions}"
+                                           DisplayMemberPath="Label"
+                                           SelectedItem="{Binding SelectedXAxis}"
+                                           IsEnabled="{Binding HasData}" />
                 </StackPanel>
                 <ui:Button Margin="12,2,0,2"
                            Content="Ajuster"
@@ -158,7 +160,21 @@
                               IsEnabled="{Binding HasData}">
                     <StackPanel Orientation="Horizontal">
                         <ui:SymbolIcon Margin="0,0,8,0" Symbol="Ruler24" />
-                        <TextBlock VerticalAlignment="Center" Text="Mesures" />
+                        <TextBlock VerticalAlignment="Center" Text="Mesures X" />
+                    </StackPanel>
+                </ToggleButton>
+                <ToggleButton Margin="4,2,0,2"
+                              Padding="11,5"
+                              ToolTip="Deux curseurs horizontaux Y1 et Y2 à faire glisser sur un graphe : niveaux et écart sur l'axe Y choisi (Ctrl+Maj+M)"
+                              IsChecked="{Binding IsMeasuringY}"
+                              IsEnabled="{Binding HasData}">
+                    <StackPanel Orientation="Horizontal">
+                        <ui:SymbolIcon Margin="0,0,8,0" Symbol="Ruler24" RenderTransformOrigin="0.5,0.5">
+                            <ui:SymbolIcon.RenderTransform>
+                                <RotateTransform Angle="90" />
+                            </ui:SymbolIcon.RenderTransform>
+                        </ui:SymbolIcon>
+                        <TextBlock VerticalAlignment="Center" Text="Mesures Y" />
                     </StackPanel>
                 </ToggleButton>
                 <ui:Button Margin="8,2,0,2"
@@ -405,11 +421,11 @@
                                Visibility="{Binding ShowPlotHint, Converter={StaticResource BoolToVisibility}}" />
                 </Grid>
             </Border>
-                <!-- Mesures entre les curseurs A et B -->
+                <!-- Mesures : curseurs A et B (axe X), Y1 et Y2 (axe Y) -->
                 <Border Grid.Row="1" Margin="0,0,0,8" Padding="12,8" CornerRadius="6" BorderThickness="1"
                         Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
                         BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
-                        Visibility="{Binding IsMeasuring, Converter={StaticResource BoolToVisibility}}">
+                        Visibility="{Binding ShowMeasurePanel, Converter={StaticResource BoolToVisibility}}">
                     <Border.LayoutTransform>
                         <ScaleTransform ScaleX="{Binding UiScale}" ScaleY="{Binding UiScale}" />
                     </Border.LayoutTransform>
@@ -427,18 +443,38 @@
                         </Style>
                     </Border.Resources>
                     <DockPanel Grid.IsSharedSizeScope="True">
-                        <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
+                        <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6"
+                                   Visibility="{Binding IsMeasuringY, Converter={StaticResource BoolToVisibility}}">
                             <ui:Button DockPanel.Dock="Right" Padding="4" MinHeight="0"
                                        Appearance="Transparent" BorderThickness="0"
                                        Icon="{ui:SymbolIcon Dismiss16}"
-                                       ToolTip="Masquer les curseurs de mesure (Ctrl+M)"
+                                       ToolTip="Masquer les curseurs Y1 et Y2 (Ctrl+Maj+M)"
+                                       Command="{Binding ToggleMeasureYCommand}" />
+                            <TextBlock VerticalAlignment="Center" FontWeight="SemiBold" Text="Mesures entre Y1 et Y2" />
+                            <ComboBox Margin="12,0,0,0" MinWidth="220" HorizontalAlignment="Left" VerticalAlignment="Center"
+                                      ToolTip="L'axe Y sur lequel Y1 et Y2 sont mesurés (aussi : clic droit sur un graphe, « Placer le curseur Y1 ici »)"
+                                      ItemsSource="{Binding MeasureYAxisChoices}"
+                                      SelectedValuePath="Value"
+                                      DisplayMemberPath="Label"
+                                      SelectedValue="{Binding MeasureYAxisId}" />
+                        </DockPanel>
+                        <TextBlock DockPanel.Dock="Top" Margin="0,0,0,8" FontFamily="Consolas" TextWrapping="Wrap"
+                                   Text="{Binding MeasureYSummary}"
+                                   Visibility="{Binding IsMeasuringY, Converter={StaticResource BoolToVisibility}}" />
+                        <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6"
+                                   Visibility="{Binding IsMeasuring, Converter={StaticResource BoolToVisibility}}">
+                            <ui:Button DockPanel.Dock="Right" Padding="4" MinHeight="0"
+                                       Appearance="Transparent" BorderThickness="0"
+                                       Icon="{ui:SymbolIcon Dismiss16}"
+                                       ToolTip="Masquer les curseurs A et B (Ctrl+M)"
                                        Command="{Binding ToggleMeasureCommand}" />
                             <TextBlock VerticalAlignment="Center" FontWeight="SemiBold" Text="Mesures entre A et B" />
                             <TextBlock Margin="16,0,8,0" VerticalAlignment="Center" FontFamily="Consolas"
                                        Foreground="{DynamicResource AppSecondaryTextBrush}"
                                        TextWrapping="Wrap" Text="{Binding MeasureSummary}" />
                         </DockPanel>
-                        <ScrollViewer MaxHeight="190" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">
+                        <ScrollViewer MaxHeight="190" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"
+                                      Visibility="{Binding IsMeasuring, Converter={StaticResource BoolToVisibility}}">
                         <StackPanel>
                         <Grid>
                             <Grid.ColumnDefinitions>
@@ -453,13 +489,13 @@
                                 <ColumnDefinition Width="Auto" SharedSizeGroup="M8" />
                             </Grid.ColumnDefinitions>
                             <TextBlock Grid.Column="0" MinWidth="160" Margin="0,0,0,2" FontWeight="SemiBold" Foreground="{DynamicResource AppSecondaryTextBrush}" Text="Courbe" />
-                            <TextBlock Grid.Column="1" MinWidth="70" Style="{StaticResource MeasureHead}" Foreground="#D6336C" Text="en A" />
-                            <TextBlock Grid.Column="2" MinWidth="70" Style="{StaticResource MeasureHead}" Foreground="#0C8599" Text="en B" />
+                            <TextBlock Grid.Column="1" MinWidth="70" Style="{StaticResource MeasureHead}" Foreground="#D6336C" Text="A" />
+                            <TextBlock Grid.Column="2" MinWidth="70" Style="{StaticResource MeasureHead}" Foreground="#0C8599" Text="B" />
                             <TextBlock Grid.Column="3" MinWidth="70" Style="{StaticResource MeasureHead}" Text="B − A" />
                             <TextBlock Grid.Column="4" MinWidth="70" Style="{StaticResource MeasureHead}" Text="Min" />
                             <TextBlock Grid.Column="5" MinWidth="70" Style="{StaticResource MeasureHead}" Text="Max" />
                             <TextBlock Grid.Column="6" MinWidth="70" Style="{StaticResource MeasureHead}" Text="Moyenne" />
-                            <TextBlock Grid.Column="7" MinWidth="70" Style="{StaticResource MeasureHead}" Text="Efficace" ToolTip="Valeur efficace (RMS)" />
+                            <TextBlock Grid.Column="7" MinWidth="70" Style="{StaticResource MeasureHead}" Text="RMS" ToolTip="Valeur efficace (RMS)" />
                             <TextBlock Grid.Column="8" MinWidth="70" Style="{StaticResource MeasureHead}" Text="Crête-crête" />
                         </Grid>
                             <ItemsControl ItemsSource="{Binding MeasureRows}" Focusable="False">

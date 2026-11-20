@@ -24,16 +24,15 @@ public partial class ComputedCurveWindow : FluentWindow
     }
 
     /// <summary>Inserts "[curve]" at the caret of the formula, then clears the picker.</summary>
-    private void OnInsertCurve(object sender, SelectionChangedEventArgs e)
+    private void OnInsertCurve(object? sender, object picked)
     {
-        if (InsertCombo.SelectedItem is not ChannelItemViewModel item)
+        if (picked is not ChannelItemViewModel item)
             return;
         string reference = ComputedCurveViewModel.Reference(item);
         int caret = ExpressionBox.CaretIndex;
         ExpressionBox.Text = ExpressionBox.Text.Insert(caret, reference);
         ExpressionBox.CaretIndex = caret + reference.Length;
-        InsertCombo.SelectedItem = null;
-        Keyboard.Focus(ExpressionBox);
+        Dispatcher.BeginInvoke(() => Keyboard.Focus(ExpressionBox), System.Windows.Threading.DispatcherPriority.Input);
     }
 
     private void OnOk(object sender, RoutedEventArgs e)

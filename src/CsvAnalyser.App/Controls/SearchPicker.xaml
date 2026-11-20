@@ -1,0 +1,52 @@
+<UserControl x:Class="CsvAnalyser.App.Controls.SearchPicker"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+             x:Name="Root">
+    <Grid>
+        <!-- Looks like a combo box; opens a list with a search box. -->
+        <ui:Button x:Name="OpenButton"
+                   HorizontalAlignment="Stretch"
+                   HorizontalContentAlignment="Stretch"
+                   Padding="11,5,8,6"
+                   Click="OnOpen">
+            <DockPanel>
+                <ui:SymbolIcon DockPanel.Dock="Right" Margin="8,0,0,0" FontSize="12" Symbol="ChevronDown24" />
+                <TextBlock x:Name="SelectedText" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+            </DockPanel>
+        </ui:Button>
+        <Popup x:Name="DropDown"
+               PlacementTarget="{Binding ElementName=OpenButton}"
+               Placement="Bottom"
+               StaysOpen="False"
+               AllowsTransparency="True"
+               Opened="OnPopupOpened">
+            <Border x:Name="DropDownBorder"
+                    Margin="0,2,0,0"
+                    Padding="6"
+                    CornerRadius="6"
+                    BorderThickness="1"
+                    Background="{DynamicResource AppMenuBackground}"
+                    BorderBrush="{DynamicResource AppMenuBorder}">
+                <DockPanel>
+                    <ui:TextBox x:Name="SearchBox"
+                                DockPanel.Dock="Top"
+                                PlaceholderText="Rechercher…"
+                                Icon="{ui:SymbolIcon Search24}"
+                                ClearButtonEnabled="True"
+                                TextChanged="OnSearchChanged"
+                                PreviewKeyDown="OnSearchKeyDown" />
+                    <TextBlock x:Name="NoMatch" DockPanel.Dock="Top" Margin="6,8,6,4" Visibility="Collapsed"
+                               Foreground="{DynamicResource AppSecondaryTextBrush}" Text="Aucune courbe ne correspond." />
+                    <ListBox x:Name="List"
+                             Margin="0,6,0,0"
+                             MaxHeight="340"
+                             Foreground="{DynamicResource AppMenuForeground}"
+                             VirtualizingPanel.IsVirtualizing="True"
+                             PreviewMouseLeftButtonUp="OnListClick"
+                             PreviewKeyDown="OnListKeyDown" />
+                </DockPanel>
+            </Border>
+        </Popup>
+    </Grid>
+</UserControl>

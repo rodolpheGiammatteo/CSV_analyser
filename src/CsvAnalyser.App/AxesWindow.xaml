@@ -3,10 +3,11 @@
                  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                  xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
                  xmlns:vm="clr-namespace:CsvAnalyser.App.ViewModels"
+                 xmlns:controls="clr-namespace:CsvAnalyser.App.Controls"
                  Title="Graphes et axes"
-                 Width="720"
+                 Width="800"
                  SizeToContent="Height"
-                 MaxHeight="780"
+                 MaxHeight="860"
                  ResizeMode="NoResize"
                  ShowInTaskbar="False"
                  WindowStartupLocation="CenterOwner"
@@ -19,10 +20,23 @@
             <Setter Property="Foreground" Value="{DynamicResource AppSecondaryTextBrush}" />
             <Setter Property="TextWrapping" Value="Wrap" />
         </Style>
+        <Style x:Key="SectionTitle" TargetType="TextBlock">
+            <Setter Property="Margin" Value="0,14,0,4" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Foreground" Value="{DynamicResource AppSecondaryTextBrush}" />
+        </Style>
+        <Style x:Key="IconButton" TargetType="ui:Button" BasedOn="{StaticResource {x:Type ui:Button}}">
+            <Setter Property="Padding" Value="6" />
+            <Setter Property="MinHeight" Value="0" />
+            <Setter Property="Margin" Value="4,0,0,0" />
+            <Setter Property="Appearance" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+        </Style>
     </ui:FluentWindow.Resources>
 
     <Grid Background="{DynamicResource ApplicationBackgroundBrush}">
         <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
@@ -31,8 +45,29 @@
 
         <ui:TitleBar Grid.Row="0" Title="Graphes et axes" ShowMinimize="False" ShowMaximize="False" />
 
-        <!-- Aide : deux lignes alignées en colonnes -->
-        <Grid Grid.Row="1" Margin="24,0,24,14">
+        <!-- Disposition : nouveau graphe, nombre de colonnes -->
+        <DockPanel Grid.Row="1" Margin="24,0,24,12">
+            <ui:Button DockPanel.Dock="Left"
+                       Appearance="Primary"
+                       Content="Nouveau graphe"
+                       Icon="{ui:SymbolIcon Add24}"
+                       ToolTip="Ajoute un graphe vide en bas, puis ajoutez-lui des courbes"
+                       Click="OnAddGraph" />
+            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                <TextBlock Margin="0,0,10,0" VerticalAlignment="Center" Text="Disposition" />
+                <ComboBox x:Name="ColumnsCombo" Width="150"
+                          ToolTip="Les graphes remplissent la première colonne de haut en bas, puis la suivante"
+                          ItemsSource="{x:Static vm:MainViewModel.GraphColumnChoices}"
+                          SelectedValuePath="Value"
+                          DisplayMemberPath="Label"
+                          SelectedValue="{Binding GraphColumns}" />
+            </StackPanel>
+            <TextBlock Margin="16,0,16,0" VerticalAlignment="Center" Style="{StaticResource Hint}"
+                       Text="Flèches : changer l'ordre. Liste « Graphe » d'une courbe : la déplacer." />
+        </DockPanel>
+
+        <!-- Aide sur les axes -->
+        <Grid Grid.Row="2" Margin="24,0,24,12">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="*" />
@@ -42,18 +77,18 @@
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
-            <TextBlock Grid.Row="0" Grid.Column="0" Margin="0,0,14,4" FontWeight="SemiBold" Text="Auto" />
-            <TextBlock Grid.Row="0" Grid.Column="1" Margin="0,0,0,4" Style="{StaticResource Hint}"
+            <TextBlock Grid.Row="0" Grid.Column="0" Margin="0,0,14,2" FontWeight="SemiBold" Text="Auto" />
+            <TextBlock Grid.Row="0" Grid.Column="1" Margin="0,0,0,2" Style="{StaticResource Hint}"
                        Text="L'axe s'ajuste aux courbes visibles (Ajuster, clic molette)." />
-            <TextBlock Grid.Row="1" Grid.Column="0" Margin="0,0,14,4" FontWeight="SemiBold" Text="Manuel" />
-            <TextBlock Grid.Row="1" Grid.Column="1" Margin="0,0,0,4" Style="{StaticResource Hint}"
+            <TextBlock Grid.Row="1" Grid.Column="0" Margin="0,0,14,2" FontWeight="SemiBold" Text="Manuel" />
+            <TextBlock Grid.Row="1" Grid.Column="1" Margin="0,0,0,2" Style="{StaticResource Hint}"
                        Text="Les bornes saisies sont reprises à chaque ajustement ; le zoom à la souris reste possible." />
             <TextBlock Grid.Row="2" Grid.Column="0" Margin="0,0,14,0" FontWeight="SemiBold" Text="Unités" />
             <TextBlock Grid.Row="2" Grid.Column="1" Style="{StaticResource Hint}"
                        Text="Un axe par unité. Pour regrouper ou séparer : Réglages de la courbe → Axe Y." />
         </Grid>
 
-        <ScrollViewer Grid.Row="2" Margin="24,0,12,0" Padding="0,0,12,0" VerticalScrollBarVisibility="Auto">
+        <ScrollViewer x:Name="Scroller" Grid.Row="3" Margin="24,0,12,0" Padding="0,0,12,0" VerticalScrollBarVisibility="Auto">
             <ItemsControl x:Name="GraphList">
                 <ItemsControl.ItemTemplate>
                     <DataTemplate DataType="{x:Type vm:GraphAxesViewModel}">
@@ -61,48 +96,97 @@
                                 Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
                                 BorderBrush="{DynamicResource AppDisabledTextBrush}">
                             <StackPanel>
-                                <!-- Graphe : titre, légende, zéros -->
+                                <!-- En-tête : numéro, titre, ordre, suppression -->
                                 <Grid>
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="90" />
                                         <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="16" />
                                         <ColumnDefinition Width="Auto" />
-                                        <ColumnDefinition Width="190" />
                                     </Grid.ColumnDefinitions>
-                                    <Grid.RowDefinitions>
-                                        <RowDefinition Height="Auto" />
-                                        <RowDefinition Height="8" />
-                                        <RowDefinition Height="Auto" />
-                                    </Grid.RowDefinitions>
-                                    <TextBlock Grid.Row="0" Grid.Column="0" VerticalAlignment="Center" FontSize="15" FontWeight="SemiBold"
+                                    <TextBlock Grid.Column="0" VerticalAlignment="Center" FontSize="15" FontWeight="SemiBold"
                                                Text="{Binding Graph.Number, StringFormat=Graphe {0}}" />
-                                    <ui:TextBox Grid.Row="0" Grid.Column="1" Grid.ColumnSpan="4"
+                                    <ui:TextBox Grid.Column="1"
                                                 PlaceholderText="Titre (facultatif, affiché au-dessus du graphe)"
                                                 Text="{Binding Graph.Name, UpdateSourceTrigger=PropertyChanged}" />
-                                    <!-- Hidden rather than disabled: disabled WPF-UI controls are invisible here. -->
-                                    <CheckBox Grid.Row="2" Grid.Column="1" VerticalAlignment="Center"
-                                              Content="Aligner les zéros des axes Y"
-                                              ToolTip="Le zéro de chaque axe Y est placé à la même hauteur"
-                                              IsChecked="{Binding Graph.AlignZeros}"
-                                              Visibility="{Binding CanAlignZeros, Converter={StaticResource BoolToVisibility}}" />
-                                    <TextBlock Grid.Row="2" Grid.Column="3" Margin="0,0,10,0" VerticalAlignment="Center" Text="Légende" />
-                                    <ComboBox Grid.Row="2" Grid.Column="4"
+                                    <StackPanel Grid.Column="2" Margin="8,0,0,0" Orientation="Horizontal">
+                                        <!-- Hidden rather than disabled: disabled WPF-UI buttons are invisible here. -->
+                                        <ui:Button Style="{StaticResource IconButton}" Icon="{ui:SymbolIcon ArrowUp24}"
+                                                   ToolTip="Monter ce graphe"
+                                                   Visibility="{Binding CanMoveUp, Converter={StaticResource BoolToVisibility}}"
+                                                   Click="OnMoveUp" />
+                                        <ui:Button Style="{StaticResource IconButton}" Icon="{ui:SymbolIcon ArrowDown24}"
+                                                   ToolTip="Descendre ce graphe"
+                                                   Visibility="{Binding CanMoveDown, Converter={StaticResource BoolToVisibility}}"
+                                                   Click="OnMoveDown" />
+                                        <ui:Button Style="{StaticResource IconButton}" Icon="{ui:SymbolIcon Delete24}"
+                                                   ToolTip="Supprimer ce graphe (ses courbes sont masquées)"
+                                                   Click="OnRemoveGraph" />
+                                    </StackPanel>
+                                </Grid>
+
+                                <!-- Zéros et légende -->
+                                <DockPanel Margin="90,8,0,0" LastChildFill="False">
+                                    <ComboBox DockPanel.Dock="Right" Width="190"
                                               ToolTip="Position de la légende (on peut aussi la faire glisser sur le graphe)"
                                               ItemsSource="{x:Static vm:GraphViewModel.LegendChoices}"
                                               SelectedValuePath="Value"
                                               DisplayMemberPath="Label"
                                               SelectedValue="{Binding Graph.LegendCorner}" />
-                                </Grid>
+                                    <TextBlock DockPanel.Dock="Right" Margin="0,0,10,0" VerticalAlignment="Center" Text="Légende" />
+                                    <CheckBox DockPanel.Dock="Left" VerticalAlignment="Center"
+                                              Content="Aligner les zéros des axes Y"
+                                              ToolTip="Le zéro de chaque axe Y est placé à la même hauteur"
+                                              IsChecked="{Binding Graph.AlignZeros}"
+                                              Visibility="{Binding CanAlignZeros, Converter={StaticResource BoolToVisibility}}" />
+                                </DockPanel>
 
-                                <TextBlock Margin="0,10,0,0" Style="{StaticResource Hint}" Text="Aucune courbe"
+                                <!-- Courbes du graphe -->
+                                <TextBlock Style="{StaticResource SectionTitle}" Text="Courbes" />
+                                <TextBlock Margin="0,0,0,4" Style="{StaticResource Hint}" Text="Aucune courbe : ajoutez-en une ci-dessous."
                                            Visibility="{Binding IsEmpty, Converter={StaticResource BoolToVisibility}}" />
+                                <ItemsControl ItemsSource="{Binding Curves}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate DataType="{x:Type vm:GraphCurveRow}">
+                                            <Grid Margin="0,2">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="20" />
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="170" />
+                                                    <ColumnDefinition Width="190" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                </Grid.ColumnDefinitions>
+                                                <Rectangle Grid.Column="0" Width="10" Height="10" RadiusX="2" RadiusY="2"
+                                                           HorizontalAlignment="Left" Fill="{Binding Item.Brush}" />
+                                                <TextBlock Grid.Column="1" Margin="0,0,8,0" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
+                                                           Text="{Binding Item.LegendText}" ToolTip="{Binding Item.LegendText}" />
+                                                <TextBlock Grid.Column="2" Margin="0,0,8,0" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
+                                                           Style="{StaticResource Hint}" TextWrapping="NoWrap" Text="{Binding Axis}" ToolTip="{Binding Axis}" />
+                                                <ComboBox Grid.Column="3"
+                                                          ToolTip="Le graphe où cette courbe est tracée"
+                                                          ItemsSource="{Binding Choices}"
+                                                          DisplayMemberPath="Label"
+                                                          SelectedItem="{Binding Selected}" />
+                                                <ui:Button Grid.Column="4" Style="{StaticResource IconButton}" Icon="{ui:SymbolIcon Dismiss24}"
+                                                           ToolTip="Masquer cette courbe"
+                                                           Click="OnHideCurve" />
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                                <controls:SearchPicker Width="320" Margin="0,6,0,0" HorizontalAlignment="Left"
+                                                       ItemsSource="{Binding AllCurves}"
+                                                       DisplayMemberPath="LegendText"
+                                                       Placeholder="＋ Ajouter une courbe à ce graphe…"
+                                                       KeepSelection="False"
+                                                       Picked="OnAddCurve" />
 
                                 <!-- Axes Y : colonnes de largeur fixe pour que tout soit aligné -->
+                                <TextBlock Style="{StaticResource SectionTitle}" Text="Axes Y"
+                                           Visibility="{Binding HasAxes, Converter={StaticResource BoolToVisibility}}" />
                                 <ItemsControl ItemsSource="{Binding Axes}">
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate DataType="{x:Type vm:AxisRowViewModel}">
-                                            <Grid Margin="0,12,0,0">
+                                            <Grid Margin="0,6,0,0">
                                                 <Grid.ColumnDefinitions>
                                                     <ColumnDefinition Width="14" />
                                                     <ColumnDefinition Width="*" />
@@ -141,7 +225,7 @@
             </ItemsControl>
         </ScrollViewer>
 
-        <DockPanel Grid.Row="3" Margin="24,8,24,20" LastChildFill="False">
+        <DockPanel Grid.Row="4" Margin="24,8,24,20" LastChildFill="False">
             <ui:Button DockPanel.Dock="Right"
                        MinWidth="100"
                        Appearance="Primary"

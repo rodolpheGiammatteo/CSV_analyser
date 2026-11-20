@@ -108,11 +108,6 @@ public sealed partial class ComputedCurveViewModel : ObservableObject
         _ => "",
     };
 
-    public string FormulaHelp =>
-        "Courbes entre crochets, par exemple [Courant] * [Tension] / 1000. Opérateurs + − * / ^, comparaisons < > <= >= == != "
-        + "(1 si vrai, 0 sinon), t = temps. Fonctions : " + string.Join(", ", Formula.FunctionNames) + " ; if(condition, si vrai, si faux). "
-        + "Décimales avec un point, arguments séparés par , ou ;.";
-
     /// <summary>Live check of the formula: an error, or the curves it uses.</summary>
     public string FormulaCheck
     {
