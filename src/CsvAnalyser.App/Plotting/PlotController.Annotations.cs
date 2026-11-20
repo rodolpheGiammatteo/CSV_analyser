@@ -427,7 +427,7 @@ public sealed partial class PlotController
 
         menu.Add(L.T("Ajouter un repère ici"), plot => AddAnnotationAtMenu(plot, AnnotationKind.Marker, null));
         if (NearestSeries(_lastMenuPixel) is { } series)
-            menu.Add(L.F("Ajouter une note sur « {0} » ici", MenuText(series.Item.Name)), plot => AddAnnotationAtMenu(plot, AnnotationKind.Note, series.Item));
+            menu.Add(L.F("Ajouter une note sur « {0} »", MenuText(series.Item.Name)), plot => AddAnnotationAtMenu(plot, AnnotationKind.Note, series.Item));
         menu.Add(L.T("Surligner une zone ici"), plot => AddAnnotationAtMenu(plot, AnnotationKind.Zone, null));
         menu.AddSeparator();
     }
