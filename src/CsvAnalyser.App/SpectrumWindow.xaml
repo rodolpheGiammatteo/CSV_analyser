@@ -55,9 +55,24 @@
             </ItemsControl>
         </DockPanel>
 
-        <Border Grid.Row="3" Margin="16,0,16,8" CornerRadius="6" ClipToBounds="True">
-            <scottplot:WpfPlot x:Name="PlotView" />
-        </Border>
+        <Grid Grid.Row="3" Margin="16,0,16,8">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <Border CornerRadius="6" ClipToBounds="True">
+                <scottplot:WpfPlot x:Name="PlotView" />
+            </Border>
+            <!-- Les 5 pics principaux de chaque courbe (remplis par le code) -->
+            <DockPanel Grid.Column="1" Width="250" Margin="12,0,0,0">
+                <TextBlock DockPanel.Dock="Top" FontWeight="SemiBold" Text="Pics principaux" />
+                <TextBlock x:Name="PeaksUnitText" DockPanel.Dock="Top" Margin="0,0,0,4" FontSize="11" TextWrapping="Wrap"
+                           Foreground="{DynamicResource AppSecondaryTextBrush}" />
+                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                    <StackPanel x:Name="PeaksPanel" />
+                </ScrollViewer>
+            </DockPanel>
+        </Grid>
 
         <DockPanel Grid.Row="4" Margin="16,0,16,10">
             <TextBlock x:Name="MouseText" DockPanel.Dock="Right" FontFamily="Consolas"

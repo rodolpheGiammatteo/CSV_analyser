@@ -149,4 +149,67 @@ public static class PlotTools
             MessageBox.Show(ex.Message, L.T("Enregistrement impossible"), MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
+
+    /// <summary>A small box at the mouse to type a bound (Entrée applies, Échap closes). <paramref name="apply"/> returns an error or null.</summary>
+    public static void ShowBoundEditor(FrameworkElement target, System.Windows.Point position, string title, double current, Func<double, string?> apply)
+    {
+        var box = new Wpf.Ui.Controls.TextBox { MinWidth = 160, Text = current.ToString("G6", System.Globalization.CultureInfo.CurrentCulture) };
+        var error = new System.Windows.Controls.TextBlock { Foreground = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(0xD1, 0x34, 0x38)), TextWrapping = TextWrapping.Wrap, MaxWidth = 220 };
+        var header = new System.Windows.Controls.TextBlock { Text = title, FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 0, 0, 6) };
+        header.SetResourceReference(System.Windows.Controls.TextBlock.ForegroundProperty, "AppMenuForeground");
+        var hint = new System.Windows.Controls.TextBlock { Text = L.T("Entrée : appliquer — Échap : annuler"), FontSize = 11, Margin = new Thickness(0, 6, 0, 0) };
+        hint.SetResourceReference(System.Windows.Controls.TextBlock.ForegroundProperty, "AppSecondaryTextBrush");
+        var panel = new System.Windows.Controls.StackPanel { Children = { header, box, error, hint } };
+        var border = new System.Windows.Controls.Border
+        {
+            Padding = new Thickness(12, 10, 12, 10),
+            CornerRadius = new CornerRadius(6),
+            BorderThickness = new Thickness(1),
+            Child = panel,
+        };
+        border.SetResourceReference(System.Windows.Controls.Border.BackgroundProperty, "AppMenuBackground");
+        border.SetResourceReference(System.Windows.Controls.Border.BorderBrushProperty, "AppMenuBorder");
+        var popup = new System.Windows.Controls.Primitives.Popup
+        {
+            Child = border,
+            PlacementTarget = target,
+            Placement = System.Windows.Controls.Primitives.PlacementMode.Relative,
+            HorizontalOffset = position.X + 8,
+            VerticalOffset = position.Y + 8,
+            StaysOpen = false,
+            AllowsTransparency = true,
+        };
+        box.KeyDown += (_, k) =>
+        {
+            if (k.Key == System.Windows.Input.Key.Escape)
+            {
+                popup.IsOpen = false;
+                k.Handled = true;
+            }
+            else if (k.Key == System.Windows.Input.Key.Enter)
+            {
+                k.Handled = true;
+                string text = box.Text.Trim();
+                if (!double.TryParse(text, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.CurrentCulture, out double value)
+                    && !double.TryParse(text, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out value)
+                    || !double.IsFinite(value))
+                {
+                    error.Text = L.T("Entrez un nombre.");
+                    return;
+                }
+                if (apply(value) is { } message)
+                {
+                    error.Text = message;
+                    return;
+                }
+                popup.IsOpen = false;
+            }
+        };
+        popup.IsOpen = true;
+        target.Dispatcher.BeginInvoke(() =>
+        {
+            System.Windows.Input.Keyboard.Focus(box);
+            box.SelectAll();
+        }, System.Windows.Threading.DispatcherPriority.Input);
+    }
 }

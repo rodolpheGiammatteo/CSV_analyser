@@ -170,6 +170,29 @@ public class SpectrumTests
     }
 
     [Fact]
+    public void Peaks_FindsEachSineOnce_HighestFirst()
+    {
+        const int n = 2048;
+        const double fs = 1000;
+        var t = Enumerable.Range(0, n).Select(i => i / fs).ToArray();
+        (double F, double A)[] sines = [(50, 1), (120, 3), (200, 0.5), (310, 2), (420, 0.8), (450, 0.1)];
+        var y = t.Select(x => sines.Sum(s => s.A * Math.Sin(2 * Math.PI * s.F * x))).ToArray();
+
+        var s = Spectrum.Compute(t, y, 0, n, FftWindow.Hann, removeMean: true);
+        var peaks = s.Peaks(5);
+
+        Assert.Equal(5, peaks.Count);
+        double[] expected = [120, 310, 50, 420, 200];
+        double[] amplitudes = [3, 2, 1, 0.8, 0.5];
+        for (int i = 0; i < 5; i++)
+        {
+            Assert.InRange(peaks[i].Frequency, expected[i] - 1, expected[i] + 1);
+            // Hann loses at most ~15 % between two bins; high frequencies must not be smoothed away.
+            Assert.InRange(peaks[i].Amplitude, amplitudes[i] * 0.84, amplitudes[i] * 1.01);
+        }
+    }
+
+    [Fact]
     public void TooFewPoints_Throws()
     {
         Assert.Throws<InvalidOperationException>(() => Spectrum.Compute([0, 1], [1, 2], 0, 2, FftWindow.Hann, true));

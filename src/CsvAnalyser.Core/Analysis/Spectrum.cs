@@ -25,6 +25,35 @@ public sealed record SpectrumResult(double[] Frequencies, double[] Amplitudes, d
             return best < 0 ? (double.NaN, double.NaN) : (Frequencies[best], Amplitudes[best]);
         }
     }
+
+    /// <summary>
+    /// The <paramref name="count"/> highest peaks above 0 Hz, highest first. A peak is a local maximum; one closer than
+    /// <paramref name="minSeparation"/> bins to a higher one is the same peak (window lobes, shoulders) and is skipped.
+    /// </summary>
+    public IReadOnlyList<(double Frequency, double Amplitude)> Peaks(int count = 5, int minSeparation = 5)
+    {
+        var maxima = new List<int>();
+        int n = Amplitudes.Length;
+        for (int i = 1; i < n; i++)
+        {
+            double a = Amplitudes[i];
+            if (!double.IsFinite(a) || a <= 0)
+                continue;
+            bool left = i == 1 || a >= Amplitudes[i - 1];
+            bool right = i == n - 1 || a > Amplitudes[i + 1];
+            if (left && right)
+                maxima.Add(i);
+        }
+        var kept = new List<int>();
+        foreach (int i in maxima.OrderByDescending(i => Amplitudes[i]))
+        {
+            if (kept.All(k => Math.Abs(k - i) >= minSeparation))
+                kept.Add(i);
+            if (kept.Count == count)
+                break;
+        }
+        return kept.Select(i => (Frequencies[i], Amplitudes[i])).ToList();
+    }
 }
 
 public static class Spectrum
@@ -60,7 +89,11 @@ public static class Spectrum
         Array.Sort(steps);
         double dt = steps[steps.Length / 2];
         double span = ts[^1] - ts[0];
-        int count = (int)Math.Min(MaxPoints, Math.Floor(span / dt) + 1);
+        // span / dt is a whole number for regular sampling, give or take rounding (2046.9999… for 2047): floor alone
+        // would drop a point, the grid would then slide across the samples and smooth the high frequencies.
+        double intervals = span / dt;
+        double whole = Math.Abs(intervals - Math.Round(intervals)) < 1e-6 ? Math.Round(intervals) : Math.Floor(intervals);
+        int count = (int)Math.Min(MaxPoints, whole + 1);
         if (count < 4)
             count = 4;
         dt = span / (count - 1);
