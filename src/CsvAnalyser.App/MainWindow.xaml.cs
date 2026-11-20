@@ -54,7 +54,88 @@ public partial class MainWindow : FluentWindow
             }
             new SpectrumWindow(viewModel, graph) { Owner = this }.Show();
         };
-        Closing += (_, _) => viewModel.SaveSession();
+        RestorePlacement();
+        Closing += (_, e) =>
+        {
+            if (!viewModel.ConfirmSaveChanges("de fermer"))
+            {
+                e.Cancel = true;
+                return;
+            }
+            viewModel.SaveSession();
+            SavePlacement();
+        };
+        LeftPanel.SizeChanged += (_, _) => LimitCursorCard();
+        PlotColumn.SizeChanged += (_, _) => LimitCursorCard();
+    }
+
+    // ---- Shift+click: tick or untick every curve between two clicks ----
+
+    private ChannelItemViewModel? _lastCheckClick;
+
+    private void OnCurveCheckClick(object sender, RoutedEventArgs e)
+    {
+        if ((sender as FrameworkElement)?.DataContext is not ChannelItemViewModel item)
+            return;
+        if (Keyboard.Modifiers.HasFlag(ModifierKeys.Shift) && _lastCheckClick is { } anchor)
+        {
+            var visible = _viewModel.ChannelsView.Cast<ChannelItemViewModel>().ToList();
+            int a = visible.IndexOf(anchor), b = visible.IndexOf(item);
+            if (a >= 0 && b >= 0)
+                _viewModel.SetPlotted(visible.GetRange(Math.Min(a, b), Math.Abs(a - b) + 1), item.IsPlotted);
+        }
+        _lastCheckClick = item;
+    }
+
+    // ---- Window size and curve list width, kept between sessions ----
+
+    private void RestorePlacement()
+    {
+        var s = _viewModel.Settings;
+        if (s.WindowWidth is > 300 and var w && s.WindowHeight is > 200 and var h
+            && s.WindowLeft is { } left && s.WindowTop is { } top)
+        {
+            // Only if the window would still be visible (a screen may have been unplugged).
+            var screen = new Rect(SystemParameters.VirtualScreenLeft, SystemParameters.VirtualScreenTop,
+                SystemParameters.VirtualScreenWidth, SystemParameters.VirtualScreenHeight);
+            if (screen.IntersectsWith(new Rect(left + 40, top + 10, Math.Max(1, w - 80), 40)))
+            {
+                WindowStartupLocation = WindowStartupLocation.Manual;
+                Left = left;
+                Top = top;
+                Width = w;
+                Height = h;
+            }
+        }
+        if (s.WindowMaximized)
+            WindowState = WindowState.Maximized;
+        if (s.CurveListWidth is > 150 and < 2000 and var listWidth)
+            CurveColumn.Width = new GridLength(listWidth);
+    }
+
+    private void SavePlacement()
+    {
+        var s = _viewModel.Settings;
+        var bounds = WindowState == WindowState.Normal ? new Rect(Left, Top, Width, Height) : RestoreBounds;
+        if (!bounds.IsEmpty)
+        {
+            s.WindowLeft = bounds.Left;
+            s.WindowTop = bounds.Top;
+            s.WindowWidth = bounds.Width;
+            s.WindowHeight = bounds.Height;
+        }
+        s.WindowMaximized = WindowState == WindowState.Maximized;
+        s.CurveListWidth = CurveColumn.ActualWidth;
+        s.Save();
+    }
+
+    /// <summary>The cursor card scrolls instead of growing past part of its area (it used to hide the curve list).</summary>
+    private void LimitCursorCard()
+    {
+        CursorHostLeft.MaxHeight = Math.Max(120, LeftPanel.ActualHeight * 0.45);
+        double scale = Math.Max(0.1, _viewModel.UiScale);
+        CursorHostRight.MaxHeight = Math.Max(120, PlotColumn.ActualHeight / scale - 8);
+        CursorHostBottom.MaxHeight = Math.Max(100, PlotColumn.ActualHeight * 0.35 / scale);
     }
 
     /// <summary>A toolbar button whose menu opens on a left click.</summary>
@@ -219,9 +300,6 @@ public partial class MainWindow : FluentWindow
         HighlightFileDropZone(false);
         if (e.Data.GetData(DataFormats.FileDrop) is not string[] { Length: > 0 } files)
             return;
-        if (files[0].EndsWith(".json", StringComparison.OrdinalIgnoreCase))
-            _viewModel.ApplyConfigurationFile(files[0]);
-        else
-            await _viewModel.LoadFileAsync(files[0]);
+        await _viewModel.LoadFileAsync(files[0]); // a .json project opens with its CSV (or applies to the open one)
     }
 }

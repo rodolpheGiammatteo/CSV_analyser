@@ -5,9 +5,9 @@
                  xmlns:vm="clr-namespace:CsvAnalyser.App.ViewModels"
                  xmlns:controls="clr-namespace:CsvAnalyser.App.Controls"
                  Title="Graphes et axes"
-                 Width="800"
+                 Width="920"
                  SizeToContent="Height"
-                 MaxHeight="860"
+                 MaxHeight="880"
                  ResizeMode="NoResize"
                  ShowInTaskbar="False"
                  WindowStartupLocation="CenterOwner"
@@ -16,27 +16,43 @@
                  Background="{DynamicResource ApplicationBackgroundBrush}"
                  WindowCornerPreference="Round">
     <ui:FluentWindow.Resources>
-        <Style x:Key="Hint" TargetType="TextBlock">
-            <Setter Property="Foreground" Value="{DynamicResource AppSecondaryTextBrush}" />
-            <Setter Property="TextWrapping" Value="Wrap" />
-        </Style>
         <Style x:Key="SectionTitle" TargetType="TextBlock">
             <Setter Property="Margin" Value="0,14,0,4" />
             <Setter Property="FontWeight" Value="SemiBold" />
             <Setter Property="Foreground" Value="{DynamicResource AppSecondaryTextBrush}" />
         </Style>
         <Style x:Key="IconButton" TargetType="ui:Button" BasedOn="{StaticResource {x:Type ui:Button}}">
-            <Setter Property="Padding" Value="6" />
+            <Setter Property="Padding" Value="5" />
             <Setter Property="MinHeight" Value="0" />
-            <Setter Property="Margin" Value="4,0,0,0" />
+            <Setter Property="Margin" Value="2,0,0,0" />
             <Setter Property="Appearance" Value="Transparent" />
             <Setter Property="BorderThickness" Value="0" />
+        </Style>
+        <!-- Color square of a curve: opens the color palette. -->
+        <Style x:Key="ColorButton" TargetType="Button">
+            <Setter Property="Width" Value="22" />
+            <Setter Property="Height" Value="22" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Frame" CornerRadius="4" BorderThickness="1" Padding="2"
+                                BorderBrush="{DynamicResource AppDisabledTextBrush}" Background="Transparent">
+                            <Border CornerRadius="2" Background="{TemplateBinding Background}" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Frame" Property="BorderBrush" Value="{DynamicResource AppSecondaryTextBrush}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
         </Style>
     </ui:FluentWindow.Resources>
 
     <Grid Background="{DynamicResource ApplicationBackgroundBrush}">
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
@@ -45,50 +61,21 @@
 
         <ui:TitleBar Grid.Row="0" Title="Graphes et axes" ShowMinimize="False" ShowMaximize="False" />
 
-        <!-- Disposition : nouveau graphe, nombre de colonnes -->
-        <DockPanel Grid.Row="1" Margin="24,0,24,12">
+        <DockPanel Grid.Row="1" Margin="24,0,24,12" LastChildFill="False">
             <ui:Button DockPanel.Dock="Left"
                        Appearance="Primary"
                        Content="Nouveau graphe"
                        Icon="{ui:SymbolIcon Add24}"
-                       ToolTip="Ajoute un graphe vide en bas, puis ajoutez-lui des courbes"
                        Click="OnAddGraph" />
-            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
-                <TextBlock Margin="0,0,10,0" VerticalAlignment="Center" Text="Disposition" />
-                <ComboBox x:Name="ColumnsCombo" Width="150"
-                          ToolTip="Les graphes remplissent la première colonne de haut en bas, puis la suivante"
-                          ItemsSource="{x:Static vm:MainViewModel.GraphColumnChoices}"
-                          SelectedValuePath="Value"
-                          DisplayMemberPath="Label"
-                          SelectedValue="{Binding GraphColumns}" />
-            </StackPanel>
-            <TextBlock Margin="16,0,16,0" VerticalAlignment="Center" Style="{StaticResource Hint}"
-                       Text="Flèches : changer l'ordre. Liste « Graphe » d'une courbe : la déplacer." />
+            <ComboBox DockPanel.Dock="Right" Width="140"
+                      ToolTip="Disposition des graphes"
+                      ItemsSource="{x:Static vm:MainViewModel.GraphColumnChoices}"
+                      SelectedValuePath="Value"
+                      DisplayMemberPath="Label"
+                      SelectedValue="{Binding GraphColumns}" />
         </DockPanel>
 
-        <!-- Aide sur les axes -->
-        <Grid Grid.Row="2" Margin="24,0,24,12">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="Auto" />
-                <ColumnDefinition Width="*" />
-            </Grid.ColumnDefinitions>
-            <Grid.RowDefinitions>
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="Auto" />
-            </Grid.RowDefinitions>
-            <TextBlock Grid.Row="0" Grid.Column="0" Margin="0,0,14,2" FontWeight="SemiBold" Text="Auto" />
-            <TextBlock Grid.Row="0" Grid.Column="1" Margin="0,0,0,2" Style="{StaticResource Hint}"
-                       Text="L'axe s'ajuste aux courbes visibles (Ajuster, clic molette)." />
-            <TextBlock Grid.Row="1" Grid.Column="0" Margin="0,0,14,2" FontWeight="SemiBold" Text="Manuel" />
-            <TextBlock Grid.Row="1" Grid.Column="1" Margin="0,0,0,2" Style="{StaticResource Hint}"
-                       Text="Les bornes saisies sont reprises à chaque ajustement ; le zoom à la souris reste possible." />
-            <TextBlock Grid.Row="2" Grid.Column="0" Margin="0,0,14,0" FontWeight="SemiBold" Text="Unités" />
-            <TextBlock Grid.Row="2" Grid.Column="1" Style="{StaticResource Hint}"
-                       Text="Un axe par unité. Pour regrouper ou séparer : Réglages de la courbe → Axe Y." />
-        </Grid>
-
-        <ScrollViewer x:Name="Scroller" Grid.Row="3" Margin="24,0,12,0" Padding="0,0,12,0" VerticalScrollBarVisibility="Auto">
+        <ScrollViewer x:Name="Scroller" Grid.Row="2" Margin="24,0,12,0" Padding="0,0,12,0" VerticalScrollBarVisibility="Auto">
             <ItemsControl x:Name="GraphList">
                 <ItemsControl.ItemTemplate>
                     <DataTemplate DataType="{x:Type vm:GraphAxesViewModel}">
@@ -96,123 +83,151 @@
                                 Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
                                 BorderBrush="{DynamicResource AppDisabledTextBrush}">
                             <StackPanel>
-                                <!-- En-tête : numéro, titre, ordre, suppression -->
+                                <!-- Graphe : numéro, titre, hauteur, ordre, suppression -->
                                 <Grid>
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="90" />
                                         <ColumnDefinition Width="*" />
                                         <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="Auto" />
                                     </Grid.ColumnDefinitions>
                                     <TextBlock Grid.Column="0" VerticalAlignment="Center" FontSize="15" FontWeight="SemiBold"
                                                Text="{Binding Graph.Number, StringFormat=Graphe {0}}" />
                                     <ui:TextBox Grid.Column="1"
-                                                PlaceholderText="Titre (facultatif, affiché au-dessus du graphe)"
+                                                PlaceholderText="Titre du graphe"
                                                 Text="{Binding Graph.Name, UpdateSourceTrigger=PropertyChanged}" />
-                                    <StackPanel Grid.Column="2" Margin="8,0,0,0" Orientation="Horizontal">
+                                    <ComboBox Grid.Column="2" Width="95" Margin="8,0,0,0"
+                                              ToolTip="Hauteur du graphe"
+                                              ItemsSource="{x:Static vm:GraphViewModel.HeightChoices}"
+                                              SelectedValuePath="Value"
+                                              DisplayMemberPath="Label"
+                                              SelectedValue="{Binding Graph.HeightFactor}" />
+                                    <StackPanel Grid.Column="3" Margin="6,0,0,0" Orientation="Horizontal">
                                         <!-- Hidden rather than disabled: disabled WPF-UI buttons are invisible here. -->
-                                        <ui:Button Style="{StaticResource IconButton}" Icon="{ui:SymbolIcon ArrowUp24}"
-                                                   ToolTip="Monter ce graphe"
-                                                   Visibility="{Binding CanMoveUp, Converter={StaticResource BoolToVisibility}}"
-                                                   Click="OnMoveUp" />
-                                        <ui:Button Style="{StaticResource IconButton}" Icon="{ui:SymbolIcon ArrowDown24}"
-                                                   ToolTip="Descendre ce graphe"
-                                                   Visibility="{Binding CanMoveDown, Converter={StaticResource BoolToVisibility}}"
-                                                   Click="OnMoveDown" />
-                                        <ui:Button Style="{StaticResource IconButton}" Icon="{ui:SymbolIcon Delete24}"
-                                                   ToolTip="Supprimer ce graphe (ses courbes sont masquées)"
+                                        <ui:Button Style="{StaticResource IconButton}" Icon="{ui:SymbolIcon ArrowUp24}" ToolTip="Monter le graphe"
+                                                   Visibility="{Binding CanMoveUp, Converter={StaticResource BoolToVisibility}}" Click="OnMoveUp" />
+                                        <ui:Button Style="{StaticResource IconButton}" Icon="{ui:SymbolIcon ArrowDown24}" ToolTip="Descendre le graphe"
+                                                   Visibility="{Binding CanMoveDown, Converter={StaticResource BoolToVisibility}}" Click="OnMoveDown" />
+                                        <ui:Button Style="{StaticResource IconButton}" Icon="{ui:SymbolIcon Delete24}" ToolTip="Supprimer le graphe"
                                                    Click="OnRemoveGraph" />
                                     </StackPanel>
                                 </Grid>
 
-                                <!-- Zéros et légende -->
                                 <DockPanel Margin="90,8,0,0" LastChildFill="False">
                                     <ComboBox DockPanel.Dock="Right" Width="190"
-                                              ToolTip="Position de la légende (on peut aussi la faire glisser sur le graphe)"
+                                              ToolTip="Légende (on peut aussi la faire glisser sur le graphe)"
                                               ItemsSource="{x:Static vm:GraphViewModel.LegendChoices}"
                                               SelectedValuePath="Value"
                                               DisplayMemberPath="Label"
                                               SelectedValue="{Binding Graph.LegendCorner}" />
                                     <TextBlock DockPanel.Dock="Right" Margin="0,0,10,0" VerticalAlignment="Center" Text="Légende" />
                                     <CheckBox DockPanel.Dock="Left" VerticalAlignment="Center"
-                                              Content="Aligner les zéros des axes Y"
-                                              ToolTip="Le zéro de chaque axe Y est placé à la même hauteur"
+                                              Content="Aligner les axes Y"
+                                              ToolTip="Les valeurs de référence des axes (0 par défaut, réglables ci-dessous) sont à la même hauteur"
                                               IsChecked="{Binding Graph.AlignZeros}"
                                               Visibility="{Binding CanAlignZeros, Converter={StaticResource BoolToVisibility}}" />
                                 </DockPanel>
 
-                                <!-- Courbes du graphe -->
+                                <!-- Courbes -->
                                 <TextBlock Style="{StaticResource SectionTitle}" Text="Courbes" />
-                                <TextBlock Margin="0,0,0,4" Style="{StaticResource Hint}" Text="Aucune courbe : ajoutez-en une ci-dessous."
-                                           Visibility="{Binding IsEmpty, Converter={StaticResource BoolToVisibility}}" />
                                 <ItemsControl ItemsSource="{Binding Curves}">
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate DataType="{x:Type vm:GraphCurveRow}">
                                             <Grid Margin="0,2">
                                                 <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="20" />
+                                                    <ColumnDefinition Width="56" />
+                                                    <ColumnDefinition Width="30" />
                                                     <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="210" />
                                                     <ColumnDefinition Width="170" />
-                                                    <ColumnDefinition Width="190" />
                                                     <ColumnDefinition Width="Auto" />
                                                 </Grid.ColumnDefinitions>
-                                                <Rectangle Grid.Column="0" Width="10" Height="10" RadiusX="2" RadiusY="2"
-                                                           HorizontalAlignment="Left" Fill="{Binding Item.Brush}" />
-                                                <TextBlock Grid.Column="1" Margin="0,0,8,0" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
-                                                           Text="{Binding Item.LegendText}" ToolTip="{Binding Item.LegendText}" />
+                                                <StackPanel Grid.Column="0" Orientation="Horizontal">
+                                                    <ui:Button Style="{StaticResource IconButton}" Margin="0" Icon="{ui:SymbolIcon ChevronUp20}"
+                                                               ToolTip="Dessiner en dessous (plus haut dans la liste)"
+                                                               Visibility="{Binding CanMoveUp, Converter={StaticResource BoolToVisibility}}" Click="OnCurveUp" />
+                                                    <ui:Button Style="{StaticResource IconButton}" Margin="0" Icon="{ui:SymbolIcon ChevronDown20}"
+                                                               ToolTip="Dessiner par-dessus (plus bas dans la liste)"
+                                                               Visibility="{Binding CanMoveDown, Converter={StaticResource BoolToVisibility}}" Click="OnCurveDown" />
+                                                </StackPanel>
+                                                <Button Grid.Column="1" Style="{StaticResource ColorButton}" HorizontalAlignment="Left"
+                                                        Background="{Binding Item.Brush}" ToolTip="Couleur" Click="OnColorClick" />
                                                 <TextBlock Grid.Column="2" Margin="0,0,8,0" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
-                                                           Style="{StaticResource Hint}" TextWrapping="NoWrap" Text="{Binding Axis}" ToolTip="{Binding Axis}" />
-                                                <ComboBox Grid.Column="3"
-                                                          ToolTip="Le graphe où cette courbe est tracée"
+                                                           Text="{Binding Item.LegendText}" ToolTip="{Binding Item.LegendText}" />
+                                                <ComboBox Grid.Column="3" Margin="0,0,6,0"
+                                                          ToolTip="Axe Y de la courbe"
+                                                          ItemsSource="{Binding AxisChoices}"
+                                                          SelectedValuePath="Value"
+                                                          DisplayMemberPath="Label"
+                                                          SelectedValue="{Binding Item.AxisChoice}" />
+                                                <ComboBox Grid.Column="4"
+                                                          ToolTip="Graphe"
                                                           ItemsSource="{Binding Choices}"
                                                           DisplayMemberPath="Label"
                                                           SelectedItem="{Binding Selected}" />
-                                                <ui:Button Grid.Column="4" Style="{StaticResource IconButton}" Icon="{ui:SymbolIcon Dismiss24}"
-                                                           ToolTip="Masquer cette courbe"
-                                                           Click="OnHideCurve" />
+                                                <StackPanel Grid.Column="5" Margin="4,0,0,0" Orientation="Horizontal">
+                                                    <ui:Button Style="{StaticResource IconButton}" Icon="{ui:SymbolIcon Settings24}"
+                                                               ToolTip="Tous les réglages : nom, unité, trait, points, opacité" Click="OnCurveSettings" />
+                                                    <ui:Button Style="{StaticResource IconButton}" Icon="{ui:SymbolIcon Dismiss24}"
+                                                               ToolTip="Masquer la courbe" Click="OnHideCurve" />
+                                                </StackPanel>
                                             </Grid>
                                         </DataTemplate>
                                     </ItemsControl.ItemTemplate>
                                 </ItemsControl>
-                                <controls:SearchPicker Width="320" Margin="0,6,0,0" HorizontalAlignment="Left"
+                                <controls:SearchPicker Width="320" Margin="86,6,0,0" HorizontalAlignment="Left"
                                                        ItemsSource="{Binding AllCurves}"
                                                        DisplayMemberPath="LegendText"
-                                                       Placeholder="＋ Ajouter une courbe à ce graphe…"
+                                                       Placeholder="＋ Ajouter une courbe…"
                                                        KeepSelection="False"
                                                        Picked="OnAddCurve" />
 
-                                <!-- Axes Y : colonnes de largeur fixe pour que tout soit aligné -->
+                                <!-- Axes Y -->
                                 <TextBlock Style="{StaticResource SectionTitle}" Text="Axes Y"
                                            Visibility="{Binding HasAxes, Converter={StaticResource BoolToVisibility}}" />
                                 <ItemsControl ItemsSource="{Binding Axes}">
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate DataType="{x:Type vm:AxisRowViewModel}">
-                                            <Grid Margin="0,6,0,0">
+                                            <Grid Margin="0,3">
                                                 <Grid.ColumnDefinitions>
                                                     <ColumnDefinition Width="14" />
                                                     <ColumnDefinition Width="*" />
-                                                    <ColumnDefinition Width="160" />
-                                                    <ColumnDefinition Width="210" />
+                                                    <ColumnDefinition Width="100" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                    <ColumnDefinition Width="Auto" />
                                                 </Grid.ColumnDefinitions>
-                                                <Rectangle Grid.Column="0" Width="4" HorizontalAlignment="Left" Margin="0,2" RadiusX="2" RadiusY="2" Fill="{Binding Brush}" />
-                                                <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,12,0">
-                                                    <TextBlock FontWeight="SemiBold" TextTrimming="CharacterEllipsis" Text="{Binding Label}" ToolTip="{Binding Label}" />
-                                                    <TextBlock Style="{StaticResource Hint}" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis"
-                                                               Text="{Binding Description}" ToolTip="{Binding Curves}" />
-                                                </StackPanel>
-                                                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
-                                                    <RadioButton MinWidth="0" Margin="0,0,10,0" Content="Auto" IsChecked="{Binding Settings.IsAuto}" />
+                                                <Rectangle Grid.Column="0" Width="4" HorizontalAlignment="Left" Margin="0,4" RadiusX="2" RadiusY="2" Fill="{Binding Brush}" />
+                                                <ui:TextBox Grid.Column="1" Margin="0,0,6,0"
+                                                            PlaceholderText="{Binding AutoLabel}"
+                                                            ToolTip="{Binding Description}"
+                                                            Text="{Binding Settings.Title, UpdateSourceTrigger=LostFocus}" KeyDown="OnBoundKeyDown" />
+                                                <ComboBox Grid.Column="2" Margin="0,0,10,0"
+                                                          ToolTip="Côté de l'axe (auto : alterné gauche / droite)"
+                                                          ItemsSource="{x:Static vm:AxisRangeSettings.SideChoices}"
+                                                          SelectedValuePath="Value"
+                                                          DisplayMemberPath="Label"
+                                                          SelectedValue="{Binding Settings.Side}" />
+                                                <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Center">
+                                                    <RadioButton MinWidth="0" Margin="0,0,8,0" Content="Auto" IsChecked="{Binding Settings.IsAuto}" />
                                                     <RadioButton MinWidth="0" Content="Manuel" IsChecked="{Binding Settings.IsManual}" />
                                                 </StackPanel>
                                                 <!-- Never disabled (disabled WPF-UI boxes are invisible here): typing a bound switches to manual. -->
-                                                <StackPanel Grid.Column="3" VerticalAlignment="Center">
+                                                <StackPanel Grid.Column="4" Margin="6,0,0,0" VerticalAlignment="Center">
                                                     <StackPanel Orientation="Horizontal">
-                                                        <ui:TextBox Width="100" PlaceholderText="min" ToolTip="Minimum (Entrée pour appliquer)"
+                                                        <ui:TextBox Width="88" PlaceholderText="min" ToolTip="Minimum (Entrée pour appliquer)"
                                                                     Text="{Binding Settings.MinText}" KeyDown="OnBoundKeyDown" />
-                                                        <ui:TextBox Width="100" Margin="8,0,0,0" PlaceholderText="max" ToolTip="Maximum (Entrée pour appliquer)"
+                                                        <ui:TextBox Width="88" Margin="6,0,0,0" PlaceholderText="max" ToolTip="Maximum (Entrée pour appliquer)"
                                                                     Text="{Binding Settings.MaxText}" KeyDown="OnBoundKeyDown" />
                                                     </StackPanel>
-                                                    <TextBlock Margin="0,2,0,0" Foreground="#D13438" Text="Bornes invalides (min &lt; max)"
+                                                    <TextBlock Margin="0,2,0,0" Foreground="#D13438" Text="min doit être &lt; max"
                                                                Visibility="{Binding Settings.HasError, Converter={StaticResource BoolToVisibility}}" />
+                                                </StackPanel>
+                                                <StackPanel Grid.Column="5" Margin="10,0,0,0" Orientation="Horizontal" VerticalAlignment="Center"
+                                                            ToolTip="Valeur de cet axe placée à la même hauteur que celle des autres axes (ex. 1000 mbar absolu avec 0 mbar relatif)"
+                                                            Visibility="{Binding DataContext.ShowAlignValues, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource BoolToVisibility}}">
+                                                    <TextBlock Margin="0,0,6,0" VerticalAlignment="Center" Text="aligné sur" />
+                                                    <ui:TextBox Width="70" Text="{Binding Settings.AlignValueText}" KeyDown="OnBoundKeyDown" />
                                                 </StackPanel>
                                             </Grid>
                                         </DataTemplate>
@@ -225,7 +240,7 @@
             </ItemsControl>
         </ScrollViewer>
 
-        <DockPanel Grid.Row="4" Margin="24,8,24,20" LastChildFill="False">
+        <DockPanel Grid.Row="3" Margin="24,8,24,20" LastChildFill="False">
             <ui:Button DockPanel.Dock="Right"
                        MinWidth="100"
                        Appearance="Primary"

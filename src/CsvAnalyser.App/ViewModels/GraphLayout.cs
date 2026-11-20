@@ -69,9 +69,16 @@ public static class GraphLayout
                 .Select((group, index) =>
                 {
                     var curves = group.ToList();
-                    return new AxisSpec(group.Key, AxisLabel(curves), curves, graph.GetAxisSettings(group.Key))
+                    var settings = graph.GetAxisSettings(group.Key);
+                    string label = string.IsNullOrWhiteSpace(settings.Title) ? AxisLabel(curves) : settings.Title.Trim();
+                    return new AxisSpec(group.Key, label, curves, settings)
                     {
-                        IsRight = index % 2 == 1,
+                        IsRight = settings.Side switch
+                        {
+                            AxisSide.Left => false,
+                            AxisSide.Right => true,
+                            _ => index % 2 == 1,
+                        },
                     };
                 })
                 .ToList();

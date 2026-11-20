@@ -36,6 +36,8 @@ public enum PlotChange
     Measure,
     /// <summary>Number of columns of graphs.</summary>
     Layout,
+    /// <summary>Which mouse button zooms and which pans.</summary>
+    MouseButtons,
 }
 
 public partial class MainViewModel : ObservableObject, IChannelHost
@@ -102,6 +104,7 @@ public partial class MainViewModel : ObservableObject, IChannelHost
         _cursorPanelPlacement = Enum.IsDefined(settings.CursorPanel) ? settings.CursorPanel : CursorPanelPlacement.Left;
         _showCursorLabels = settings.ShowCursorLabels;
         _restoreLayout = settings.RestoreLayout;
+        _leftDragZooms = settings.LeftDragZooms;
         ChannelsView = CollectionViewSource.GetDefaultView(Channels);
         ChannelsView.Filter = o => MatchesSearch((ChannelItemViewModel)o);
         PlottedChannels.CollectionChanged += (_, _) =>
@@ -112,6 +115,9 @@ public partial class MainViewModel : ObservableObject, IChannelHost
     }
 
     public event EventHandler<PlotChange>? PlotChanged;
+
+    /// <summary>The user preferences (window placement is saved by the main window).</summary>
+    public AppSettings Settings => _settings;
 
     public ObservableCollection<ChannelItemViewModel> Channels { get; } = [];
 
@@ -174,8 +180,8 @@ public partial class MainViewModel : ObservableObject, IChannelHost
     {
         var dialog = new OpenFileDialog
         {
-            Title = "Ouvrir un fichier CSV",
-            Filter = "Fichiers CSV (*.csv;*.txt)|*.csv;*.txt|Tous les fichiers (*.*)|*.*",
+            Title = "Ouvrir un fichier CSV ou un projet",
+            Filter = "Fichiers CSV ou projets (*.csv;*.txt;*.json)|*.csv;*.txt;*.json|Fichiers CSV (*.csv;*.txt)|*.csv;*.txt|Projets (*.json)|*.json|Tous les fichiers (*.*)|*.*",
         };
         if (_settings.LastDirectory is { } dir && Directory.Exists(dir))
             dialog.InitialDirectory = dir;
@@ -184,10 +190,30 @@ public partial class MainViewModel : ObservableObject, IChannelHost
             await LoadFileAsync(dialog.FileName);
     }
 
+    /// <summary>Opens a CSV file, or a project (.json) with its CSV file (dialog, drop, command line).</summary>
     public async Task LoadFileAsync(string path)
     {
         if (IsLoading)
             return;
+        if (path.EndsWith(".json", StringComparison.OrdinalIgnoreCase))
+        {
+            await OpenProjectFileAsync(path);
+            return;
+        }
+        if (Dataset is not null && !ConfirmSaveChanges("d'ouvrir un autre fichier"))
+            return;
+        if (await LoadCsvAsync(path, restoreSession: true))
+        {
+            ProjectPath = null;
+            ResetHistory();
+        }
+    }
+
+    /// <summary>Reads a CSV file; <paramref name="restoreSession"/> brings back the layout it had when last left.</summary>
+    private async Task<bool> LoadCsvAsync(string path, bool restoreSession)
+    {
+        if (IsLoading)
+            return false;
 
         SaveSession();
         IsLoading = true;
@@ -198,14 +224,17 @@ public partial class MainViewModel : ObservableObject, IChannelHost
         {
             var dataset = await Task.Run(() => CsvImporter.Load(path, progress));
             ApplyDataset(dataset);
-            RestoreSession(path);
+            if (restoreSession)
+                RestoreSession(path);
             _settings.LastDirectory = Path.GetDirectoryName(path);
             _settings.Save();
+            return true;
         }
         catch (Exception ex)
         {
             StatusText = $"Impossible de lire {Path.GetFileName(path)} : {ex.Message}";
             MessageBox.Show(ex.Message, "Erreur de lecture", MessageBoxButton.OK, MessageBoxImage.Error);
+            return false;
         }
         finally
         {
@@ -303,6 +332,7 @@ public partial class MainViewModel : ObservableObject, IChannelHost
         onAppearanceChanged: () => RaisePlotChanged(PlotChange.GraphAppearance))
     {
         Number = Graphs.Count + 1,
+        OnLayoutChangedHandler = () => RaisePlotChanged(PlotChange.Layout),
     };
 
     /// <summary>The plotted curves grouped by graph, for the cursor card.</summary>
@@ -438,6 +468,25 @@ public partial class MainViewModel : ObservableObject, IChannelHost
         RaisePlotChanged(PlotChange.Theme);
     }
 
+    /// <summary>Ticks or unticks several curves at once (one plot update).</summary>
+    public void SetPlotted(IEnumerable<ChannelItemViewModel> items, bool plotted)
+    {
+        var changed = items.Where(i => i.IsPlotted != plotted).ToList();
+        if (changed.Count == 0)
+            return;
+        _suppressPlotEvents = true;
+        try
+        {
+            foreach (var item in changed)
+                item.IsPlotted = plotted;
+        }
+        finally
+        {
+            _suppressPlotEvents = false;
+        }
+        RaisePlotChanged(PlotChange.Curves);
+    }
+
     [RelayCommand]
     private void ClearSelection()
     {
@@ -464,10 +513,10 @@ public partial class MainViewModel : ObservableObject, IChannelHost
     private void AutoScaleY() => RaisePlotChanged(PlotChange.AutoScaleY);
 
     [RelayCommand]
-    private void UndoView() => RaisePlotChanged(PlotChange.UndoView);
+    private void UndoView() => Undo();
 
     [RelayCommand]
-    private void RedoView() => RaisePlotChanged(PlotChange.RedoView);
+    private void RedoView() => Redo();
 
     partial void OnUiScaleChanged(double value)
     {
@@ -504,7 +553,12 @@ public partial class MainViewModel : ObservableObject, IChannelHost
             UpdateMeasureYSummary();
         }
         if (!_suppressPlotEvents)
+        {
             PlotChanged?.Invoke(this, change);
+            if (change is PlotChange.Curves or PlotChange.Appearance or PlotChange.AxisSettings or PlotChange.GraphAppearance
+                or PlotChange.Layout or PlotChange.XAxis or PlotChange.Measure)
+                ScheduleCommit();
+        }
     }
 
     // ---- Cursor panel placement ----
@@ -542,6 +596,23 @@ public partial class MainViewModel : ObservableObject, IChannelHost
     /// <summary>Also write each curve's value in the graph, next to its point under the cursor.</summary>
     [ObservableProperty]
     private bool _showCursorLabels;
+
+    /// <summary>Left-button drag = zoom rectangle and wheel-button drag = pan (true), or the reverse.</summary>
+    [ObservableProperty]
+    private bool _leftDragZooms;
+
+    public static IReadOnlyList<StyleChoice<bool>> MouseChoices { get; } =
+    [
+        new(true, "Clic gauche : zoom sur un rectangle — molette : déplacer"),
+        new(false, "Clic gauche : déplacer — molette : zoom sur un rectangle"),
+    ];
+
+    partial void OnLeftDragZoomsChanged(bool value)
+    {
+        _settings.LeftDragZooms = value;
+        _settings.Save();
+        RaisePlotChanged(PlotChange.MouseButtons);
+    }
 
     partial void OnShowCursorLabelsChanged(bool value)
     {

@@ -7,6 +7,9 @@ public sealed class AxisRowViewModel(AxisSpec spec)
 {
     public string Label => string.IsNullOrEmpty(spec.Label) ? "(sans unité)" : spec.Label;
 
+    /// <summary>The title the axis gets when none is typed.</summary>
+    public string AutoLabel => GraphLayout.AxisLabel(spec.Curves) is { Length: > 0 } label ? label : "(sans unité)";
+
     public string Curves => string.Join(", ", spec.Curves.Select(c => c.Name));
 
     public string Side => spec.IsRight ? "droite" : "gauche";
@@ -31,14 +34,28 @@ public sealed class AxisRowViewModel(AxisSpec spec)
 /// <summary>A destination in the "Graphe" list of a curve: an existing graph, or a new one (Graph = null).</summary>
 public sealed record GraphChoice(GraphViewModel? Graph, string Label);
 
-/// <summary>A curve of a graph, as shown in the graphs window: its axis, and a list to send it to another graph.</summary>
-public sealed class GraphCurveRow(ChannelItemViewModel item, string axis, IReadOnlyList<GraphChoice> choices, Action<ChannelItemViewModel, GraphViewModel?> move)
+/// <summary>
+/// A curve of a graph, as shown in the graphs window: order, color, axis, graph (bound straight to the curve),
+/// plus the full settings behind the gear button.
+/// </summary>
+public sealed class GraphCurveRow(
+    ChannelItemViewModel item,
+    IReadOnlyList<StyleChoice<string>> axisChoices,
+    IReadOnlyList<GraphChoice> choices,
+    Action<ChannelItemViewModel, GraphViewModel?> move,
+    bool canMoveUp,
+    bool canMoveDown)
 {
     public ChannelItemViewModel Item { get; } = item;
 
-    public string Axis { get; } = axis;
+    /// <summary>Automatic, own axis, or an axis shared with other curves of the graph.</summary>
+    public IReadOnlyList<StyleChoice<string>> AxisChoices { get; } = axisChoices;
 
     public IReadOnlyList<GraphChoice> Choices { get; } = choices;
+
+    public bool CanMoveUp { get; } = canMoveUp;
+
+    public bool CanMoveDown { get; } = canMoveDown;
 
     public GraphChoice? Selected
     {
@@ -78,4 +95,7 @@ public sealed class GraphAxesViewModel(
     public bool CanMoveUp { get; } = index > 0;
 
     public bool CanMoveDown { get; } = index < count - 1;
+
+    /// <summary>The per-axis alignment value is shown only when the graph aligns its axes.</summary>
+    public bool ShowAlignValues => Graph.AlignZeros && Axes.Count > 1;
 }

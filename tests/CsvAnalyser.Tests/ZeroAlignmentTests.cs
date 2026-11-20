@@ -71,4 +71,18 @@ public class ZeroAlignmentTests
         var result = ZeroAlignment.Align([(3, 7)], [false]);
         Assert.Equal((3.0, 7.0), result[0]);
     }
+
+    [Fact]
+    public void References_AbsoluteAndRelativePressureAligned()
+    {
+        // 900..1300 mbar absolute (reference 1000) and -50..250 mbar relative (reference 0).
+        (double, double)[] input = [(900, 1300), (-50, 250)];
+        var result = ZeroAlignment.Align(input, [false, false], [1000, 0]);
+
+        double f0 = (1000 - result[0].Min) / (result[0].Max - result[0].Min);
+        double f1 = (0 - result[1].Min) / (result[1].Max - result[1].Min);
+        Assert.Equal(f0, f1, 9);
+        AssertContains(result[0], input[0]);
+        AssertContains(result[1], input[1]);
+    }
 }

@@ -1,7 +1,7 @@
 namespace CsvAnalyser.Core.Analysis;
 
 /// <summary>
-/// Adjusts the ranges of several Y axes sharing one plot so that their zeros are drawn at the same height.
+/// Adjusts the ranges of several Y axes sharing one plot so that their zeros (or chosen reference values) are drawn at the same height.
 /// </summary>
 public static class ZeroAlignment
 {
@@ -65,6 +65,19 @@ public static class ZeroAlignment
             result[i] = (-fraction * height, (1 - fraction) * height);
         }
         return result;
+    }
+
+    /// <summary>
+    /// Same, but each axis is aligned on its own reference value instead of zero (e.g. 1000 mbar absolute
+    /// with 0 mbar relative): the references are drawn at the same height.
+    /// </summary>
+    public static (double Min, double Max)[] Align(
+        IReadOnlyList<(double Min, double Max)> ranges, IReadOnlyList<bool> isFixed, IReadOnlyList<double> references)
+    {
+        ArgumentOutOfRangeException.ThrowIfNotEqual(references.Count, ranges.Count);
+        var shifted = ranges.Select((r, i) => (r.Min - references[i], r.Max - references[i])).ToArray();
+        var aligned = Align(shifted, isFixed);
+        return aligned.Select((r, i) => (r.Min + references[i], r.Max + references[i])).ToArray();
     }
 
     private static (double Negative, double Positive) Extents((double Min, double Max) range) =>

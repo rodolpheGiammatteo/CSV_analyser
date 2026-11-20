@@ -34,7 +34,6 @@ public sealed class PlotController : IPlotView
     private float _scale = 1;
 
     // Zoom/pan history: the view before a mouse gesture (or a burst of wheel ticks) is recorded when it ends.
-    private readonly ViewHistory _history = new();
     private readonly DispatcherTimer _wheelTimer = new() { Interval = TimeSpan.FromMilliseconds(400) };
     private ViewSnapshot? _gestureStart;
     private Point _middleDownPosition;
@@ -90,6 +89,7 @@ public sealed class PlotController : IPlotView
         // Middle click = our NaN-aware autoscale (handled in OnMouseUpAfterPlot); no benchmark overlay.
         _view.UserInputProcessor.UserActionResponses.RemoveAll(r => r is SingleClickAutoscale);
         _view.UserInputProcessor.DoubleLeftClickBenchmark(false);
+        ApplyMouseButtons();
         SetupContextMenu();
 
         Rebuild(resetView: true);
@@ -125,6 +125,17 @@ public sealed class PlotController : IPlotView
         menu.Add("Enregistrer l'image…", menu.OpenSaveImageDialog);
     }
 
+    /// <summary>Left drag zooms on a rectangle and wheel-button drag pans, or the reverse (Paramètres).</summary>
+    private void ApplyMouseButtons()
+    {
+        var responses = _view.UserInputProcessor.UserActionResponses;
+        responses.RemoveAll(r => r is MouseDragPan or MouseDragZoomRectangle);
+        var left = ScottPlot.Interactivity.StandardMouseButtons.Left;
+        var middle = ScottPlot.Interactivity.StandardMouseButtons.Middle;
+        responses.Add(new MouseDragZoomRectangle(_vm.LeftDragZooms ? left : middle));
+        responses.Add(new MouseDragPan(_vm.LeftDragZooms ? middle : left));
+    }
+
     private GraphViewModel? GraphOf(Plot plot) => _graphs.FirstOrDefault(g => g.Plot == plot)?.Graph;
 
     private void UpdateScale()
@@ -144,8 +155,6 @@ public sealed class PlotController : IPlotView
             case PlotChange.XAxis:
                 // Previous views are meaningless on another X axis.
                 _gestureStart = null;
-                _history.Clear();
-                UpdateHistoryState();
                 Rebuild(resetView: true);
                 break;
             case PlotChange.Curves:
@@ -184,6 +193,9 @@ public sealed class PlotController : IPlotView
                 break;
             case PlotChange.RedoView:
                 Redo();
+                break;
+            case PlotChange.MouseButtons:
+                ApplyMouseButtons();
                 break;
             case PlotChange.Layout:
                 Rebuild(resetView: false);
@@ -276,28 +288,35 @@ public sealed class PlotController : IPlotView
         if (_xs is not null)
         {
             var created = new List<(Series Series, IYAxis Axis)>();
-            for (int ai = 0; ai < spec.Axes.Count; ai++)
+            var axisOf = new Dictionary<ChannelItemViewModel, IYAxis>();
+            bool leftUsed = false, rightUsed = false;
+            foreach (var axisSpec in spec.Axes)
             {
-                var axisSpec = spec.Axes[ai];
-                IYAxis axis = ai switch
-                {
-                    0 => plot.Axes.Left,
-                    1 => plot.Axes.Right,
-                    _ => axisSpec.IsRight ? plot.Axes.AddRightAxis() : plot.Axes.AddLeftAxis(),
-                };
+                // The first axis of each side is the plot's own; the others are added beside it.
+                IYAxis axis = axisSpec.IsRight
+                    ? (rightUsed ? plot.Axes.AddRightAxis() : plot.Axes.Right)
+                    : (leftUsed ? plot.Axes.AddLeftAxis() : plot.Axes.Left);
+                if (axisSpec.IsRight)
+                    rightUsed = true;
+                else
+                    leftUsed = true;
                 StyleAxis(axis);
                 var axisRender = new AxisRender(axisSpec.Key, axisSpec, axis);
                 render.Axes.Add(axisRender);
                 ApplyAxisLabel(plot, axisRender);
-
                 foreach (var item in axisSpec.Curves)
-                {
-                    IPlottable curve = _xSorted
-                        ? plot.Add.SignalXY(_xs, item.Channel.Values, item.Color)
-                        : plot.Add.ScatterPoints(_xs, item.Channel.Values, item.Color);
-                    curve.Axes.YAxis = axis;
-                    created.Add((new Series(item, item.Channel.Values, curve, null!, null!, render, axis), axis));
-                }
+                    axisOf[item] = axis;
+            }
+
+            // Drawing order = order of the plotted list: the last curve is drawn on top (and listed last in the legend).
+            foreach (var item in spec.Curves.OrderBy(c => _vm.PlottedChannels.IndexOf(c)))
+            {
+                var axis = axisOf[item];
+                IPlottable curve = _xSorted
+                    ? plot.Add.SignalXY(_xs, item.Channel.Values, item.Color)
+                    : plot.Add.ScatterPoints(_xs, item.Channel.Values, item.Color);
+                curve.Axes.YAxis = axis;
+                created.Add((new Series(item, item.Channel.Values, curve, null!, null!, render, axis), axis));
             }
 
             // Markers, value labels and cursor are added last so they are drawn on top of the curves.
@@ -531,7 +550,7 @@ public sealed class PlotController : IPlotView
         switch (s.Curve)
         {
             case SignalXY signal:
-                signal.Color = item.Color;
+                signal.Color = item.Color.WithAlpha(item.Opacity);
                 signal.LegendText = item.LegendText;
                 signal.LineWidth = item.IsLineVisible ? (float)item.LineWidth * _scale : 0;
                 signal.LinePattern = ToPattern(item.Line);
@@ -541,7 +560,7 @@ public sealed class PlotController : IPlotView
 
             case Scatter scatter:
                 // Unsorted X: points only, a line would zigzag across the plot.
-                scatter.Color = item.Color;
+                scatter.Color = item.Color.WithAlpha(item.Opacity);
                 scatter.LegendText = item.LegendText;
                 scatter.LineWidth = 0;
                 scatter.MarkerShape = item.HasMarkers ? ToShape(item.Marker) : MarkerShape.FilledCircle;
@@ -642,7 +661,7 @@ public sealed class PlotController : IPlotView
         }
 
         if (g.Graph.AlignZeros && g.Axes.Count > 1)
-            ranges = ZeroAlignment.Align(ranges, isFixed);
+            ranges = ZeroAlignment.Align(ranges, isFixed, g.Axes.Select(a => a.Spec.Settings.AlignValue).ToArray());
 
         for (int i = 0; i < g.Axes.Count; i++)
             g.Plot.Axes.SetLimitsY(ranges[i].Min, ranges[i].Max, g.Axes[i].Axis);
@@ -769,7 +788,9 @@ public sealed class PlotController : IPlotView
                 continue;
 
             var axes = g.Axes.Select(a => a.Axis).ToList();
-            static double ZeroFraction(IYAxis axis) => -axis.Range.Min / (axis.Range.Max - axis.Range.Min);
+            // Each axis is aligned on its own reference value (0 unless set in the graphs window).
+            var references = g.Axes.ToDictionary(a => a.Axis, a => a.Spec.Settings.AlignValue);
+            double ZeroFraction(IYAxis axis) => (references[axis] - axis.Range.Min) / (axis.Range.Max - axis.Range.Min);
 
             double reference = ZeroFraction(axes[0]);
             bool aligned = axes.All(a => Math.Abs(ZeroFraction(a) - reference) < 1e-6);
@@ -787,7 +808,8 @@ public sealed class PlotController : IPlotView
                     foreach (var axis in axes.Where(a => a != leader))
                     {
                         double span = axis.Range.Max - axis.Range.Min;
-                        g.Plot.Axes.SetLimitsY(-f * span, (1 - f) * span, axis);
+                        double r = references[axis];
+                        g.Plot.Axes.SetLimitsY(r - f * span, r + (1 - f) * span, axis);
                     }
                 }
             }
@@ -808,12 +830,27 @@ public sealed class PlotController : IPlotView
             var rects = new PixelRect[count];
             int columns = Math.Clamp(owner._vm.GraphColumns, 1, Math.Max(1, count));
             float width = figureRect.Width / columns;
+            // Height of a graph = its share of the column, weighted by its height factor.
+            var weights = Enumerable.Range(0, count)
+                .Select(i => i < owner._graphs.Count ? Math.Clamp(owner._graphs[i].Graph.HeightFactor, 0.1, 10) : 1)
+                .ToArray();
             for (int i = 0; i < count; i++)
             {
-                var (column, row, rows) = MainViewModel.GraphCell(i, count, columns);
-                float height = figureRect.Height / rows;
+                var (column, row, _) = MainViewModel.GraphCell(i, count, columns);
+                int first = i - row;
+                int last = first;
+                while (last + 1 < count && MainViewModel.GraphCell(last + 1, count, columns).Column == column)
+                    last++;
+                double total = 0, above = 0;
+                for (int k = first; k <= last; k++)
+                {
+                    total += weights[k];
+                    if (k < i)
+                        above += weights[k];
+                }
+                float top = figureRect.Top + (float)(figureRect.Height * above / total);
+                float height = (float)(figureRect.Height * weights[i] / total);
                 float left = figureRect.Left + column * width;
-                float top = figureRect.Top + row * height;
                 rects[i] = new PixelRect(left, left + width, top + height, top);
             }
             return rects;
@@ -900,20 +937,6 @@ public sealed class PlotController : IPlotView
         return new ViewSnapshot(ranges);
     }
 
-    private void Restore(ViewSnapshot snapshot)
-    {
-        if (snapshot.Ranges.TryGetValue(XKey, out var x))
-            SetX(x.Min, x.Max);
-        foreach (var g in _graphs)
-        {
-            foreach (var a in g.Axes)
-            {
-                if (snapshot.Ranges.TryGetValue(AxisId(g.Graph, a.Key), out var r))
-                    g.Plot.Axes.SetLimitsY(r.Min, r.Max, a.Axis);
-            }
-        }
-    }
-
     private void OnPreviewMouseDown(object sender, MouseButtonEventArgs e)
     {
         switch (e.ChangedButton)
@@ -936,6 +959,7 @@ public sealed class PlotController : IPlotView
 
         if (TryStartLegendDrag(e) || TryStartMeasureDrag(e))
             return;
+        RememberAxisClick(e);
 
         RememberInteractionAxis(e);
         if (_wheelTimer.IsEnabled)
@@ -958,6 +982,8 @@ public sealed class PlotController : IPlotView
             EndMeasureDrag();
             return;
         }
+        if (_axisClick is not null && e.ChangedButton == MouseButton.Left)
+            _view.Dispatcher.BeginInvoke(() => TryOpenAxisEditor(e), DispatcherPriority.Input);
         if (e.ChangedButton == MouseButton.Middle && (e.GetPosition(_view) - _middleDownPosition).Length < 4)
         {
             // Middle click without dragging: fit everything (a middle drag is ScottPlot's zoom rectangle).
@@ -996,46 +1022,47 @@ public sealed class PlotController : IPlotView
         if (_gestureStart is not { } start)
             return;
         _gestureStart = null;
+        KeepManualBoundsOnScreen();
         Record(start);
     }
 
+    /// <summary>
+    /// After a zoom or pan with the mouse, a manual axis takes the bounds now on screen
+    /// (otherwise the next "Ajuster" would jump back to the old typed bounds).
+    /// </summary>
+    private void KeepManualBoundsOnScreen()
+    {
+        foreach (var g in _graphs)
+        {
+            foreach (var a in g.Axes)
+            {
+                if (a.Spec.Settings.IsManual)
+                    a.Spec.Settings.SetBoundsSilently(a.Axis.Range.Min, a.Axis.Range.Max);
+            }
+        }
+    }
+
+    /// <summary>The view changed (zoom, pan, fit): one step of the application-wide undo history.</summary>
     private void Record(ViewSnapshot previous)
     {
         if (previous.SameAs(Capture()))
             return;
-        _history.Push(previous);
-        UpdateHistoryState();
+        _vm.CommitNow();
     }
 
     private void Undo()
     {
         _wheelTimer.Stop();
         CommitGesture();
-        if (_history.TryUndo(Capture(), out var target))
-            ShowView(target);
+        _vm.Undo();
     }
 
     private void Redo()
     {
         _wheelTimer.Stop();
         CommitGesture();
-        if (_history.TryRedo(Capture(), out var target))
-            ShowView(target);
+        _vm.Redo();
     }
-
-    private void ShowView(ViewSnapshot snapshot)
-    {
-        Restore(snapshot);
-        UpdateHistoryState();
-        _view.Refresh();
-    }
-
-    private void UpdateHistoryState()
-    {
-        _vm.CanUndoView = _history.CanUndo;
-        _vm.CanRedoView = _history.CanRedo;
-    }
-
     // ---------------------------------------------------------------- measurement cursors A and B
 
     private static readonly ScottPlot.Color MeasureColorA = ScottPlot.Color.FromHex("#D6336C");
@@ -1168,6 +1195,141 @@ public sealed class PlotController : IPlotView
             _vm.SetMeasureCursors(_vm.MeasureA ?? x, x);
         UpdateMeasureLines();
         _view.Refresh();
+    }
+
+    // ---------------------------------------------------------------- typing a bound by clicking an axis
+
+    private (GraphRender Graph, IAxis Axis, Pixel Pixel)? _axisClick;
+
+    /// <summary>Mouse-down on an axis (outside the data area): remembered, the editor opens if the mouse is released without moving.</summary>
+    private void RememberAxisClick(MouseButtonEventArgs e)
+    {
+        _axisClick = null;
+        if (e.ChangedButton != MouseButton.Left)
+            return;
+        var pixel = ToPixel(e);
+        foreach (var g in _graphs)
+        {
+            var r = g.Plot.LastRender.DataRect;
+            if (pixel.X >= r.Left && pixel.X <= r.Right && pixel.Y >= r.Top && pixel.Y <= r.Bottom)
+                return;
+            if (g.Plot.GetAxis(pixel) is { } axis && (axis is IYAxis || axis == g.Plot.Axes.Bottom))
+            {
+                _axisClick = (g, axis, pixel);
+                return;
+            }
+        }
+    }
+
+    /// <summary>Click on the upper (or right) half of an axis: edit its maximum; lower (or left) half: its minimum.</summary>
+    private bool TryOpenAxisEditor(MouseButtonEventArgs e)
+    {
+        if (_axisClick is not { } click || e.ChangedButton != MouseButton.Left)
+            return false;
+        _axisClick = null;
+        var pixel = ToPixel(e);
+        if (Math.Abs(pixel.X - click.Pixel.X) > 4 * _scale || Math.Abs(pixel.Y - click.Pixel.Y) > 4 * _scale)
+            return false;
+
+        var g = click.Graph;
+        var data = g.Plot.LastRender.DataRect;
+        var position = e.GetPosition(_view);
+        if (click.Axis is IYAxis yAxis && g.Axes.FirstOrDefault(a => a.Axis == yAxis) is { } a)
+        {
+            bool max = pixel.Y < (data.Top + data.Bottom) / 2;
+            var range = a.Axis.Range;
+            string name = string.IsNullOrEmpty(a.Spec.Label) ? "Axe Y" : a.Spec.Label;
+            ShowBoundEditor(position, $"{name} — {(max ? "maximum" : "minimum")}", max ? range.Max : range.Min, value =>
+            {
+                double min = max ? range.Min : value, top = max ? value : range.Max;
+                if (!(min < top))
+                    return "Le minimum doit rester inférieur au maximum.";
+                a.Spec.Settings.Apply(manual: true, min, top); // a setting: kept by "Ajuster"
+                return null;
+            });
+            return true;
+        }
+        if (click.Axis == g.Plot.Axes.Bottom)
+        {
+            bool max = pixel.X > (data.Left + data.Right) / 2;
+            var range = g.Plot.Axes.Bottom.Range;
+            ShowBoundEditor(position, $"Axe X — {(max ? "maximum" : "minimum")}", max ? range.Max : range.Min, value =>
+            {
+                double min = max ? range.Min : value, top = max ? value : range.Max;
+                if (!(min < top))
+                    return "Le minimum doit rester inférieur au maximum.";
+                var before = Capture();
+                SetX(min, top);
+                Record(before);
+                _view.Refresh();
+                return null;
+            });
+            return true;
+        }
+        return false;
+    }
+
+    /// <summary>A small box at the mouse to type a bound (Entrée applies, Échap closes). <paramref name="apply"/> returns an error or null.</summary>
+    private void ShowBoundEditor(Point position, string title, double current, Func<double, string?> apply)
+    {
+        var box = new Wpf.Ui.Controls.TextBox { MinWidth = 160, Text = current.ToString("G6", System.Globalization.CultureInfo.CurrentCulture) };
+        var error = new System.Windows.Controls.TextBlock { Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0xD1, 0x34, 0x38)), TextWrapping = TextWrapping.Wrap, MaxWidth = 220 };
+        var header = new System.Windows.Controls.TextBlock { Text = title, FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 0, 0, 6) };
+        header.SetResourceReference(System.Windows.Controls.TextBlock.ForegroundProperty, "AppMenuForeground");
+        var hint = new System.Windows.Controls.TextBlock { Text = "Entrée : appliquer — Échap : annuler", FontSize = 11, Margin = new Thickness(0, 6, 0, 0) };
+        hint.SetResourceReference(System.Windows.Controls.TextBlock.ForegroundProperty, "AppSecondaryTextBrush");
+        var panel = new System.Windows.Controls.StackPanel { Children = { header, box, error, hint } };
+        var border = new System.Windows.Controls.Border
+        {
+            Padding = new Thickness(12, 10, 12, 10),
+            CornerRadius = new CornerRadius(6),
+            BorderThickness = new Thickness(1),
+            Child = panel,
+        };
+        border.SetResourceReference(System.Windows.Controls.Border.BackgroundProperty, "AppMenuBackground");
+        border.SetResourceReference(System.Windows.Controls.Border.BorderBrushProperty, "AppMenuBorder");
+        var popup = new System.Windows.Controls.Primitives.Popup
+        {
+            Child = border,
+            PlacementTarget = _view,
+            Placement = System.Windows.Controls.Primitives.PlacementMode.Relative,
+            HorizontalOffset = position.X + 8,
+            VerticalOffset = position.Y + 8,
+            StaysOpen = false,
+            AllowsTransparency = true,
+        };
+        box.KeyDown += (_, k) =>
+        {
+            if (k.Key == Key.Escape)
+            {
+                popup.IsOpen = false;
+                k.Handled = true;
+            }
+            else if (k.Key == Key.Enter)
+            {
+                k.Handled = true;
+                string text = box.Text.Trim();
+                if (!double.TryParse(text, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.CurrentCulture, out double value)
+                    && !double.TryParse(text, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out value)
+                    || !double.IsFinite(value))
+                {
+                    error.Text = "Entrez un nombre.";
+                    return;
+                }
+                if (apply(value) is { } message)
+                {
+                    error.Text = message;
+                    return;
+                }
+                popup.IsOpen = false;
+            }
+        };
+        popup.IsOpen = true;
+        _view.Dispatcher.BeginInvoke(() =>
+        {
+            Keyboard.Focus(box);
+            box.SelectAll();
+        }, DispatcherPriority.Input);
     }
 
     // ---------------------------------------------------------------- measurement cursors Y1 and Y2

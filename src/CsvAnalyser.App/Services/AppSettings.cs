@@ -30,6 +30,23 @@ public sealed class AppSettings
 
     public string? ExportDecimal { get; set; }
 
+    /// <summary>Main window position and size (device-independent units) and state, restored at startup.</summary>
+    public double? WindowLeft { get; set; }
+
+    public double? WindowTop { get; set; }
+
+    public double? WindowWidth { get; set; }
+
+    public double? WindowHeight { get; set; }
+
+    public bool WindowMaximized { get; set; }
+
+    /// <summary>Width of the curve list column.</summary>
+    public double? CurveListWidth { get; set; }
+
+    /// <summary>Left-button drag zooms on a rectangle (and the wheel button pans); false = the reverse.</summary>
+    public bool LeftDragZooms { get; set; } = true;
+
     public static AppSettings Load()
     {
         try

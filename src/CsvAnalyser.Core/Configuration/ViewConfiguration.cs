@@ -21,6 +21,9 @@ public sealed class ViewConfiguration
     /// <summary>Name of the CSV file the configuration was made from (information only).</summary>
     public string? SourceFile { get; set; }
 
+    /// <summary>Full path of that CSV file: opening the project opens it.</summary>
+    public string? SourcePath { get; set; }
+
     /// <summary>Column used as X axis; "" = row number; null = the default one.</summary>
     public string? XAxis { get; set; }
 
@@ -174,6 +177,9 @@ public sealed class GraphConfig
 
     public double? LegendOffsetY { get; set; }
 
+    /// <summary>Relative height in its column (null = 1).</summary>
+    public double? HeightFactor { get; set; }
+
     public List<AxisConfig> Axes { get; set; } = [];
 }
 
@@ -190,6 +196,15 @@ public sealed class AxisConfig
 
     /// <summary>Visible range when saved (restored only on the same file).</summary>
     public RangeConfig? View { get; set; }
+
+    /// <summary>Value drawn at the same height as the other axes when the graph aligns them (null = 0).</summary>
+    public double? AlignValue { get; set; }
+
+    /// <summary>Auto, Left or Right (null = Auto).</summary>
+    public string? Side { get; set; }
+
+    /// <summary>Axis title typed by the user (null = automatic).</summary>
+    public string? Title { get; set; }
 }
 
 public sealed class CurveConfig
@@ -219,4 +234,7 @@ public sealed class CurveConfig
     public string? Marker { get; set; }
 
     public double? MarkerSize { get; set; }
+
+    /// <summary>0.1 to 1; null = opaque.</summary>
+    public double? Opacity { get; set; }
 }

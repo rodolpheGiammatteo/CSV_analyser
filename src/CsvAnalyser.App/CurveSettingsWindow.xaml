@@ -192,6 +192,14 @@
             <TextBlock Foreground="{DynamicResource AppSecondaryTextBrush}" TextWrapping="Wrap"
                        Text="Un point par échantillon : utile pour voir les mesures réelles en zoomant." />
 
+            <!-- Opacité -->
+            <DockPanel Margin="0,18,0,0">
+                <TextBlock DockPanel.Dock="Right" FontFamily="Consolas" Text="{Binding Opacity, StringFormat={}{0:P0}}" />
+                <TextBlock FontWeight="SemiBold" Text="Opacité" />
+            </DockPanel>
+            <Slider Minimum="0.1" Maximum="1" TickFrequency="0.05" IsSnapToTickEnabled="True" Value="{Binding Opacity}"
+                    ToolTip="Une courbe bruitée rendue transparente ne cache plus les autres" />
+
             <!-- Axe Y -->
             <TextBlock Margin="0,18,0,6" FontWeight="SemiBold" Text="Axe Y" />
             <ComboBox x:Name="AxisCombo"

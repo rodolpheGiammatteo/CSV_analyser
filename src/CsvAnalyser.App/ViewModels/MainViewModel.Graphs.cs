@@ -88,6 +88,24 @@ public partial class MainViewModel
         RaisePlotChanged(PlotChange.Curves);
     }
 
+    /// <summary>
+    /// Swaps a curve with the previous (delta = -1) or next (+1) curve of its graph in the plotted order:
+    /// the last one is drawn on top of the others.
+    /// </summary>
+    public void MoveCurveInGraph(ChannelItemViewModel item, int delta)
+    {
+        var inGraph = PlottedChannels.Where(c => c.Graph == item.Graph).ToList();
+        int index = inGraph.IndexOf(item);
+        int other = index + delta;
+        if (index < 0 || other < 0 || other >= inGraph.Count)
+            return;
+        int a = PlottedChannels.IndexOf(item), b = PlottedChannels.IndexOf(inGraph[other]);
+        PlottedChannels.Move(a, b);
+        if (Math.Abs(a - b) > 1)
+            PlottedChannels.Move(a < b ? b - 1 : b + 1, a); // put the other one where this one was
+        RaisePlotChanged(PlotChange.Curves);
+    }
+
     private void RenumberGraphs()
     {
         for (int i = 0; i < Graphs.Count; i++)

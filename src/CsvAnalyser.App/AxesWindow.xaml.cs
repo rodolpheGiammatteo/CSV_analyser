@@ -43,7 +43,7 @@ public partial class AxesWindow : FluentWindow
     /// <summary>The cards are rebuilt after a change of the graphs or curves (once, after the current event).</summary>
     private void OnPlotChanged(object? sender, PlotChange change)
     {
-        if (change is not (PlotChange.Curves or PlotChange.Appearance or PlotChange.Dataset) || _refreshPending)
+        if (change is not (PlotChange.Curves or PlotChange.Appearance or PlotChange.Dataset or PlotChange.AxisSettings or PlotChange.Layout) || _refreshPending)
             return;
         _refreshPending = true;
         Dispatcher.BeginInvoke(() =>
@@ -66,8 +66,10 @@ public partial class AxesWindow : FluentWindow
         for (int i = 0; i < layout.Count; i++)
         {
             var spec = layout[i];
-            var curves = spec.Axes
-                .SelectMany(a => a.Curves.Select(c => new GraphCurveRow(c, AxisText(a), choices, MoveCurve)))
+            // In drawing order: the last curve is drawn on top.
+            var ordered = spec.Curves.OrderBy(c => _vm.PlottedChannels.IndexOf(c)).ToList();
+            var curves = ordered
+                .Select((c, k) => new GraphCurveRow(c, GraphLayout.AxisChoices(c, layout), choices, MoveCurve, k > 0, k < ordered.Count - 1))
                 .ToList();
             var axes = spec.Axes.Select(a =>
             {
@@ -80,9 +82,6 @@ public partial class AxesWindow : FluentWindow
         }
         GraphList.ItemsSource = groups;
     }
-
-    private static string AxisText(AxisSpec axis) =>
-        $"axe {(string.IsNullOrEmpty(axis.Label) ? "sans unité" : axis.Label)} ({(axis.IsRight ? "droite" : "gauche")})";
 
     private void MoveCurve(ChannelItemViewModel item, GraphViewModel? target)
     {
@@ -136,6 +135,75 @@ public partial class AxesWindow : FluentWindow
     {
         if ((sender as FrameworkElement)?.DataContext is GraphCurveRow row)
             row.Item.IsPlotted = false;
+    }
+
+    private static ChannelItemViewModel? CurveOf(object sender) => ((sender as FrameworkElement)?.DataContext as GraphCurveRow)?.Item;
+
+    private void OnCurveUp(object sender, RoutedEventArgs e)
+    {
+        if (CurveOf(sender) is { } item)
+            _vm.MoveCurveInGraph(item, -1);
+    }
+
+    private void OnCurveDown(object sender, RoutedEventArgs e)
+    {
+        if (CurveOf(sender) is { } item)
+            _vm.MoveCurveInGraph(item, +1);
+    }
+
+    private void OnCurveSettings(object sender, RoutedEventArgs e)
+    {
+        if (CurveOf(sender) is { } item)
+            new CurveSettingsWindow(item, GraphLayout.AxisChoices(item, _vm.BuildLayout())) { Owner = this }.ShowDialog();
+    }
+
+    /// <summary>A small palette under the color square: one click picks a color, "Automatique" follows the theme.</summary>
+    private void OnColorClick(object sender, RoutedEventArgs e)
+    {
+        if (sender is not FrameworkElement anchor || CurveOf(sender) is not { } item)
+            return;
+        var popup = new System.Windows.Controls.Primitives.Popup
+        {
+            PlacementTarget = anchor,
+            Placement = System.Windows.Controls.Primitives.PlacementMode.Bottom,
+            StaysOpen = false,
+            AllowsTransparency = true,
+        };
+        var swatches = new System.Windows.Controls.WrapPanel { Width = 10 * 28 };
+        foreach (var hex in CurveStyleChoices.Swatches)
+        {
+            var swatch = new System.Windows.Controls.Button
+            {
+                Style = (Style)FindResource("ColorButton"),
+                Margin = new Thickness(0, 0, 6, 6),
+                Background = new System.Windows.Media.BrushConverter().ConvertFromString(hex) as System.Windows.Media.Brush,
+                ToolTip = hex,
+            };
+            swatch.Click += (_, _) =>
+            {
+                popup.IsOpen = false;
+                item.SetColorCommand.Execute(hex);
+            };
+            swatches.Children.Add(swatch);
+        }
+        var auto = new Wpf.Ui.Controls.Button { Content = "Automatique (suit le thème)", Margin = new Thickness(0, 2, 0, 0) };
+        auto.Click += (_, _) =>
+        {
+            popup.IsOpen = false;
+            item.UseAutoColorCommand.Execute(null);
+        };
+        var border = new System.Windows.Controls.Border
+        {
+            Margin = new Thickness(0, 4, 0, 0),
+            Padding = new Thickness(10),
+            CornerRadius = new CornerRadius(6),
+            BorderThickness = new Thickness(1),
+            Child = new System.Windows.Controls.StackPanel { Children = { swatches, auto } },
+        };
+        border.SetResourceReference(System.Windows.Controls.Border.BackgroundProperty, "AppMenuBackground");
+        border.SetResourceReference(System.Windows.Controls.Border.BorderBrushProperty, "AppMenuBorder");
+        popup.Child = border;
+        popup.IsOpen = true;
     }
 
     private void OnBoundKeyDown(object sender, KeyEventArgs e)

@@ -3,6 +3,13 @@ using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace CsvAnalyser.App.ViewModels;
 
+public enum AxisSide
+{
+    Auto,
+    Left,
+    Right,
+}
+
 public enum LegendCorner
 {
     UpperRight,
@@ -30,6 +37,20 @@ public sealed partial class GraphViewModel : ObservableObject
 
     [ObservableProperty]
     private bool _alignZeros;
+
+    /// <summary>Relative height of the graph in its column (1 = normal, 2 = twice as high).</summary>
+    [ObservableProperty]
+    private double _heightFactor = 1;
+
+    public static IReadOnlyList<StyleChoice<double>> HeightChoices { get; } =
+    [
+        new(0.5, "× 0,5"),
+        new(0.75, "× 0,75"),
+        new(1, "× 1"),
+        new(1.5, "× 1,5"),
+        new(2, "× 2"),
+        new(3, "× 3"),
+    ];
 
     [ObservableProperty]
     private LegendCorner _legendCorner = LegendCorner.UpperRight;
@@ -76,7 +97,7 @@ public sealed partial class GraphViewModel : ObservableObject
     public AxisRangeSettings GetAxisSettings(string key)
     {
         if (!_axes.TryGetValue(key, out var settings))
-            _axes[key] = settings = new AxisRangeSettings(_onSettingsChanged);
+            _axes[key] = settings = new AxisRangeSettings(_onSettingsChanged) { OnLayoutChangedHandler = () => _onLayoutChanged?.Invoke() };
         return settings;
     }
 
@@ -86,6 +107,13 @@ public sealed partial class GraphViewModel : ObservableObject
     public IEnumerable<KeyValuePair<string, AxisRangeSettings>> AxisSettings => _axes;
 
     partial void OnAlignZerosChanged(bool value) => _onSettingsChanged();
+
+    partial void OnHeightFactorChanged(double value) => _onLayoutChanged?.Invoke();
+
+    /// <summary>Set by the main view model: a height change rebuilds the layout.</summary>
+    public Action? OnLayoutChangedHandler { set => _onLayoutChanged = value; }
+
+    private Action? _onLayoutChanged;
 }
 
 /// <summary>Automatic (fit the data) or manual range of one Y axis.</summary>
@@ -118,6 +146,49 @@ public sealed partial class AxisRangeSettings : ObservableObject
             : null;
 
     public bool HasError => IsManual && ManualRange is null;
+
+    /// <summary>Value of this axis drawn at the same height as the others' when the graph aligns its axes (0 by default).</summary>
+    [ObservableProperty]
+    private string _alignValueText = "0";
+
+    public double AlignValue => TryParse(AlignValueText, out double v) && double.IsFinite(v) ? v : 0;
+
+    /// <summary>Side of the axis (automatic = alternating left/right).</summary>
+    [ObservableProperty]
+    private AxisSide _side;
+
+    /// <summary>Title written along the axis; empty = automatic (curve name or units).</summary>
+    [ObservableProperty]
+    private string _title = "";
+
+    partial void OnAlignValueTextChanged(string value) => _onChanged();
+
+    partial void OnSideChanged(AxisSide value) => _onLayoutChanged?.Invoke();
+
+    partial void OnTitleChanged(string value) => _onLayoutChanged?.Invoke();
+
+    private Action? _onLayoutChanged;
+
+    /// <summary>Called when side or title change (the plot is rebuilt).</summary>
+    public Action? OnLayoutChangedHandler { set => _onLayoutChanged = value; }
+
+    public static IReadOnlyList<StyleChoice<AxisSide>> SideChoices { get; } =
+    [
+        new(AxisSide.Auto, "Auto"),
+        new(AxisSide.Left, "Gauche"),
+        new(AxisSide.Right, "Droite"),
+    ];
+
+    /// <summary>Bounds set to what is on screen, without refitting (manual axis moved with the mouse).</summary>
+    public void SetBoundsSilently(double min, double max)
+    {
+#pragma warning disable MVVMTK0034
+        _minText = Format(min);
+        _maxText = Format(max);
+#pragma warning restore MVVMTK0034
+        OnPropertyChanged(nameof(MinText));
+        OnPropertyChanged(nameof(MaxText));
+    }
 
     public double? ParsedMin => TryParse(MinText, out double v) ? v : null;
 

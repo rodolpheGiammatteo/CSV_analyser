@@ -34,6 +34,7 @@ public partial class MainViewModel
         var config = new ViewConfiguration
         {
             SourceFile = Dataset is { } ds ? Path.GetFileName(ds.FilePath) : null,
+            SourcePath = Dataset?.FilePath,
             XAxis = SelectedXAxis?.Channel?.SourceName ?? "",
             GraphColumns = GraphColumns > 1 ? GraphColumns : null,
         };
@@ -50,13 +51,21 @@ public partial class MainViewModel
                 Legend = graph.LegendCorner.ToString(),
                 LegendOffsetX = graph.LegendOffset?.X,
                 LegendOffsetY = graph.LegendOffset?.Y,
+                HeightFactor = graph.HeightFactor != 1 ? graph.HeightFactor : null,
             };
             var used = layout.FirstOrDefault(s => s.Graph == graph)?.Axes.Select(a => a.Key).ToHashSet() ?? [];
             foreach (var (key, settings) in graph.AxisSettings)
             {
-                if (!settings.IsManual && !used.Contains(key))
+                bool customized = settings.IsManual || settings.AlignValue != 0 || settings.Side != AxisSide.Auto || settings.Title.Trim().Length > 0;
+                if (!customized && !used.Contains(key))
                     continue;
-                var axis = new AxisConfig { Key = key, Manual = settings.IsManual, Min = settings.ParsedMin, Max = settings.ParsedMax };
+                var axis = new AxisConfig
+                {
+                    Key = key, Manual = settings.IsManual, Min = settings.ParsedMin, Max = settings.ParsedMax,
+                    AlignValue = settings.AlignValue != 0 ? settings.AlignValue : null,
+                    Side = settings.Side != AxisSide.Auto ? settings.Side.ToString() : null,
+                    Title = settings.Title.Trim().Length > 0 ? settings.Title.Trim() : null,
+                };
                 if (used.Contains(key) && PlotView?.AxisRange(graph, key) is { } r)
                     axis.View = new RangeConfig(r.Min, r.Max);
                 g.Axes.Add(axis);
@@ -99,6 +108,7 @@ public partial class MainViewModel
             LineWidth = item.LineWidth != CurveStyleChoices.DefaultLineWidth ? item.LineWidth : null,
             Marker = item.Marker != CurveMarker.None ? item.Marker.ToString() : null,
             MarkerSize = item.MarkerSize != CurveStyleChoices.DefaultMarkerSize ? item.MarkerSize : null,
+            Opacity = item.Opacity != 1 ? item.Opacity : null,
         };
     }
 
@@ -155,8 +165,16 @@ public partial class MainViewModel
                     graph.LegendCorner = corner;
                 if (gc.LegendOffsetX is { } ox && gc.LegendOffsetY is { } oy)
                     graph.LegendOffset = (ox, oy);
+                if (gc.HeightFactor is { } hf && double.IsFinite(hf))
+                    graph.HeightFactor = Math.Clamp(hf, 0.1, 10);
                 foreach (var ac in gc.Axes)
-                    graph.GetAxisSettings(ac.Key).Apply(ac.Manual, ac.Min, ac.Max);
+                {
+                    var axisSettings = graph.GetAxisSettings(ac.Key);
+                    axisSettings.Apply(ac.Manual, ac.Min, ac.Max);
+                    axisSettings.AlignValueText = ac.AlignValue is { } av ? av.ToString("R", System.Globalization.CultureInfo.CurrentCulture) : "0";
+                    axisSettings.Side = Enum.TryParse<AxisSide>(ac.Side, out var side) ? side : AxisSide.Auto;
+                    axisSettings.Title = ac.Title ?? "";
+                }
                 Graphs.Add(graph);
                 created.Add(graph);
             }
@@ -178,6 +196,8 @@ public partial class MainViewModel
                     item.Marker = marker;
                 if (cc.MarkerSize is { } size && double.IsFinite(size))
                     item.MarkerSize = Math.Clamp(size, 2, 16);
+                if (cc.Opacity is { } opacity && double.IsFinite(opacity))
+                    item.Opacity = Math.Clamp(opacity, 0.1, 1);
                 if (cc.Color is { } hex)
                     item.ColorHex = hex;
                 item.Graph = cc.Graph is { } gi && gi >= 0 && gi < created.Count ? created[gi] : created[0];
@@ -256,36 +276,177 @@ public partial class MainViewModel
         StatusText += " — mise en page précédente retrouvée";
     }
 
-    // ---------------------------------------------------------------- recipes
+    // ---------------------------------------------------------------- projects
+
+    /// <summary>The project file being edited (null until saved or opened).</summary>
+    public string? ProjectPath { get; private set; }
+
+    /// <summary>Ctrl+S: saves the project (CSV path + layout) where it was, or asks where the first time.</summary>
+    [RelayCommand]
+    private void SaveProject() => TrySaveProject(saveAs: false);
 
     [RelayCommand]
-    private void SaveConfiguration()
+    private void SaveProjectAs() => TrySaveProject(saveAs: true);
+
+    /// <summary>Returns false when the user cancelled the dialog or the file could not be written.</summary>
+    public bool TrySaveProject(bool saveAs)
     {
         if (Dataset is not { } ds)
         {
             ShowNeedsFile();
-            return;
+            return false;
         }
-        var dialog = new SaveFileDialog
+        string? path = saveAs ? null : ProjectPath;
+        if (path is null)
         {
-            Title = "Enregistrer la configuration",
-            Filter = "Configuration CSV Analyser (*.json)|*.json",
-            FileName = Path.GetFileNameWithoutExtension(ds.FilePath) + " - configuration.json",
-            InitialDirectory = ExistingFolder(_settings.LastConfigDirectory) ?? Path.GetDirectoryName(ds.FilePath),
-        };
-        if (dialog.ShowDialog() != true)
-            return;
+            var dialog = new SaveFileDialog
+            {
+                Title = "Enregistrer le projet",
+                Filter = "Projet CSV Analyser (*.json)|*.json",
+                FileName = ProjectPath is { } current ? Path.GetFileName(current) : Path.GetFileNameWithoutExtension(ds.FilePath) + " - projet.json",
+                InitialDirectory = ExistingFolder(Path.GetDirectoryName(ProjectPath)) ?? ExistingFolder(_settings.LastConfigDirectory) ?? Path.GetDirectoryName(ds.FilePath),
+            };
+            if (dialog.ShowDialog() != true)
+                return false;
+            path = dialog.FileName;
+        }
         try
         {
-            CaptureConfiguration().Save(dialog.FileName);
-            _settings.LastConfigDirectory = Path.GetDirectoryName(dialog.FileName);
+            CaptureConfiguration().Save(path);
+            ProjectPath = path;
+            _settings.LastConfigDirectory = Path.GetDirectoryName(path);
             _settings.Save();
-            StatusText = $"Configuration enregistrée : {Path.GetFileName(dialog.FileName)}";
+            MarkSaved();
+            StatusText = $"Projet enregistré : {Path.GetFileName(path)}";
+            return true;
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
             MessageBox.Show(ex.Message, "Enregistrement impossible", MessageBoxButton.OK, MessageBoxImage.Error);
+            return false;
         }
+    }
+
+    /// <summary>
+    /// Before closing or opening something else: offers to save the project when something changed.
+    /// Returns false when the user cancels.
+    /// </summary>
+    public bool ConfirmSaveChanges(string action)
+    {
+        if (!IsDirty)
+            return true;
+        string name = ProjectPath is { } p ? $"le projet « {Path.GetFileNameWithoutExtension(p)} »" : "le projet (fichier CSV et mise en page)";
+        var answer = MessageBox.Show(
+            $"Enregistrer {name} avant {action} ?\n\nOui : enregistrer\nNon : continuer sans enregistrer\nAnnuler : revenir",
+            "Modifications non enregistrées", MessageBoxButton.YesNoCancel, MessageBoxImage.Question);
+        return answer switch
+        {
+            MessageBoxResult.Yes => TrySaveProject(saveAs: false),
+            MessageBoxResult.No => true,
+            _ => false,
+        };
+    }
+
+    [RelayCommand]
+    private async Task OpenProject()
+    {
+        var dialog = new OpenFileDialog
+        {
+            Title = "Ouvrir un projet",
+            Filter = "Projet CSV Analyser (*.json)|*.json|Tous les fichiers (*.*)|*.*",
+            InitialDirectory = ExistingFolder(_settings.LastConfigDirectory) ?? ExistingFolder(_settings.LastDirectory),
+        };
+        if (dialog.ShowDialog() == true)
+            await OpenProjectFileAsync(dialog.FileName);
+    }
+
+    /// <summary>
+    /// Opens a project: its CSV file (found by its path, next to the project, or asked) with its layout.
+    /// When another CSV is open, the user may instead apply the layout to that file.
+    /// </summary>
+    public async Task OpenProjectFileAsync(string path)
+    {
+        ViewConfiguration config;
+        try
+        {
+            config = ViewConfiguration.Load(path);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException)
+        {
+            MessageBox.Show(ex.Message, "Projet illisible", MessageBoxButton.OK, MessageBoxImage.Error);
+            return;
+        }
+
+        string? csv = FindProjectCsv(config, path);
+        if (Dataset is { } ds)
+        {
+            bool same = csv is not null && string.Equals(Path.GetFullPath(csv), Path.GetFullPath(ds.FilePath), StringComparison.OrdinalIgnoreCase);
+            if (!same)
+            {
+                string csvName = config.SourceFile ?? (csv is null ? "?" : Path.GetFileName(csv));
+                var answer = MessageBox.Show(
+                    $"Ce projet a été fait avec « {csvName} ».\n\nOui : ouvrir « {csvName} » avec cette mise en page\n"
+                    + $"Non : appliquer la mise en page au fichier ouvert « {Path.GetFileName(ds.FilePath)} »\nAnnuler : ne rien faire",
+                    "Ouvrir le projet", MessageBoxButton.YesNoCancel, MessageBoxImage.Question);
+                if (answer == MessageBoxResult.Cancel)
+                    return;
+                if (answer == MessageBoxResult.No)
+                {
+                    ApplyConfigurationFile(path);
+                    return;
+                }
+            }
+            if (!ConfirmSaveChanges("d'ouvrir ce projet"))
+                return;
+            if (same)
+            {
+                ApplyLoadedProject(config, path);
+                return;
+            }
+        }
+
+        csv ??= AskForCsv(config);
+        if (csv is null)
+            return;
+        if (await LoadCsvAsync(csv, restoreSession: false))
+            ApplyLoadedProject(config, path);
+    }
+
+    private void ApplyLoadedProject(ViewConfiguration config, string path)
+    {
+        var missing = ApplyConfiguration(config, restoreView: true);
+        ProjectPath = path;
+        _settings.LastConfigDirectory = Path.GetDirectoryName(path);
+        _settings.Save();
+        ResetHistory();
+        StatusText = $"Projet ouvert : {Path.GetFileName(path)}" + (missing.Count > 0 ? $" — {missing.Count} élément(s) ignoré(s)" : "");
+        ReportMissing(missing);
+    }
+
+    /// <summary>The CSV of a project: its saved path, else a file of the same name next to the project.</summary>
+    private static string? FindProjectCsv(ViewConfiguration config, string projectPath)
+    {
+        if (config.SourcePath is { } saved && File.Exists(saved))
+            return saved;
+        if (config.SourceFile is { } name && Path.GetDirectoryName(projectPath) is { } folder && File.Exists(Path.Combine(folder, name)))
+            return Path.Combine(folder, name);
+        return null;
+    }
+
+    private string? AskForCsv(ViewConfiguration config)
+    {
+        string name = config.SourceFile ?? "le fichier CSV";
+        if (MessageBox.Show($"« {name} » est introuvable (déplacé ou renommé ?).\nVoulez-vous le chercher ?", "Fichier introuvable",
+                MessageBoxButton.OKCancel, MessageBoxImage.Question) != MessageBoxResult.OK)
+            return null;
+        var dialog = new OpenFileDialog
+        {
+            Title = $"Où est « {name} » ?",
+            Filter = "Fichiers CSV (*.csv;*.txt)|*.csv;*.txt|Tous les fichiers (*.*)|*.*",
+            FileName = config.SourceFile ?? "",
+            InitialDirectory = ExistingFolder(Path.GetDirectoryName(config.SourcePath)) ?? ExistingFolder(_settings.LastDirectory),
+        };
+        return dialog.ShowDialog() == true ? dialog.FileName : null;
     }
 
     [RelayCommand]
@@ -298,15 +459,15 @@ public partial class MainViewModel
         }
         var dialog = new OpenFileDialog
         {
-            Title = "Appliquer une configuration",
-            Filter = "Configuration CSV Analyser (*.json)|*.json|Tous les fichiers (*.*)|*.*",
+            Title = "Appliquer une configuration au fichier ouvert",
+            Filter = "Projet ou configuration CSV Analyser (*.json)|*.json|Tous les fichiers (*.*)|*.*",
             InitialDirectory = ExistingFolder(_settings.LastConfigDirectory) ?? ExistingFolder(_settings.LastDirectory),
         };
         if (dialog.ShowDialog() == true)
             ApplyConfigurationFile(dialog.FileName);
     }
 
-    /// <summary>Applies a saved configuration to the open file (menu, or a .json file dropped on the window).</summary>
+    /// <summary>Applies the layout of a project or configuration to the open file (its own CSV is not opened).</summary>
     public void ApplyConfigurationFile(string path)
     {
         if (Dataset is not { } ds)
@@ -319,19 +480,12 @@ public partial class MainViewModel
             var config = ViewConfiguration.Load(path);
             bool sameFile = string.Equals(config.SourceFile, Path.GetFileName(ds.FilePath), StringComparison.OrdinalIgnoreCase);
             var missing = ApplyConfiguration(config, restoreView: sameFile);
+            CommitNow(); // undoable
             _settings.LastConfigDirectory = Path.GetDirectoryName(path);
             _settings.Save();
             StatusText = $"Configuration appliquée : {Path.GetFileName(path)}"
-                + (missing.Count > 0 ? $" — {missing.Count} colonne(s) absente(s) ignorée(s)" : "");
-            if (missing.Count > 0)
-            {
-                string list = string.Join("\n", missing.Take(15).Select(m => "• " + m));
-                if (missing.Count > 15)
-                    list += $"\n… et {missing.Count - 15} autre(s)";
-                MessageBox.Show(
-                    $"Ces colonnes de la configuration n'existent pas dans {Path.GetFileName(ds.FilePath)} ; elles ont été ignorées :\n\n{list}",
-                    "Configuration appliquée", MessageBoxButton.OK, MessageBoxImage.Information);
-            }
+                + (missing.Count > 0 ? $" — {missing.Count} élément(s) ignoré(s)" : "");
+            ReportMissing(missing);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException)
         {
@@ -339,6 +493,17 @@ public partial class MainViewModel
         }
     }
 
+    private void ReportMissing(IReadOnlyList<string> missing)
+    {
+        if (missing.Count == 0 || Dataset is not { } ds)
+            return;
+        string list = string.Join("\n", missing.Take(15).Select(m => "• " + m));
+        if (missing.Count > 15)
+            list += $"\n… et {missing.Count - 15} autre(s)";
+        MessageBox.Show(
+            $"Ces colonnes n'existent pas dans {Path.GetFileName(ds.FilePath)} ; elles ont été ignorées :\n\n{list}",
+            "Mise en page appliquée", MessageBoxButton.OK, MessageBoxImage.Information);
+    }
     private static void ShowNeedsFile() =>
         MessageBox.Show("Ouvrez d'abord un fichier CSV.", "Aucun fichier", MessageBoxButton.OK, MessageBoxImage.Information);
 

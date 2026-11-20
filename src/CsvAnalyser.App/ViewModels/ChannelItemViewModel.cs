@@ -53,6 +53,10 @@ public partial class ChannelItemViewModel : ObservableObject
     [ObservableProperty]
     private double _markerSize = CurveStyleChoices.DefaultMarkerSize;
 
+    /// <summary>Opacity of the curve, 0.1 to 1 (a noisy curve made transparent no longer hides the others).</summary>
+    [ObservableProperty]
+    private double _opacity = 1;
+
     [ObservableProperty]
     private string _cursorText = "";
 
@@ -124,7 +128,7 @@ public partial class ChannelItemViewModel : ObservableObject
     public bool IsDefaultAppearance =>
         Name == _originalName && Unit == _originalUnit && !IsColorCustom
         && Line == CurveLine.Solid && LineWidth == CurveStyleChoices.DefaultLineWidth
-        && Marker == CurveMarker.None && MarkerSize == CurveStyleChoices.DefaultMarkerSize
+        && Marker == CurveMarker.None && MarkerSize == CurveStyleChoices.DefaultMarkerSize && Opacity == 1
         && AxisChoice == AutoAxis;
 
     public bool IsLineVisible => Line != CurveLine.None;
@@ -187,6 +191,7 @@ public partial class ChannelItemViewModel : ObservableObject
         LineWidth = CurveStyleChoices.DefaultLineWidth;
         Marker = CurveMarker.None;
         MarkerSize = CurveStyleChoices.DefaultMarkerSize;
+        Opacity = 1;
         AxisChoice = AutoAxis;
         UseAutoColor();
     }
@@ -221,6 +226,8 @@ public partial class ChannelItemViewModel : ObservableObject
     partial void OnMarkerChanged(CurveMarker value) => _host.OnAppearanceChanged(this);
 
     partial void OnMarkerSizeChanged(double value) => _host.OnAppearanceChanged(this);
+
+    partial void OnOpacityChanged(double value) => _host.OnAppearanceChanged(this);
 
     partial void OnAxisChoiceChanged(string value) => _host.OnAppearanceChanged(this);
 }

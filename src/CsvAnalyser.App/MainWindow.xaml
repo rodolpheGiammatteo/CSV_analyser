@@ -41,7 +41,8 @@
         <KeyBinding Modifiers="Ctrl" Key="Z" Command="{Binding UndoViewCommand}" />
         <KeyBinding Modifiers="Ctrl" Key="Y" Command="{Binding RedoViewCommand}" />
         <KeyBinding Modifiers="Ctrl+Shift" Key="Z" Command="{Binding RedoViewCommand}" />
-        <KeyBinding Modifiers="Ctrl" Key="S" Command="{Binding SaveConfigurationCommand}" />
+        <KeyBinding Modifiers="Ctrl" Key="S" Command="{Binding SaveProjectCommand}" />
+        <KeyBinding Modifiers="Ctrl+Shift" Key="S" Command="{Binding SaveProjectAsCommand}" />
         <KeyBinding Modifiers="Ctrl" Key="E" Command="{Binding ExportCommand}" />
         <KeyBinding Modifiers="Ctrl" Key="M" Command="{Binding ToggleMeasureCommand}" />
         <KeyBinding Modifiers="Ctrl+Shift" Key="M" Command="{Binding ToggleMeasureYCommand}" />
@@ -81,18 +82,25 @@
                            Appearance="Primary"
                            Content="Ouvrir…"
                            Icon="{ui:SymbolIcon FolderOpen24}"
-                           ToolTip="Ouvrir un fichier CSV (Ctrl+O)"
+                           ToolTip="Ouvrir un fichier CSV ou un projet (Ctrl+O)"
                            Command="{Binding OpenCommand}" />
                 <ui:Button Icon="{ui:SymbolIcon Save24}"
-                           ToolTip="Configuration et export : enregistrer ou appliquer une mise en page, exporter en CSV"
+                           ToolTip="Projet (fichier CSV + mise en page) : enregistrer, ouvrir ; appliquer une mise en page ; exporter en CSV"
                            Click="OnOpenButtonMenu">
                     <ui:Button.ContextMenu>
                         <ContextMenu>
-                            <MenuItem Header="Enregistrer la configuration…" InputGestureText="Ctrl+S"
+                            <MenuItem Header="Enregistrer le projet" InputGestureText="Ctrl+S"
                                       Icon="{ui:SymbolIcon Save24}"
-                                      Command="{Binding SaveConfigurationCommand}" />
-                            <MenuItem Header="Appliquer une configuration…"
+                                      Command="{Binding SaveProjectCommand}" />
+                            <MenuItem Header="Enregistrer le projet sous…" InputGestureText="Ctrl+Maj+S"
+                                      Icon="{ui:SymbolIcon SaveEdit24}"
+                                      Command="{Binding SaveProjectAsCommand}" />
+                            <MenuItem Header="Ouvrir un projet…"
                                       Icon="{ui:SymbolIcon FolderOpen24}"
+                                      Command="{Binding OpenProjectCommand}" />
+                            <Separator />
+                            <MenuItem Header="Appliquer une mise en page au fichier ouvert…"
+                                      Icon="{ui:SymbolIcon DocumentArrowLeft24}"
                                       Command="{Binding OpenConfigurationCommand}" />
                             <Separator />
                             <MenuItem Header="Exporter en CSV…" InputGestureText="Ctrl+E"
@@ -122,13 +130,13 @@
                            Command="{Binding AutoScaleYCommand}" />
                 <ui:Button Margin="8,2,0,2"
                            Icon="{ui:SymbolIcon ArrowUndo24}"
-                           ToolTip="Vue précédente (Ctrl+Z ou bouton « précédent » de la souris)"
+                           ToolTip="Annuler la dernière action (Ctrl+Z ou bouton « précédent » de la souris)"
                            Style="{StaticResource HistoryButton}"
                            Tag="{Binding CanUndoView}"
                            Command="{Binding UndoViewCommand}" />
                 <ui:Button Margin="4,2,0,2"
                            Icon="{ui:SymbolIcon ArrowRedo24}"
-                           ToolTip="Vue suivante (Ctrl+Y ou bouton « suivant » de la souris)"
+                           ToolTip="Rétablir (Ctrl+Y ou bouton « suivant » de la souris)"
                            Style="{StaticResource HistoryButton}"
                            Tag="{Binding CanRedoView}"
                            Command="{Binding RedoViewCommand}" />
@@ -185,14 +193,14 @@
         </DockPanel>
         <Grid Grid.Row="2" Margin="12,0,12,0">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="330" MinWidth="200" />
+                <ColumnDefinition x:Name="CurveColumn" Width="330" MinWidth="200" />
                 <ColumnDefinition Width="8" />
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
 
             <!-- Panneau gauche : courbes + curseur -->
-            <Grid Grid.Column="0">
+            <Grid x:Name="LeftPanel" Grid.Column="0">
                 <Grid.LayoutTransform>
                     <ScaleTransform ScaleX="{Binding UiScale}" ScaleY="{Binding UiScale}" />
                 </Grid.LayoutTransform>
@@ -210,7 +218,7 @@
 
                 <ListBox Grid.Row="1"
                          Margin="0,8,0,0"
-                         ToolTip="Faites glisser une courbe vers un graphe, ou vers « Nouveau graphe » en bas du tracé"
+                         ToolTip="Maj+clic : cocher ou décocher toutes les courbes entre deux clics (dans la liste filtrée). Glisser une courbe : la placer dans un graphe."
                          ToolTipService.InitialShowDelay="1500"
                          PreviewMouseLeftButtonDown="OnCurvePreviewMouseDown"
                          PreviewMouseMove="OnCurvePreviewMouseMove"
@@ -253,7 +261,7 @@
                                     <ColumnDefinition Width="*" />
                                     <ColumnDefinition Width="Auto" />
                                 </Grid.ColumnDefinitions>
-                                <CheckBox IsChecked="{Binding IsPlotted}" MinHeight="0" Padding="6,0,0,0" ToolTip="{Binding Channel.SourceName}">
+                                <CheckBox IsChecked="{Binding IsPlotted}" MinHeight="0" Padding="6,0,0,0" ToolTip="{Binding Channel.SourceName}" Click="OnCurveCheckClick">
                                     <StackPanel Orientation="Horizontal">
                                         <Rectangle Width="12" Height="12" Margin="0,0,8,0" RadiusX="2" RadiusY="2"
                                                    VerticalAlignment="Center"
@@ -296,9 +304,11 @@
                             BorderThickness="1"
                             Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
                             BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}">
-                        <StackPanel>
-                            <TextBlock FontWeight="SemiBold" Text="Curseur" />
-                            <TextBlock Margin="0,4,0,6" Foreground="{DynamicResource AppSecondaryTextBrush}" TextWrapping="Wrap" Text="{Binding CursorXText}" />
+                        <DockPanel>
+                            <TextBlock DockPanel.Dock="Top" FontWeight="SemiBold" Text="Curseur" />
+                            <TextBlock DockPanel.Dock="Top" Margin="0,4,0,6" Foreground="{DynamicResource AppSecondaryTextBrush}" TextWrapping="Wrap" Text="{Binding CursorXText}" />
+                            <!-- Scrolls when many curves are plotted, so the card never hides the curve list. -->
+                            <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Focusable="False">
                             <ItemsControl ItemsSource="{Binding CursorGroups}" Focusable="False">
                                 <ItemsControl.ItemsPanel>
                                     <ItemsPanelTemplate>
@@ -339,7 +349,8 @@
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
-                        </StackPanel>
+                            </ScrollViewer>
+                        </DockPanel>
                     </Border>
                 </ContentControl>
             </Grid>
@@ -347,7 +358,7 @@
             <GridSplitter Grid.Column="1" HorizontalAlignment="Stretch" Background="Transparent" />
 
             <!-- Graphe (+ emplacement du curseur sous le graphe) -->
-            <Grid Grid.Column="2">
+            <Grid x:Name="PlotColumn" Grid.Column="2">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="*" />
                     <RowDefinition Height="Auto" />

@@ -188,6 +188,7 @@ public partial class MainViewModel
             replacement.LineWidth = old.LineWidth;
             replacement.Marker = old.Marker;
             replacement.MarkerSize = old.MarkerSize;
+            replacement.Opacity = old.Opacity;
             if (old.IsColorCustom)
                 replacement.ColorHex = old.ColorHex;
             else
@@ -236,9 +237,16 @@ public partial class MainViewModel
     /// <summary>Configurations: removes the computed curves, then creates those of the configuration. Returns the errors.</summary>
     private List<string> RebuildComputed(IReadOnlyList<ComputedCurveConfig> definitions)
     {
+        // A curve whose definition did not change is kept as is (undo/redo stays fast on big files).
+        static string Key(ComputedCurveConfig d) => System.Text.Json.JsonSerializer.Serialize(d);
+        var previous = new Dictionary<string, ChannelItemViewModel>();
         foreach (var item in ComputedChannels.ToList())
+        {
+            previous.TryAdd(Key(item.Definition!), item);
             Channels.Remove(item);
+        }
         var errors = new List<string>();
+        bool recomputed = false; // a later curve may use one that was recomputed: recompute the rest too
         foreach (var def in definitions)
         {
             if (Channels.Any(c => c.Channel.SourceName == def.Name))
@@ -246,6 +254,12 @@ public partial class MainViewModel
                 errors.Add($"{def.Name} (nom déjà pris)");
                 continue;
             }
+            if (!recomputed && previous.Remove(Key(def), out var kept))
+            {
+                Channels.Insert(ComputedChannels.Count(), kept);
+                continue;
+            }
+            recomputed = true;
             try
             {
                 Channels.Insert(ComputedChannels.Count(), CreateComputedItem(def, ComputeValues(def)));
