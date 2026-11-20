@@ -192,8 +192,20 @@
                 </ToggleButton>
                 <ui:Button Margin="8,2,0,2"
                            Icon="{ui:SymbolIcon Eraser24}"
-                           ToolTip="Tout désélectionner (masquer toutes les courbes)"
-                           Command="{Binding ClearSelectionCommand}" />
+                           ToolTip="Tout désélectionner (masquer toutes les courbes). Clic droit : réinitialiser la mise en page"
+                           Command="{Binding ClearSelectionCommand}">
+                    <ui:Button.ContextMenu>
+                        <ContextMenu>
+                            <MenuItem Header="Tout désélectionner"
+                                      Icon="{ui:SymbolIcon Eraser24}"
+                                      Command="{Binding ClearSelectionCommand}" />
+                            <MenuItem Header="Réinitialiser la mise en page"
+                                      ToolTip="Comme à la première ouverture du fichier : un graphe, aucune courbe, noms et styles d'origine, sans courbes calculées ni curseurs de mesure (Ctrl+Z pour annuler)"
+                                      Icon="{ui:SymbolIcon ArrowReset24}"
+                                      Command="{Binding ResetLayoutCommand}" />
+                        </ContextMenu>
+                    </ui:Button.ContextMenu>
+                </ui:Button>
             </WrapPanel>
         </DockPanel>
         <Grid Grid.Row="2" Margin="12,0,12,0">

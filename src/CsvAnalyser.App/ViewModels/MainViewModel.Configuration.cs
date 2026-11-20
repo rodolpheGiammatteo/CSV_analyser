@@ -259,6 +259,23 @@ public partial class MainViewModel
         return missing;
     }
 
+    /// <summary>
+    /// Back to the state of a first opening: one graph, no curve, original names and styles, no computed curve,
+    /// default X axis, no measurement cursor (right-click on the eraser). Undoable with Ctrl+Z.
+    /// </summary>
+    [RelayCommand]
+    private void ResetLayout()
+    {
+        if (Dataset is null)
+            return;
+        var defaultX = XAxisOptions.FirstOrDefault();
+        IsMeasuring = false;
+        IsMeasuringY = false;
+        ApplyConfiguration(new ViewConfiguration { XAxis = defaultX?.Channel?.SourceName ?? "" }, restoreView: false);
+        CommitNow();
+        StatusText = L.T("Mise en page réinitialisée (Ctrl+Z pour annuler)");
+    }
+
     // ---------------------------------------------------------------- session (per file)
 
     /// <summary>Remembers the layout of the open file (before opening another one, and when the app closes).</summary>
