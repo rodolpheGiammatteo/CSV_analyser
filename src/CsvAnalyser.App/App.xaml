@@ -9,10 +9,30 @@
                 <ui:ControlsDictionary />
             </ResourceDictionary.MergedDictionaries>
             <BooleanToVisibilityConverter x:Key="BoolToVisibility" />
-            <!-- Opaque menus: the Fluent menu background is semi-transparent and renders invisible here. -->
-            <Style TargetType="ContextMenu" BasedOn="{StaticResource {x:Type ContextMenu}}">
+            <!--
+                Opaque menus with our own template: the Fluent menu is semi-transparent (invisible here), and basing a
+                style on it fell back to the classic template (white icon gutter on the left in the dark theme).
+            -->
+            <Style TargetType="ContextMenu">
+                <Setter Property="OverridesDefaultStyle" Value="True" />
+                <Setter Property="SnapsToDevicePixels" Value="True" />
+                <Setter Property="HasDropShadow" Value="False" />
                 <Setter Property="Background" Value="{DynamicResource AppMenuBackground}" />
                 <Setter Property="BorderBrush" Value="{DynamicResource AppMenuBorder}" />
+                <Setter Property="Foreground" Value="{DynamicResource AppMenuForeground}" />
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="ContextMenu">
+                            <Border Background="{TemplateBinding Background}"
+                                    BorderBrush="{TemplateBinding BorderBrush}"
+                                    BorderThickness="1"
+                                    CornerRadius="6"
+                                    Padding="4">
+                                <StackPanel IsItemsHost="True" KeyboardNavigation.DirectionalNavigation="Cycle" />
+                            </Border>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
             </Style>
         </ResourceDictionary>
     </Application.Resources>

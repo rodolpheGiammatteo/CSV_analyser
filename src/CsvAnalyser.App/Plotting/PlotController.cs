@@ -194,7 +194,9 @@ public sealed class PlotController
 
         _graphs.Clear();
         _series.Clear();
-        _xs = _vm.Dataset is { } ds && _vm.SelectedXAxis is { } option ? option.GetValues(ds) : null;
+        _lastYRanges.Clear();
+        _interactionAxis = null;
+        _xs =_vm.Dataset is { } ds && _vm.SelectedXAxis is { } option ? option.GetValues(ds) : null;
         _xSorted = _vm.SelectedXAxis?.IsSorted ?? true;
 
         for (int gi = 0; gi < specs.Count; gi++)
@@ -675,7 +677,62 @@ public sealed class PlotController
     /// </summary>
     private sealed class PaddingMatcher(PlotController owner) : IMultiplotPreRenderAction
     {
-        public void Invoke() => owner.MatchPaddings();
+        public void Invoke()
+        {
+            owner.KeepZerosAligned();
+            owner.MatchPaddings();
+        }
+    }
+
+    // Y ranges seen at the previous render, to find which axis changed when no axis was grabbed.
+    private readonly Dictionary<IYAxis, (double Min, double Max)> _lastYRanges = [];
+
+    // The Y axis under the mouse when a drag or a wheel burst started (null = the data area).
+    private IYAxis? _interactionAxis;
+
+    private void RememberInteractionAxis(MouseEventArgs e)
+    {
+        var pixel = ToPixel(e);
+        _interactionAxis = _graphs.Select(g => g.Plot.GetAxis(pixel)).OfType<IYAxis>().FirstOrDefault();
+    }
+
+    /// <summary>
+    /// "Align zeros" must hold while the user drags or zooms one Y axis with the mouse (ScottPlot moves only that
+    /// axis): the axis that changed leads, the others shift so their zero is at the same height, keeping their scale.
+    /// </summary>
+    private void KeepZerosAligned()
+    {
+        foreach (var g in _graphs)
+        {
+            if (!g.Graph.AlignZeros || g.Axes.Count < 2)
+                continue;
+
+            var axes = g.Axes.Select(a => a.Axis).ToList();
+            static double ZeroFraction(IYAxis axis) => -axis.Range.Min / (axis.Range.Max - axis.Range.Min);
+
+            double reference = ZeroFraction(axes[0]);
+            bool aligned = axes.All(a => Math.Abs(ZeroFraction(a) - reference) < 1e-6);
+            if (!aligned)
+            {
+                // The axis grabbed with the mouse leads. (ScottPlot puts the other axes back to their state at
+                // mouse-down on every move, so "the axis that changed" would pick the wrong one.)
+                var leader = _interactionAxis is { } grabbed && axes.Contains(grabbed)
+                    ? grabbed
+                    : axes.FirstOrDefault(a => !_lastYRanges.TryGetValue(a, out var last)
+                        || last.Min != a.Range.Min || last.Max != a.Range.Max) ?? axes[0];
+                double f = ZeroFraction(leader);
+                if (double.IsFinite(f))
+                {
+                    foreach (var axis in axes.Where(a => a != leader))
+                    {
+                        double span = axis.Range.Max - axis.Range.Min;
+                        g.Plot.Axes.SetLimitsY(-f * span, (1 - f) * span, axis);
+                    }
+                }
+            }
+            foreach (var axis in axes)
+                _lastYRanges[axis] = (axis.Range.Min, axis.Range.Max);
+        }
     }
 
     private void MatchPaddings()
@@ -786,6 +843,7 @@ public sealed class PlotController
         if (TryStartLegendDrag(e))
             return;
 
+        RememberInteractionAxis(e);
         if (_wheelTimer.IsEnabled)
         {
             _wheelTimer.Stop();
@@ -822,6 +880,8 @@ public sealed class PlotController
 
     private void OnPreviewMouseWheel(object sender, MouseWheelEventArgs e)
     {
+        if (!_wheelTimer.IsEnabled)
+            RememberInteractionAxis(e);
         _gestureStart ??= Capture();
         _wheelTimer.Stop();
         _wheelTimer.Start();
@@ -829,8 +889,12 @@ public sealed class PlotController
 
     private void CommitGesture()
     {
-        if (_gestureStart is not { } start || Mouse.LeftButton == MouseButtonState.Pressed
-            || Mouse.RightButton == MouseButtonState.Pressed || Mouse.MiddleButton == MouseButtonState.Pressed)
+        if (Mouse.LeftButton == MouseButtonState.Pressed || Mouse.RightButton == MouseButtonState.Pressed
+            || Mouse.MiddleButton == MouseButtonState.Pressed)
+            return;
+        // Runs after the last render of the gesture: the grabbed axis no longer leads the zero alignment.
+        _interactionAxis = null;
+        if (_gestureStart is not { } start)
             return;
         _gestureStart = null;
         Record(start);

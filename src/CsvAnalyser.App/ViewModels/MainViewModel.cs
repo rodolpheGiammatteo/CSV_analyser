@@ -494,7 +494,14 @@ public partial class MainViewModel : ObservableObject, IChannelHost
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(CursorGroupsOrientation))]
+    [NotifyPropertyChangedFor(nameof(CursorGroupWidth))]
     private CursorPanelPlacement _cursorPanelPlacement;
+
+    /// <summary>
+    /// Fixed group width on the right and under the plot (so the panel never changes size while the values change);
+    /// NaN on the left, where the column width decides.
+    /// </summary>
+    public double CursorGroupWidth => CursorPanelPlacement == CursorPanelPlacement.Left ? double.NaN : 280;
 
     /// <summary>Groups side by side when the panel is under the plot, stacked otherwise.</summary>
     public System.Windows.Controls.Orientation CursorGroupsOrientation =>

@@ -227,7 +227,8 @@
                                 </ItemsControl.ItemsPanel>
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate DataType="{x:Type vm:CursorGroup}">
-                                        <StackPanel MinWidth="220" Margin="0,0,20,8">
+                                        <StackPanel Width="{Binding DataContext.CursorGroupWidth, RelativeSource={RelativeSource AncestorType=ItemsControl, AncestorLevel=1}}"
+                                                    Margin="0,0,20,8">
                                             <TextBlock Margin="0,0,0,2" FontSize="12" FontWeight="SemiBold"
                                                        Foreground="{DynamicResource AppSecondaryTextBrush}"
                                                        Text="{Binding Graph.Title}"
@@ -247,7 +248,9 @@
                                                             </Grid.ColumnDefinitions>
                                                             <Rectangle Width="10" Height="10" Margin="0,0,8,0" RadiusX="2" RadiusY="2" Fill="{Binding Brush}" />
                                                             <TextBlock Grid.Column="1" TextTrimming="CharacterEllipsis" Text="{Binding Name}" ToolTip="{Binding Name}" />
-                                                            <TextBlock Grid.Column="2" Margin="10,0,0,0" FontFamily="Consolas" Text="{Binding CursorText}" />
+                                                            <!-- Fixed minimum width, right-aligned: the card does not jump when the digits change. -->
+                                                            <TextBlock Grid.Column="2" Margin="10,0,0,0" MinWidth="120" TextAlignment="Right"
+                                                                       FontFamily="Consolas" Text="{Binding CursorText}" />
                                                         </Grid>
                                                     </DataTemplate>
                                                 </ItemsControl.ItemTemplate>
