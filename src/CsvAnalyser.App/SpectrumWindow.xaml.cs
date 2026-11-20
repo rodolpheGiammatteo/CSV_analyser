@@ -49,7 +49,7 @@ public partial class SpectrumWindow : FluentWindow
         if (vm.PlotView?.XRange is not null)
             ranges.Add(new(SpectrumRange.Visible, "Plage visible du graphe"));
         if (vm.IsMeasuring && vm.RowsBetweenCursors is not null)
-            ranges.Add(new(SpectrumRange.BetweenCursors, "Entre les curseurs A et B"));
+            ranges.Add(new(SpectrumRange.BetweenCursors, "Entre les curseurs X1 et X2"));
         ranges.Add(new(SpectrumRange.All, "Toutes les données"));
         RangeCombo.ItemsSource = ranges;
         RangeCombo.SelectedValue = vm.IsMeasuring && vm.RowsBetweenCursors is not null ? SpectrumRange.BetweenCursors : ranges[0].Value;

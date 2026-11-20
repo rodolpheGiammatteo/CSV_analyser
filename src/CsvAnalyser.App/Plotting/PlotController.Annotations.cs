@@ -420,7 +420,7 @@ public sealed partial class PlotController
             string name = MenuText(a.ListText);
             menu.Add(L.F("Modifier « {0} »…", name), _ => _vm.EditAnnotationCommand.Execute(a));
             if (a.Kind == AnnotationKind.Zone)
-                menu.Add(L.T("Mesurer cette zone (curseurs A et B)"), _ => _vm.MeasureZoneCommand.Execute(a));
+                menu.Add(L.T("Mesurer cette zone (curseurs X1 et X2)"), _ => _vm.MeasureZoneCommand.Execute(a));
             menu.Add(L.F("Supprimer « {0} »", name), _ => _vm.DeleteAnnotation(a));
             menu.AddSeparator();
         }

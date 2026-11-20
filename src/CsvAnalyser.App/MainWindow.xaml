@@ -194,7 +194,7 @@
                 </ui:Button>
                 <ToggleButton Margin="8,2,0,2"
                               Padding="11,5"
-                              ToolTip="Deux curseurs A et B à faire glisser sur le graphe : valeurs, écart, min, max, moyenne et valeur efficace entre les deux (Ctrl+M)"
+                              ToolTip="Deux curseurs X1 et X2 à faire glisser sur le graphe : valeurs, écart, min, max, moyenne et valeur efficace entre les deux (Ctrl+M)"
                               IsChecked="{Binding IsMeasuring}"
                               IsEnabled="{Binding HasData}">
                     <StackPanel Orientation="Horizontal">
@@ -394,7 +394,7 @@
                                                               Icon="{ui:SymbolIcon Edit16}"
                                                               Command="{Binding PlacementTarget.Tag.EditAnnotationCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
                                                               CommandParameter="{Binding}" />
-                                                    <MenuItem Header="Mesurer cette zone (curseurs A et B)"
+                                                    <MenuItem Header="Mesurer cette zone (curseurs X1 et X2)"
                                                               Icon="{ui:SymbolIcon Ruler24}"
                                                               Visibility="{Binding IsZone, Converter={StaticResource BoolToVisibility}}"
                                                               Command="{Binding PlacementTarget.Tag.MeasureZoneCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
@@ -585,7 +585,7 @@
                                Visibility="{Binding ShowPlotHint, Converter={StaticResource BoolToVisibility}}" />
                 </Grid>
             </Border>
-                <!-- Mesures : curseurs A et B (axe X), Y1 et Y2 (axe Y) -->
+                <!-- Mesures : curseurs X1 et X2 (axe X), Y1 et Y2 (axe Y) -->
                 <Border Grid.Row="1" Margin="0,0,0,8" Padding="12,8" CornerRadius="6" BorderThickness="1"
                         Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
                         BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
@@ -630,14 +630,14 @@
                             <ui:Button DockPanel.Dock="Right" Padding="4" MinHeight="0"
                                        Appearance="Transparent" BorderThickness="0"
                                        Icon="{ui:SymbolIcon Dismiss16}"
-                                       ToolTip="Masquer les curseurs A et B (Ctrl+M)"
+                                       ToolTip="Masquer les curseurs X1 et X2 (Ctrl+M)"
                                        Command="{Binding ToggleMeasureCommand}" />
                             <ui:Button DockPanel.Dock="Right" Margin="0,0,6,0" Padding="8,3" MinHeight="0"
                                        Icon="{ui:SymbolIcon Highlight16}"
-                                       Content="Zone A–B"
-                                       ToolTip="Créer une zone surlignée entre les curseurs A et B (annotation)"
+                                       Content="Zone X1–X2"
+                                       ToolTip="Créer une zone surlignée entre les curseurs X1 et X2 (annotation)"
                                        Command="{Binding ZoneFromMeasureCommand}" />
-                            <TextBlock VerticalAlignment="Center" FontWeight="SemiBold" Text="Mesures entre A et B" />
+                            <TextBlock VerticalAlignment="Center" FontWeight="SemiBold" Text="Mesures entre X1 et X2" />
                             <TextBlock Margin="16,0,8,0" VerticalAlignment="Center" FontFamily="Consolas"
                                        Foreground="{DynamicResource AppSecondaryTextBrush}"
                                        TextWrapping="Wrap" Text="{Binding MeasureSummary}" />
@@ -658,9 +658,9 @@
                                 <ColumnDefinition Width="Auto" SharedSizeGroup="M8" />
                             </Grid.ColumnDefinitions>
                             <TextBlock Grid.Column="0" MinWidth="160" Margin="0,0,0,2" FontWeight="SemiBold" Foreground="{DynamicResource AppSecondaryTextBrush}" Text="Courbe" />
-                            <TextBlock Grid.Column="1" MinWidth="70" Style="{StaticResource MeasureHead}" Foreground="#D6336C" Text="A" />
-                            <TextBlock Grid.Column="2" MinWidth="70" Style="{StaticResource MeasureHead}" Foreground="#0C8599" Text="B" />
-                            <TextBlock Grid.Column="3" MinWidth="70" Style="{StaticResource MeasureHead}" Text="B − A" />
+                            <TextBlock Grid.Column="1" MinWidth="70" Style="{StaticResource MeasureHead}" Foreground="#D6336C" Text="X1" />
+                            <TextBlock Grid.Column="2" MinWidth="70" Style="{StaticResource MeasureHead}" Foreground="#0C8599" Text="X2" />
+                            <TextBlock Grid.Column="3" MinWidth="70" Style="{StaticResource MeasureHead}" Text="X2 − X1" />
                             <TextBlock Grid.Column="4" MinWidth="70" Style="{StaticResource MeasureHead}" Text="Min" />
                             <TextBlock Grid.Column="5" MinWidth="70" Style="{StaticResource MeasureHead}" Text="Max" />
                             <TextBlock Grid.Column="6" MinWidth="70" Style="{StaticResource MeasureHead}" Text="Moyenne" />

@@ -55,7 +55,7 @@ public sealed partial class ExportViewModel : ObservableObject
         if (main.IsMeasuring && main.MeasureA is { } a && main.MeasureB is { } b)
         {
             ranges.Add(new(ExportRangeKind.BetweenCursors,
-                L.F("Entre les curseurs A et B ({0} → {1})", MainViewModel.FormatValue(Math.Min(a, b), ""), MainViewModel.FormatValue(Math.Max(a, b), ""))));
+                L.F("Entre les curseurs X1 et X2 ({0} → {1})", MainViewModel.FormatValue(Math.Min(a, b), ""), MainViewModel.FormatValue(Math.Max(a, b), ""))));
             _range = ExportRangeKind.BetweenCursors;
         }
         RangeChoices = ranges;

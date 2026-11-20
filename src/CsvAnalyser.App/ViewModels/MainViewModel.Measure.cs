@@ -101,7 +101,7 @@ public partial class MainViewModel
 
         string xUnit = option.Channel?.Unit ?? "";
         double delta = b - a;
-        string summary = $"A : {Number(a)}   B : {Number(b)}   B − A = {Number(delta)}{(xUnit.Length > 0 ? " " + xUnit : "")}";
+        string summary = $"X1 : {Number(a)}   X2 : {Number(b)}   X2 − X1 = {Number(delta)}{(xUnit.Length > 0 ? " " + xUnit : "")}";
         bool isSeconds = option.Channel is not null && option.Channel == ds.Time?.Channel || xUnit == "s";
         if (isSeconds && Math.Abs(delta) > 0)
             summary += $"   (1/Δ = {Number(1 / Math.Abs(delta))} Hz)";

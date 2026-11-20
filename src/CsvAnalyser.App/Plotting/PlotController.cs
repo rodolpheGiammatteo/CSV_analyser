@@ -132,8 +132,8 @@ public sealed partial class PlotController : IPlotView
         if (axisGraph is null) // "here" means a point of the graph, not of an axis
         {
             AddAnnotationMenuItems(menu);
-            menu.Add(L.T("Placer le curseur A ici"), plot => PlaceMeasureCursorAtMenu(plot, 'A'));
-            menu.Add(L.T("Placer le curseur B ici"), plot => PlaceMeasureCursorAtMenu(plot, 'B'));
+            menu.Add(L.T("Placer le curseur X1 ici"), plot => PlaceMeasureCursorAtMenu(plot, 'A'));
+            menu.Add(L.T("Placer le curseur X2 ici"), plot => PlaceMeasureCursorAtMenu(plot, 'B'));
             menu.Add(L.T("Placer le curseur Y1 ici"), plot => PlaceMeasureYAtMenu(plot, '1'));
             menu.Add(L.T("Placer le curseur Y2 ici"), plot => PlaceMeasureYAtMenu(plot, '2'));
             menu.AddSeparator();
@@ -438,8 +438,8 @@ public sealed partial class PlotController : IPlotView
             cursor.LineWidth = _scale;
             cursor.IsVisible = false;
             render.Cursor = cursor;
-            render.LineA = AddMeasureLine(plot, "A", MeasureColorA, labelled: isTop);
-            render.LineB = AddMeasureLine(plot, "B", MeasureColorB, labelled: isTop);
+            render.LineA = AddMeasureLine(plot, "X1", MeasureColorA, labelled: isTop);
+            render.LineB = AddMeasureLine(plot, "X2", MeasureColorB, labelled: isTop);
         }
 
         // Only the bottom graph shows the X axis; the others share it.
@@ -1480,9 +1480,9 @@ public sealed partial class PlotController : IPlotView
             {
                 var r = g.Plot.Axes.Bottom.Range;
                 if (g.LineA is { } la)
-                    PlaceVertical(la, a, r.Min, r.Max, "A", g.IsTop);
+                    PlaceVertical(la, a, r.Min, r.Max, "X1", g.IsTop);
                 if (g.LineB is { } lb)
-                    PlaceVertical(lb, b, r.Min, r.Max, "B", g.IsTop);
+                    PlaceVertical(lb, b, r.Min, r.Max, "X2", g.IsTop);
             }
         }
 
