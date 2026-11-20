@@ -50,6 +50,12 @@ public sealed class AppSettings
     /// <summary>The curve list is hidden (more room for the graphs).</summary>
     public bool CurveListHidden { get; set; }
 
+    /// <summary>Copied and saved graph images: size on screen × this factor.</summary>
+    public double ImageScale { get; set; } = 1;
+
+    /// <summary>Last opened CSV files and projects, most recent first.</summary>
+    public List<string> RecentFiles { get; set; } = [];
+
     /// <summary>Left-button drag zooms on a rectangle (and the wheel button pans); false = the reverse.</summary>
     public bool LeftDragZooms { get; set; } = true;
 

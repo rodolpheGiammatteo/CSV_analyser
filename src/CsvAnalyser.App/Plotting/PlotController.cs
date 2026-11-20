@@ -139,8 +139,47 @@ public sealed class PlotController : IPlotView
         menu.Add(L.T("Spectre (FFT) de ce graphe…"), plot => _vm.ShowSpectrumCommand.Execute(GraphOf(plot)));
         menu.Add(L.T("Titre, légende et axes…"), plot => _vm.EditAxesCommand.Execute(GraphOf(plot)));
         menu.AddSeparator();
-        menu.Add(L.T("Copier l'image"), WpfPlotMenu.CopyImageToClipboard);
-        menu.Add(L.T("Enregistrer l'image…"), menu.OpenSaveImageDialog);
+        // Images at the resolution chosen in Paramètres; with several graphs, this one or all of them.
+        if (_graphs.Count > 1)
+        {
+            menu.Add(L.T("Copier l'image de ce graphe"), plot => PlotTools.CopyToClipboard(RenderGraphImage(plot, SkiaSharp.SKEncodedImageFormat.Png)));
+            menu.Add(L.T("Copier l'image de tous les graphes"), _ => PlotTools.CopyToClipboard(RenderAllImage(SkiaSharp.SKEncodedImageFormat.Png)));
+            menu.Add(L.T("Enregistrer l'image de ce graphe…"), plot => PlotTools.SaveWithDialog(f => RenderGraphImage(plot, f), ImageName(GraphOf(plot)?.Title)));
+            menu.Add(L.T("Enregistrer l'image de tous les graphes…"), _ => PlotTools.SaveWithDialog(RenderAllImage, ImageName(L.T("graphes"))));
+        }
+        else
+        {
+            menu.Add(L.T("Copier l'image"), _ => PlotTools.CopyToClipboard(RenderAllImage(SkiaSharp.SKEncodedImageFormat.Png)));
+            menu.Add(L.T("Enregistrer l'image…"), _ => PlotTools.SaveWithDialog(RenderAllImage, ImageName(null)));
+        }
+    }
+
+    private string ImageName(string? what)
+    {
+        string name = System.IO.Path.GetFileNameWithoutExtension(_vm.Dataset?.FilePath ?? "graphe");
+        return (what is { Length: > 0 } ? $"{name} - {what}" : name) + ".png";
+    }
+
+    /// <summary>One graph as an image (the hover cursor is hidden first).</summary>
+    private byte[] RenderGraphImage(Plot plot, SkiaSharp.SKEncodedImageFormat format)
+    {
+        HideCursor();
+        var rect = _view.Multiplot.LastRender.GetLastRenderRectangle(plot);
+        var size = rect is { } r ? new PixelSize(r.Width, r.Height)
+            : new PixelSize((float)(_view.ActualWidth * _view.DisplayScale), (float)(_view.ActualHeight * _view.DisplayScale));
+        var bytes = PlotTools.RenderPlot(plot, size, _vm.ImageScale, format);
+        _view.Refresh(); // the export changed the last-render layout used by the mouse
+        return bytes;
+    }
+
+    /// <summary>Every graph, as laid out on screen, as one image.</summary>
+    private byte[] RenderAllImage(SkiaSharp.SKEncodedImageFormat format)
+    {
+        HideCursor();
+        var size = new PixelSize((float)(_view.ActualWidth * _view.DisplayScale), (float)(_view.ActualHeight * _view.DisplayScale));
+        var bytes = PlotTools.RenderMultiplot(_view.Multiplot, size, _vm.ImageScale, format);
+        _view.Refresh();
+        return bytes;
     }
 
     /// <summary>A Y axis back to automatic (manual bounds dropped) and fitted to the visible data.</summary>
@@ -157,13 +196,7 @@ public sealed class PlotController : IPlotView
     /// <param name="leftPans">For one gesture: a left drag started on an axis moves that axis, whatever the setting.</param>
     private void ApplyMouseButtons(bool leftPans = false)
     {
-        var responses = _view.UserInputProcessor.UserActionResponses;
-        responses.RemoveAll(r => r is MouseDragPan or MouseDragZoomRectangle);
-        var left = ScottPlot.Interactivity.StandardMouseButtons.Left;
-        var middle = ScottPlot.Interactivity.StandardMouseButtons.Middle;
-        bool leftZooms = _vm.LeftDragZooms && !leftPans;
-        responses.Add(new MouseDragZoomRectangle(leftZooms ? left : middle));
-        responses.Add(new MouseDragPan(leftZooms ? middle : left));
+        PlotTools.ApplyMouseButtons(_view, _vm.LeftDragZooms && !leftPans);
     }
 
     private bool _axisPanGesture;

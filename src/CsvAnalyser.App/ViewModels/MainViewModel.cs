@@ -206,6 +206,7 @@ public partial class MainViewModel : ObservableObject, IChannelHost
         {
             ProjectPath = null;
             ResetHistory();
+            AddRecent(path);
         }
     }
 

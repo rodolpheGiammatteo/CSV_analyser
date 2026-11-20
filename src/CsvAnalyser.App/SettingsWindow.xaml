@@ -77,16 +77,14 @@
                     IsSnapToTickEnabled="True"
                     Value="{Binding PlotFontScale}" />
 
-            <TextBlock Margin="0,12,0,0" FontWeight="SemiBold" Text="Panneau Curseur" />
-            <TextBlock Margin="0,2,0,0" Foreground="{DynamicResource AppSecondaryTextBrush}"
-                       Text="Les valeurs des courbes sous le curseur, groupées par graphe." />
+            <TextBlock Margin="0,12,0,0" FontWeight="SemiBold" Text="Placement du panneau curseur" />
             <ComboBox Margin="0,6,0,8"
                       ItemsSource="{x:Static vm:MainViewModel.CursorPanelChoices}"
                       SelectedValuePath="Value"
                       DisplayMemberPath="Label"
                       SelectedValue="{Binding CursorPanelPlacement}" />
             <CheckBox Margin="0,4,0,8"
-                      Content="Valeurs aussi dans les graphes, près des points"
+                      Content="Afficher les valeurs du curseur dans les graphiques"
                       ToolTip="Chaque valeur est écrite à côté de son point d'intersection avec le curseur"
                       IsChecked="{Binding ShowCursorLabels}" />
 
@@ -96,6 +94,13 @@
                       SelectedValuePath="Value"
                       DisplayMemberPath="Label"
                       SelectedValue="{Binding LeftDragZooms}" />
+
+            <TextBlock Margin="0,12,0,0" FontWeight="SemiBold" Text="Résolution des images copiées ou enregistrées" />
+            <ComboBox Margin="0,6,0,8"
+                      ItemsSource="{x:Static vm:MainViewModel.ImageScaleChoices}"
+                      SelectedValuePath="Value"
+                      DisplayMemberPath="Label"
+                      SelectedValue="{Binding ImageScale}" />
 
             <TextBlock Margin="0,12,0,0" FontWeight="SemiBold" Text="Fichiers" />
             <CheckBox Margin="0,6,0,8"

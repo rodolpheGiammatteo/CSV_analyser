@@ -356,6 +356,7 @@ public partial class MainViewModel
             _settings.LastConfigDirectory = Path.GetDirectoryName(path);
             _settings.Save();
             MarkSaved();
+            AddRecent(path);
             StatusText = L.F("Projet enregistré : {0}", Path.GetFileName(path));
             return true;
         }
@@ -457,6 +458,7 @@ public partial class MainViewModel
         _settings.LastConfigDirectory = Path.GetDirectoryName(path);
         _settings.Save();
         ResetHistory();
+        AddRecent(path);
         StatusText = L.F("Projet ouvert : {0}", Path.GetFileName(path)) + (missing.Count > 0 ? L.F(" — {0} élément(s) ignoré(s)", missing.Count) : "");
         ReportMissing(missing);
     }

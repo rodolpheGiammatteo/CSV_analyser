@@ -181,6 +181,35 @@ public partial class MainWindow : FluentWindow
         CursorHostBottom.MaxHeight = Math.Max(100, PlotColumn.ActualHeight * 0.35 / scale);
     }
 
+    /// <summary>The recent files, most recent first, in a menu under the clock button.</summary>
+    private void OnRecentMenu(object sender, RoutedEventArgs e)
+    {
+        var menu = new ContextMenu
+        {
+            PlacementTarget = (UIElement)sender,
+            Placement = System.Windows.Controls.Primitives.PlacementMode.Bottom,
+        };
+        if (_viewModel.RecentFiles.Count == 0)
+            menu.Items.Add(new System.Windows.Controls.MenuItem { Header = L.T("Aucun fichier récent"), IsEnabled = false });
+        foreach (var recent in _viewModel.RecentFiles)
+        {
+            menu.Items.Add(new System.Windows.Controls.MenuItem
+            {
+                Header = recent.Name,
+                ToolTip = recent.Path,
+                Icon = new SymbolIcon(recent.IsProject ? SymbolRegular.DocumentData24 : SymbolRegular.DocumentTable24),
+                Command = _viewModel.OpenRecentCommand,
+                CommandParameter = recent.Path,
+            });
+        }
+        if (_viewModel.RecentFiles.Count > 0)
+        {
+            menu.Items.Add(new Separator());
+            menu.Items.Add(new System.Windows.Controls.MenuItem { Header = L.T("Vider la liste"), Command = _viewModel.ClearRecentCommand });
+        }
+        menu.IsOpen = true;
+    }
+
     /// <summary>A toolbar button whose menu opens on a left click.</summary>
     private void OnOpenButtonMenu(object sender, RoutedEventArgs e)
     {

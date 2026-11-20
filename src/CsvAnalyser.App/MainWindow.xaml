@@ -99,6 +99,9 @@
                            Icon="{ui:SymbolIcon FolderOpen24}"
                            ToolTip="Ouvrir un fichier CSV ou un projet (Ctrl+O)"
                            Command="{Binding OpenCommand}" />
+                <ui:Button Icon="{ui:SymbolIcon History24}"
+                           ToolTip="Ouvrir un fichier récent"
+                           Click="OnRecentMenu" />
                 <ui:Button Icon="{ui:SymbolIcon Save24}"
                            ToolTip="Projet (fichier CSV + mise en page) : enregistrer, ouvrir ; appliquer une mise en page ; exporter en CSV"
                            Click="OnOpenButtonMenu">
@@ -430,6 +433,28 @@
                             <TextBlock Margin="0,6,0,0" HorizontalAlignment="Center" FontSize="14"
                                        Foreground="{DynamicResource AppSecondaryTextBrush}"
                                        Text="ou cliquez pour en choisir un (Ctrl+O)" />
+                            <!-- Fichiers récents (a click on one does not reach the drop zone: the button handles it) -->
+                            <StackPanel Margin="0,28,0,0" HorizontalAlignment="Center" MinWidth="360"
+                                        Visibility="{Binding HasRecentFiles, Converter={StaticResource BoolToVisibility}}">
+                                <TextBlock Margin="0,0,0,6" FontWeight="SemiBold" Text="Fichiers récents" />
+                                <ItemsControl ItemsSource="{Binding StartRecentFiles}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate DataType="{x:Type vm:RecentFile}">
+                                            <ui:Button Margin="0,0,0,4" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
+                                                       Appearance="Transparent" Cursor="Hand"
+                                                       ToolTip="{Binding Path}"
+                                                       Command="{Binding DataContext.OpenRecentCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                       CommandParameter="{Binding Path}">
+                                                <StackPanel>
+                                                    <TextBlock FontWeight="SemiBold" Text="{Binding Name}" />
+                                                    <TextBlock FontSize="11" Foreground="{DynamicResource AppSecondaryTextBrush}" TextTrimming="CharacterEllipsis"
+                                                               MaxWidth="460" Text="{Binding Folder}" />
+                                                </StackPanel>
+                                            </ui:Button>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
                         </StackPanel>
                     </Grid>
 

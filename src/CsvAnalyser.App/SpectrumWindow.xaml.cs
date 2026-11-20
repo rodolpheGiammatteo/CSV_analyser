@@ -3,6 +3,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
+using CsvAnalyser.App.Plotting;
 using CsvAnalyser.App.ViewModels;
 using CsvAnalyser.Core.Analysis;
 using CsvAnalyser.Core.Export;
@@ -75,6 +76,22 @@ public partial class SpectrumWindow : FluentWindow
         }
 
         PlotView.MouseMove += OnPlotMouseMove;
+        // Same mouse buttons as the main graph (Paramètres), and the same image export.
+        PlotTools.ApplyMouseButtons(PlotView, vm.LeftDragZooms);
+        PlotView.UserInputProcessor.DoubleLeftClickBenchmark(false);
+        if (PlotView.Menu is ScottPlot.WPF.WpfPlotMenu menu)
+        {
+            menu.Clear();
+            menu.Add(L.T("Tout ajuster (X et Y)"), plot =>
+            {
+                plot.Axes.AutoScale();
+                PlotView.Refresh();
+            });
+            menu.AddSeparator();
+            menu.Add(L.T("Copier l'image"), _ => PlotTools.CopyToClipboard(RenderImage(SkiaSharp.SKEncodedImageFormat.Png)));
+            menu.Add(L.T("Enregistrer l'image…"), _ => PlotTools.SaveWithDialog(RenderImage,
+                System.IO.Path.GetFileNameWithoutExtension(vm.Dataset?.FilePath ?? "spectre") + " - " + L.T("spectre") + ".png"));
+        }
         Loaded += (_, _) =>
         {
             _scale = (float)VisualTreeHelper.GetDpi(PlotView).DpiScaleX;
@@ -188,6 +205,14 @@ public partial class SpectrumWindow : FluentWindow
         {
             StatusText.Text = string.Join(" ; ", notes);
         }
+    }
+
+    private byte[] RenderImage(SkiaSharp.SKEncodedImageFormat format)
+    {
+        var size = new PixelSize((float)(PlotView.ActualWidth * PlotView.DisplayScale), (float)(PlotView.ActualHeight * PlotView.DisplayScale));
+        var bytes = PlotTools.RenderPlot(PlotView.Plot, size, _vm.ImageScale, format);
+        PlotView.Refresh();
+        return bytes;
     }
 
     private void ShowMessage(string text)
