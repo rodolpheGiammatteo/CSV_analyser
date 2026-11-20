@@ -36,6 +36,25 @@ public partial class MainWindow : FluentWindow
             if (change == PlotChange.Theme)
                 ApplyAppTheme();
         };
+        viewModel.ExportRequested += async (_, _) =>
+        {
+            var export = new ExportViewModel(viewModel);
+            var window = new ExportWindow(export, System.IO.Path.GetDirectoryName(viewModel.Dataset?.FilePath)) { Owner = this };
+            if (window.ShowDialog() == true && window.ChosenPath is { } path)
+                await viewModel.ExportAsync(path, export.Columns, export.Rows, export.Options);
+        };
+        Closing += (_, _) => viewModel.SaveSession();
+    }
+
+    /// <summary>A toolbar button whose menu opens on a left click.</summary>
+    private void OnOpenButtonMenu(object sender, RoutedEventArgs e)
+    {
+        if (sender is not FrameworkElement { ContextMenu: { } menu } button)
+            return;
+        menu.DataContext = button.DataContext; // not inherited when opened from code
+        menu.PlacementTarget = button;
+        menu.Placement = System.Windows.Controls.Primitives.PlacementMode.Bottom;
+        menu.IsOpen = true;
     }
 
     private void ApplyAppTheme()
@@ -187,7 +206,11 @@ public partial class MainWindow : FluentWindow
     private async void OnDrop(object sender, DragEventArgs e)
     {
         HighlightFileDropZone(false);
-        if (e.Data.GetData(DataFormats.FileDrop) is string[] { Length: > 0 } files)
+        if (e.Data.GetData(DataFormats.FileDrop) is not string[] { Length: > 0 } files)
+            return;
+        if (files[0].EndsWith(".json", StringComparison.OrdinalIgnoreCase))
+            _viewModel.ApplyConfigurationFile(files[0]);
+        else
             await _viewModel.LoadFileAsync(files[0]);
     }
 }

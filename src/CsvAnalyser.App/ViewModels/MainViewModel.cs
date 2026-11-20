@@ -97,6 +97,7 @@ public partial class MainViewModel : ObservableObject, IChannelHost
         _plotFontScale = ClampOrDefault(settings.PlotFontScale, MinPlotFontScale, MaxPlotFontScale);
         _cursorPanelPlacement = Enum.IsDefined(settings.CursorPanel) ? settings.CursorPanel : CursorPanelPlacement.Left;
         _showCursorLabels = settings.ShowCursorLabels;
+        _restoreLayout = settings.RestoreLayout;
         ChannelsView = CollectionViewSource.GetDefaultView(Channels);
         ChannelsView.Filter = o => MatchesSearch((ChannelItemViewModel)o);
         PlottedChannels.CollectionChanged += (_, _) =>
@@ -184,6 +185,7 @@ public partial class MainViewModel : ObservableObject, IChannelHost
         if (IsLoading)
             return;
 
+        SaveSession();
         IsLoading = true;
         LoadProgress = 0;
         StatusText = $"Chargement de {Path.GetFileName(path)}…";
@@ -192,6 +194,7 @@ public partial class MainViewModel : ObservableObject, IChannelHost
         {
             var dataset = await Task.Run(() => CsvImporter.Load(path, progress));
             ApplyDataset(dataset);
+            RestoreSession(path);
             _settings.LastDirectory = Path.GetDirectoryName(path);
             _settings.Save();
         }

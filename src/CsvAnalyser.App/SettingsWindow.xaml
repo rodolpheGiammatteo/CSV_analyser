@@ -77,6 +77,12 @@
                       Content="Valeurs aussi dans les graphes, près des points"
                       ToolTip="Chaque valeur est écrite à côté de son point d'intersection avec le curseur"
                       IsChecked="{Binding ShowCursorLabels}" />
+
+            <TextBlock Margin="0,12,0,0" FontWeight="SemiBold" Text="Fichiers" />
+            <CheckBox Margin="0,6,0,8"
+                      Content="Retrouver la mise en page en rouvrant un fichier"
+                      ToolTip="Graphes, courbes, réglages et zoom de chaque fichier sont mémorisés quand on le quitte"
+                      IsChecked="{Binding RestoreLayout}" />
         </StackPanel>
 
         <DockPanel Grid.Row="2" Margin="24,16,24,20" LastChildFill="False">

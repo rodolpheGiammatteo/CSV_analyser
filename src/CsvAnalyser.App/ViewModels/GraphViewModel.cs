@@ -79,6 +79,9 @@ public sealed partial class GraphViewModel : ObservableObject
 
     public bool TryGetAxisSettings(string key, out AxisRangeSettings settings) => _axes.TryGetValue(key, out settings!);
 
+    /// <summary>Every axis setting created so far (saved in configurations).</summary>
+    public IEnumerable<KeyValuePair<string, AxisRangeSettings>> AxisSettings => _axes;
+
     partial void OnAlignZerosChanged(bool value) => _onSettingsChanged();
 }
 
@@ -112,6 +115,18 @@ public sealed partial class AxisRangeSettings : ObservableObject
             : null;
 
     public bool HasError => IsManual && ManualRange is null;
+
+    public double? ParsedMin => TryParse(MinText, out double v) ? v : null;
+
+    public double? ParsedMax => TryParse(MaxText, out double v) ? v : null;
+
+    /// <summary>Sets mode and bounds at once (configuration loading).</summary>
+    public void Apply(bool manual, double? min, double? max)
+    {
+        MinText = min is { } a ? a.ToString("R", CultureInfo.CurrentCulture) : "";
+        MaxText = max is { } b ? b.ToString("R", CultureInfo.CurrentCulture) : "";
+        IsManual = manual; // after the bounds: typing a bound switches to manual
+    }
 
     public static string Format(double value) => value.ToString("G6", CultureInfo.CurrentCulture);
 

@@ -111,6 +111,17 @@ public partial class ChannelItemViewModel : ObservableObject
 
     public bool IsRenamed => Name != Channel.SourceName;
 
+    public string OriginalName => _originalName;
+
+    public string OriginalUnit => _originalUnit;
+
+    /// <summary>Nothing changed by the user: name, unit, color, line, markers and axis as when the file was opened.</summary>
+    public bool IsDefaultAppearance =>
+        Name == _originalName && Unit == _originalUnit && !IsColorCustom
+        && Line == CurveLine.Solid && LineWidth == CurveStyleChoices.DefaultLineWidth
+        && Marker == CurveMarker.None && MarkerSize == CurveStyleChoices.DefaultMarkerSize
+        && AxisChoice == AutoAxis;
+
     public bool IsLineVisible => Line != CurveLine.None;
 
     public bool HasMarkers => Marker != CurveMarker.None;

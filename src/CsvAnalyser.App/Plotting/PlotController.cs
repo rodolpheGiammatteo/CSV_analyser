@@ -16,7 +16,7 @@ namespace CsvAnalyser.App.Plotting;
 /// (shared X axis), one Y axis per unit (or per curve that asks for its own), the vertical cursor, the
 /// NaN-aware autoscale and the zoom history. This is the only class that touches ScottPlot.
 /// </summary>
-public sealed class PlotController
+public sealed class PlotController : IPlotView
 {
     private const double Margin = 0.04;
     private const string XKey = "X";
@@ -68,6 +68,7 @@ public sealed class PlotController
         _paddingMatcher = new PaddingMatcher(this);
         _vm.PlotChanged += OnPlotChanged;
         _vm.CurrentAxisRange = GetCurrentAxisRange;
+        _vm.PlotView = this;
         _view.MouseMove += OnMouseMove;
         _view.MouseLeave += (_, _) => HideCursor();
         _view.Loaded += (_, _) => UpdateScale();
@@ -667,6 +668,40 @@ public sealed class PlotController
         var g = _graphs.FirstOrDefault(x => x.Graph == graph);
         var a = g?.Axes.FirstOrDefault(x => x.Key == axisKey);
         return a is null ? null : (a.Axis.Range.Min, a.Axis.Range.Max);
+    }
+
+    // ---------------------------------------------------------------- IPlotView
+
+    public (double Min, double Max)? XRange
+    {
+        get
+        {
+            if (_series.Count == 0 || _graphs.Count == 0)
+                return null;
+            var x = _graphs[0].Plot.Axes.Bottom.Range;
+            return (x.Min, x.Max);
+        }
+    }
+
+    public (double Min, double Max)? AxisRange(GraphViewModel graph, string axisKey) => GetCurrentAxisRange(graph, axisKey);
+
+    public void SetView((double Min, double Max)? x, IReadOnlyList<(GraphViewModel Graph, string AxisKey, double Min, double Max)> y)
+    {
+        if (x is { } xr)
+        {
+            SetX(xr.Min, xr.Max);
+            // Auto axes without a saved range follow the restored X range.
+            foreach (var g in _graphs)
+                FitGraphY(g);
+        }
+        foreach (var (graph, key, min, max) in y)
+        {
+            var g = _graphs.FirstOrDefault(r => r.Graph == graph);
+            if (g?.Axes.FirstOrDefault(a => a.Key == key) is { } a)
+                g.Plot.Axes.SetLimitsY(min, max, a.Axis);
+        }
+        _lastYRanges.Clear();
+        _view.Refresh();
     }
 
     // ---------------------------------------------------------------- stacked layout

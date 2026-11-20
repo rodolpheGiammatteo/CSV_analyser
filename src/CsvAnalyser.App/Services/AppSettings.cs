@@ -21,6 +21,15 @@ public sealed class AppSettings
 
     public bool ShowCursorLabels { get; set; }
 
+    /// <summary>Reopening a file restores the layout it had when it was left.</summary>
+    public bool RestoreLayout { get; set; } = true;
+
+    public string? LastConfigDirectory { get; set; }
+
+    public string? ExportDelimiter { get; set; }
+
+    public string? ExportDecimal { get; set; }
+
     public static AppSettings Load()
     {
         try
