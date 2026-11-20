@@ -43,7 +43,8 @@ public sealed class PlotController
 
     /// <param name="Curve">The SignalXY (sorted X) or Scatter (unsorted X) drawing the data.</param>
     /// <param name="Marker">The dot that follows the vertical cursor.</param>
-    private sealed record Series(ChannelItemViewModel Item, double[] Ys, IPlottable Curve, Marker Marker);
+    /// <param name="Label">The value written next to the marker (option "valeurs dans les graphes").</param>
+    private sealed record Series(ChannelItemViewModel Item, double[] Ys, IPlottable Curve, Marker Marker, Text Label, GraphRender Graph, IYAxis Axis);
 
     private sealed class AxisRender(string key, AxisSpec spec, IYAxis axis)
     {
@@ -269,18 +270,29 @@ public sealed class PlotController
                         ? plot.Add.SignalXY(_xs, item.Channel.Values, item.Color)
                         : plot.Add.ScatterPoints(_xs, item.Channel.Values, item.Color);
                     curve.Axes.YAxis = axis;
-                    created.Add((new Series(item, item.Channel.Values, curve, null!), axis));
+                    created.Add((new Series(item, item.Channel.Values, curve, null!, null!, render, axis), axis));
                 }
             }
 
-            // Markers and cursor are added last so they are drawn on top of the curves.
+            // Markers, value labels and cursor are added last so they are drawn on top of the curves.
             foreach (var (pending, axis) in created)
             {
                 var marker = plot.Add.Marker(0, 0, MarkerShape.FilledCircle, 8 * _scale, pending.Item.Color);
                 marker.Axes.YAxis = axis;
                 marker.IsVisible = false;
                 marker.LegendText = "";
-                var series = pending with { Marker = marker };
+
+                var label = plot.Add.Text("", 0, 0);
+                label.Axes.YAxis = axis;
+                label.IsVisible = false;
+                label.LabelStyle.FontSize = 11 * FontScale;
+                label.LabelStyle.ForeColor = ScottPlot.Color.FromHex(_vm.SelectedTheme.AxisColor);
+                label.LabelStyle.BackgroundColor = ScottPlot.Color.FromHex(_vm.SelectedTheme.DataBackground).WithAlpha(0.92);
+                label.LabelStyle.BorderWidth = 1.5f * _scale;
+                label.LabelStyle.BorderRadius = 4 * _scale;
+                label.LabelStyle.Padding = 3 * _scale;
+
+                var series = pending with { Marker = marker, Label = label };
                 _series.Add(series);
                 ApplyAppearance(series);
             }
@@ -486,6 +498,7 @@ public sealed class PlotController
     {
         var item = s.Item;
         s.Marker.Color = item.Color;
+        s.Label.LabelStyle.BorderColor = item.Color;
 
         switch (s.Curve)
         {
@@ -908,7 +921,67 @@ public sealed class PlotController
             s.Marker.IsVisible = !double.IsNaN(y);
             s.Item.CursorText = MainViewModel.FormatValue(y, s.Item.Unit);
         }
+        PlaceValueLabels(snappedX, index);
         _view.Refresh();
+    }
+
+    /// <summary>
+    /// Writes each value next to its point, on the right of the cursor (left near the right edge),
+    /// spreading the labels of a graph vertically so they never overlap.
+    /// </summary>
+    private void PlaceValueLabels(double x, int index)
+    {
+        foreach (var g in _graphs)
+        {
+            var inGraph = _series.Where(s => s.Graph == g).ToList();
+            if (!_vm.ShowCursorLabels)
+            {
+                foreach (var s in inGraph)
+                    s.Label.IsVisible = false;
+                continue;
+            }
+
+            var data = g.Plot.LastRender.DataRect;
+            float cursorPixel = g.Plot.GetPixel(new Coordinates(x, 0), g.Plot.Axes.Bottom, g.Plot.Axes.Left).X;
+            bool toLeft = cursorPixel > data.Right - 170 * _scale;
+            float gap = 12 * _scale;
+            float height = 11 * FontScale * 1.35f + 8 * _scale; // text + padding + border
+            float spacing = height + 2 * _scale;
+
+            var visible = new List<(Series S, float Pixel)>();
+            foreach (var s in inGraph)
+            {
+                double y = s.Ys[index];
+                bool show = !double.IsNaN(y);
+                s.Label.IsVisible = show;
+                if (!show)
+                    continue;
+                s.Label.Location = new Coordinates(x, y);
+                s.Label.LabelText = s.Item.CursorText;
+                s.Label.Alignment = toLeft ? Alignment.MiddleRight : Alignment.MiddleLeft;
+                s.Label.OffsetX = toLeft ? -gap : gap;
+                visible.Add((s, g.Plot.GetPixel(new Coordinates(x, y), g.Plot.Axes.Bottom, s.Axis).Y));
+            }
+            if (visible.Count == 0)
+                continue;
+
+            // Top to bottom: push each label below the previous one, then pull the stack back inside the data area.
+            visible.Sort((a, b) => a.Pixel.CompareTo(b.Pixel));
+            var placed = new float[visible.Count];
+            for (int i = 0; i < visible.Count; i++)
+            {
+                float wanted = Math.Clamp(visible[i].Pixel, data.Top + height / 2, data.Bottom - height / 2);
+                placed[i] = i == 0 ? wanted : Math.Max(wanted, placed[i - 1] + spacing);
+            }
+            float overflow = placed[^1] - (data.Bottom - height / 2);
+            if (overflow > 0)
+            {
+                for (int i = 0; i < placed.Length; i++)
+                    placed[i] -= overflow;
+            }
+            for (int i = 0; i < visible.Count; i++)
+                visible[i].S.Label.OffsetY = placed[i] - visible[i].Pixel;
+        }
     }
 
     private void HideCursor()
@@ -924,6 +997,7 @@ public sealed class PlotController
         foreach (var s in _series)
         {
             s.Marker.IsVisible = false;
+            s.Label.IsVisible = false;
             s.Item.CursorText = "";
         }
         _vm.CursorXText = "Survolez le graphe";

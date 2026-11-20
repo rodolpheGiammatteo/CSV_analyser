@@ -73,6 +73,10 @@
                       SelectedValuePath="Value"
                       DisplayMemberPath="Label"
                       SelectedValue="{Binding CursorPanelPlacement}" />
+            <CheckBox Margin="0,4,0,8"
+                      Content="Valeurs aussi dans les graphes, près des points"
+                      ToolTip="Chaque valeur est écrite à côté de son point d'intersection avec le curseur"
+                      IsChecked="{Binding ShowCursorLabels}" />
         </StackPanel>
 
         <DockPanel Grid.Row="2" Margin="24,16,24,20" LastChildFill="False">

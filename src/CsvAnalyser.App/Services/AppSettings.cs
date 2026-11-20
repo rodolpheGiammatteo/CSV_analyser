@@ -19,6 +19,8 @@ public sealed class AppSettings
 
     public CsvAnalyser.App.ViewModels.CursorPanelPlacement CursorPanel { get; set; }
 
+    public bool ShowCursorLabels { get; set; }
+
     public static AppSettings Load()
     {
         try

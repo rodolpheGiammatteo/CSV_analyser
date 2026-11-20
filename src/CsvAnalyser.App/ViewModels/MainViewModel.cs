@@ -96,6 +96,7 @@ public partial class MainViewModel : ObservableObject, IChannelHost
         _uiScale = ClampOrDefault(settings.UiScale, MinUiScale, MaxUiScale);
         _plotFontScale = ClampOrDefault(settings.PlotFontScale, MinPlotFontScale, MaxPlotFontScale);
         _cursorPanelPlacement = Enum.IsDefined(settings.CursorPanel) ? settings.CursorPanel : CursorPanelPlacement.Left;
+        _showCursorLabels = settings.ShowCursorLabels;
         ChannelsView = CollectionViewSource.GetDefaultView(Channels);
         ChannelsView.Filter = o => MatchesSearch((ChannelItemViewModel)o);
         PlottedChannels.CollectionChanged += (_, _) =>
@@ -511,6 +512,16 @@ public partial class MainViewModel : ObservableObject, IChannelHost
     partial void OnCursorPanelPlacementChanged(CursorPanelPlacement value)
     {
         _settings.CursorPanel = value;
+        _settings.Save();
+    }
+
+    /// <summary>Also write each curve's value in the graph, next to its point under the cursor.</summary>
+    [ObservableProperty]
+    private bool _showCursorLabels;
+
+    partial void OnShowCursorLabelsChanged(bool value)
+    {
+        _settings.ShowCursorLabels = value;
         _settings.Save();
     }
 }
