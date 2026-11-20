@@ -462,6 +462,20 @@
     "Tout ajuster : X sur l'ensemble des données, Y de tous les graphes, axes manuels compris (aussi : clic molette). Clic droit : tout remettre en automatique et ajuster": "Fit all: X over all the data, Y of every graph, manual axes included (also: middle click). Right-click: everything back to automatic and fitted",
     "Ajuster X seulement (le zoom vertical est gardé). Clic droit : tout remettre en automatique et ajuster": "Fit X only (the vertical zoom is kept). Right-click: everything back to automatic and fitted",
     "Ajuster Y de tous les graphes sur la plage X visible, axes manuels compris (pour un seul graphe : clic droit sur ce graphe). Clic droit : tous les axes Y en automatique": "Fit Y of every graph over the visible X range, manual axes included (for one graph: right-click on that graph). Right-click: every Y axis to automatic",
-    "Tous les axes Y en automatique (Ctrl+Z pour annuler)": "Every Y axis to automatic (Ctrl+Z to undo)"
+    "Tous les axes Y en automatique (Ctrl+Z pour annuler)": "Every Y axis to automatic (Ctrl+Z to undo)",
+    "Version {0}": "Version {0}",
+    "Version et mises à jour": "Version and updates",
+    "Rechercher une mise à jour": "Check for updates",
+    "Consulte les versions publiées sur GitHub (pas encore prise en charge)": "Looks at the versions published on GitHub (not supported yet)",
+    "Rechercher les mises à jour au démarrage": "Check for updates at startup",
+    "Une nouvelle version est signalée dans la barre d'état (pas encore prise en charge)": "A newer version is shown in the status bar (not supported yet)",
+    "Mise à jour": "Update",
+    "La recherche de mise à jour n'est pas encore prise en charge.\n\nElle consultera bientôt les versions publiées sur GitHub ; en attendant, une nouvelle version s'installe en remplaçant simplement le fichier .exe.": "Checking for updates is not supported yet.\n\nIt will soon look at the versions published on GitHub; meanwhile, a new version is installed by simply replacing the .exe file.",
+    "Vous avez la dernière version ({0}).": "You have the latest version ({0}).",
+    "La version {0} est disponible (vous avez la {1}).\n\nOuvrir sa page de téléchargement ?": "Version {0} is available (you have {1}).\n\nOpen its download page?",
+    "La recherche de mise à jour a échoué : {0}": "The update check failed: {0}",
+    "Nouvelle version disponible : {0} (Paramètres → Rechercher une mise à jour)": "New version available: {0} (Settings → Check for updates)",
+    "Réponse de GitHub illisible.": "Unreadable answer from GitHub.",
+    "CSV Analyser, développé par Rodolphe Giammatteo.": "CSV Analyser, developed by Rodolphe Giammatteo."
   }
 }

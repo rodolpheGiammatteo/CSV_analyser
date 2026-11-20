@@ -109,6 +109,7 @@ public partial class MainViewModel : ObservableObject, IChannelHost
         _showCursorLabels = settings.ShowCursorLabels;
         _restoreLayout = settings.RestoreLayout;
         _leftDragZooms = settings.LeftDragZooms;
+        _checkUpdatesAtStartup = settings.CheckUpdatesAtStartup;
         ChannelsView = CollectionViewSource.GetDefaultView(Channels);
         ChannelsView.Filter = o => MatchesSearch((ChannelItemViewModel)o);
         PlottedChannels.CollectionChanged += (_, _) =>

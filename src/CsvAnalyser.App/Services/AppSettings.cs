@@ -78,6 +78,9 @@ public sealed class AppSettings
     /// <summary>Left-button drag zooms on a rectangle (and the wheel button pans); false = the reverse.</summary>
     public bool LeftDragZooms { get; set; } = true;
 
+    /// <summary>Look for a newer version on GitHub at startup (off by default: no network access unless asked).</summary>
+    public bool CheckUpdatesAtStartup { get; set; }
+
     public static AppSettings Load()
     {
         try

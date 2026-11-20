@@ -21,6 +21,8 @@ public partial class MainWindow : FluentWindow
         _plotController = new PlotController(PlotView, viewModel);
 
         ApplyAppTheme();
+        // Once the window is shown, so a slow network never delays the start.
+        ContentRendered += async (_, _) => await viewModel.CheckUpdatesQuietlyAsync();
         viewModel.EditAnnotationRequested += (_, annotation) =>
             new AnnotationSettingsWindow(annotation, viewModel) { Owner = this }.ShowDialog();
         viewModel.EditChannelRequested += (_, item) =>
