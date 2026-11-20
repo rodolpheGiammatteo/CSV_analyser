@@ -67,6 +67,8 @@ public partial class MainWindow : FluentWindow
         };
         LeftPanel.SizeChanged += (_, _) => LimitCursorCard();
         PlotColumn.SizeChanged += (_, _) => LimitCursorCard();
+        BodyGrid.SizeChanged += (_, _) => LimitCurveList();
+        CursorHostRight.SizeChanged += (_, _) => LimitCurveList();
     }
 
     // ---- Shift+click: tick or untick every curve between two clicks ----
@@ -110,6 +112,7 @@ public partial class MainWindow : FluentWindow
         }
         LeftPanel.Visibility = hidden ? Visibility.Collapsed : Visibility.Visible;
         CurveSplitter.Visibility = LeftPanel.Visibility;
+        LimitCurveList();
         CurveListButton.Icon = new SymbolIcon(hidden ? SymbolRegular.PanelLeftExpand24 : SymbolRegular.PanelLeftContract24);
         _viewModel.Settings.CurveListHidden = hidden;
     }
@@ -170,6 +173,21 @@ public partial class MainWindow : FluentWindow
         s.WindowMaximized = WindowState == WindowState.Maximized;
         s.CurveListWidth = LeftPanel.Visibility == Visibility.Visible ? CurveColumn.ActualWidth : _curveListWidth;
         s.Save();
+    }
+
+    /// <summary>Width always left to the graphs, so the list cannot cover them nor push the splitter out of reach.</summary>
+    private const double MinPlotWidth = 320;
+
+    /// <summary>Caps the curve list width to what the window leaves after the graphs and the right cursor card.</summary>
+    private void LimitCurveList()
+    {
+        if (BodyGrid.ActualWidth <= 0)
+            return;
+        double max = Math.Max(CurveColumn.MinWidth,
+            BodyGrid.ActualWidth - 8 - CursorRightColumn.ActualWidth - MinPlotWidth);
+        CurveColumn.MaxWidth = max;
+        if (LeftPanel.Visibility == Visibility.Visible && CurveColumn.Width.IsAbsolute && CurveColumn.Width.Value > max)
+            CurveColumn.Width = new GridLength(max);
     }
 
     /// <summary>The cursor card scrolls instead of growing past part of its area (it used to hide the curve list).</summary>
