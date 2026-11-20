@@ -53,6 +53,25 @@ public sealed class AppSettings
     /// <summary>Copied and saved graph images: size on screen × this factor.</summary>
     public double ImageScale { get; set; } = 1;
 
+    /// <summary>Background grid of the graphs.</summary>
+    public bool GridVertical { get; set; } = true;
+
+    public bool GridHorizontal { get; set; } = true;
+
+    public bool GridMinor { get; set; } = true;
+
+    /// <summary>Solid, Dashed or Dotted.</summary>
+    public string GridPattern { get; set; } = "Solid";
+
+    /// <summary>Grid color between the plot background (0) and the axis color (1); 0.15 is about the themes' own grid.</summary>
+    public double GridIntensity { get; set; } = 0.25;
+
+    /// <summary>Line width multiplier (1 = thin).</summary>
+    public double GridWidth { get; set; } = 1;
+
+    /// <summary>Alternating horizontal bands between the major lines.</summary>
+    public bool GridBands { get; set; }
+
     /// <summary>Last opened CSV files and projects, most recent first.</summary>
     public List<string> RecentFiles { get; set; } = [];
 

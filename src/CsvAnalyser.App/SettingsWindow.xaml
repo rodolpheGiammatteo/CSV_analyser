@@ -26,7 +26,8 @@
 
         <ui:TitleBar Grid.Row="0" Title="Paramètres" ShowMinimize="False" ShowMaximize="False" />
 
-        <StackPanel Grid.Row="1" Margin="24,4,24,0">
+        <ScrollViewer Grid.Row="1" MaxHeight="660" VerticalScrollBarVisibility="Auto">
+        <StackPanel Margin="24,4,24,0">
             <TextBlock FontSize="18" FontWeight="SemiBold" Text="Affichage" />
             <TextBlock Margin="0,2,0,16" Foreground="{DynamicResource AppSecondaryTextBrush}"
                        Text="Les changements s'appliquent tout de suite et sont mémorisés." />
@@ -48,6 +49,51 @@
                       HorizontalAlignment="Stretch"
                       ItemsSource="{Binding Themes}"
                       SelectedItem="{Binding SelectedTheme}" />
+
+            <!-- Grille de fond -->
+            <DockPanel>
+                <ui:Button DockPanel.Dock="Right" Padding="8,3" MinHeight="0" Content="Par défaut"
+                           Icon="{ui:SymbolIcon ArrowReset24}" Command="{Binding ResetGridCommand}" />
+                <TextBlock VerticalAlignment="Center" FontWeight="SemiBold" Text="Grille de fond" />
+            </DockPanel>
+            <UniformGrid Margin="0,6,0,0" Columns="2">
+                <CheckBox Margin="0,0,0,4" Content="Lignes verticales" IsChecked="{Binding GridVertical}" />
+                <CheckBox Margin="0,0,0,4" Content="Lignes horizontales" IsChecked="{Binding GridHorizontal}" />
+                <CheckBox Margin="0,0,0,4" Content="Lignes secondaires" ToolTip="Lignes fines entre les graduations" IsChecked="{Binding GridMinor}" />
+                <CheckBox Margin="0,0,0,4" Content="Bandes alternées" ToolTip="Une bande sur deux légèrement colorée, entre les lignes horizontales" IsChecked="{Binding GridBands}" />
+            </UniformGrid>
+            <Grid Margin="0,6,0,20">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="16" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="16" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <StackPanel Grid.Column="0">
+                    <TextBlock Text="Style" />
+                    <ComboBox Margin="0,4,0,0"
+                              ItemsSource="{x:Static vm:MainViewModel.GridPatternChoices}"
+                              SelectedValuePath="Value"
+                              DisplayMemberPath="Label"
+                              SelectedValue="{Binding GridPattern}" />
+                </StackPanel>
+                <StackPanel Grid.Column="2">
+                    <DockPanel>
+                        <TextBlock DockPanel.Dock="Right" FontFamily="Consolas" Text="{Binding GridIntensity, StringFormat={}{0:P0}}" />
+                        <TextBlock Text="Intensité" />
+                    </DockPanel>
+                    <Slider Margin="0,8,0,0" Minimum="0.03" Maximum="0.8" TickFrequency="0.01" IsSnapToTickEnabled="True" Value="{Binding GridIntensity}"
+                            ToolTip="De très pâle à aussi foncé que les axes" />
+                </StackPanel>
+                <StackPanel Grid.Column="4">
+                    <DockPanel>
+                        <TextBlock DockPanel.Dock="Right" FontFamily="Consolas" Text="{Binding GridWidth, StringFormat={}{0:0.0}}" />
+                        <TextBlock Text="Épaisseur" />
+                    </DockPanel>
+                    <Slider Margin="0,8,0,0" Minimum="0.5" Maximum="4" TickFrequency="0.5" IsSnapToTickEnabled="True" Value="{Binding GridWidth}" />
+                </StackPanel>
+            </Grid>
 
             <DockPanel>
                 <TextBlock DockPanel.Dock="Right" FontFamily="Consolas" VerticalAlignment="Bottom"
@@ -108,6 +154,7 @@
                       ToolTip="Graphes, courbes, réglages et zoom de chaque fichier sont mémorisés quand on le quitte"
                       IsChecked="{Binding RestoreLayout}" />
         </StackPanel>
+        </ScrollViewer>
 
         <DockPanel Grid.Row="2" Margin="24,16,24,20" LastChildFill="False">
             <ui:Button DockPanel.Dock="Left"

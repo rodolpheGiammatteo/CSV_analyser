@@ -259,6 +259,11 @@ public sealed class PlotController : IPlotView
             case PlotChange.RedoView:
                 Redo();
                 break;
+            case PlotChange.Grid:
+                foreach (var g in _graphs)
+                    PlotTools.ApplyGrid(g.Plot, _vm.SelectedTheme.DataBackground, _vm.SelectedTheme.AxisColor, _vm.Grid, _scale);
+                _view.Refresh();
+                break;
             case PlotChange.MouseButtons:
                 ApplyMouseButtons();
                 break;
@@ -588,10 +593,7 @@ public sealed class PlotController : IPlotView
         plot.FigureBackground.Color = figure;
         plot.DataBackground.Color = ScottPlot.Color.FromHex(t.DataBackground);
         plot.Axes.Color(axis);
-        plot.Grid.MajorLineColor = ScottPlot.Color.FromHex(t.MajorGrid);
-        plot.Grid.MinorLineColor = ScottPlot.Color.FromHex(t.MinorGrid);
-        plot.Grid.MajorLineWidth = _scale;
-        plot.Grid.MinorLineWidth = _scale;
+        PlotTools.ApplyGrid(plot, t.DataBackground, t.AxisColor, _vm.Grid, _scale);
         plot.Legend.BackgroundColor = figure.WithAlpha(0.85);
         plot.Legend.FontColor = axis;
         plot.Legend.OutlineColor = ScottPlot.Color.FromHex(t.MajorGrid);

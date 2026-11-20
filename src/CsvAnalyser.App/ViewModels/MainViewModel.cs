@@ -38,6 +38,8 @@ public enum PlotChange
     Layout,
     /// <summary>Which mouse button zooms and which pans.</summary>
     MouseButtons,
+    /// <summary>Background grid settings (applied in place).</summary>
+    Grid,
 }
 
 public partial class MainViewModel : ObservableObject, IChannelHost

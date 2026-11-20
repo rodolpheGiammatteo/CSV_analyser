@@ -9,9 +9,63 @@ using SkiaSharp;
 
 namespace CsvAnalyser.App.Plotting;
 
-/// <summary>What the main plot and the spectrum window share: mouse buttons and image export.</summary>
+/// <summary>Background grid chosen in Paramètres.</summary>
+/// <param name="Pattern">Solid, Dashed or Dotted.</param>
+/// <param name="Intensity">Line color between the plot background (0) and the axis color (1).</param>
+/// <param name="Width">Line width multiplier.</param>
+/// <param name="Bands">Alternating horizontal bands between major lines.</param>
+public sealed record GridOptions(bool Vertical, bool Horizontal, bool Minor, string Pattern, double Intensity, double Width, bool Bands);
+
+/// <summary>What the main plot and the spectrum window share: grid, mouse buttons and image export.</summary>
 public static class PlotTools
 {
+    /// <summary>
+    /// Draws the grid as chosen. Its color is a mix of the plot background and the axis color, so the same
+    /// intensity suits every theme (light grays alone were nearly invisible on some screens).
+    /// </summary>
+    /// <param name="scale">Display scaling.</param>
+    public static void ApplyGrid(Plot plot, string backgroundHex, string axisHex, GridOptions o, float scale)
+    {
+        var pattern = o.Pattern switch
+        {
+            "Dashed" => LinePattern.Dashed,
+            "Dotted" => LinePattern.Dotted,
+            _ => LinePattern.Solid,
+        };
+        var background = ScottPlot.Color.FromHex(backgroundHex);
+        var axis = ScottPlot.Color.FromHex(axisHex);
+        var major = Mix(background, axis, o.Intensity);
+        var minor = Mix(background, axis, o.Intensity * 0.5);
+        float width = (float)(o.Width * scale);
+        foreach (var style in new[] { plot.Grid.XAxisStyle, plot.Grid.YAxisStyle })
+        {
+            style.MajorLineStyle.Color = major;
+            style.MajorLineStyle.Width = width;
+            style.MajorLineStyle.Pattern = pattern;
+            style.MinorLineStyle.Color = minor;
+            style.MinorLineStyle.Width = o.Minor ? width : 0;
+            style.MinorLineStyle.IsVisible = o.Minor;
+            style.MinorLineStyle.Pattern = pattern;
+        }
+        plot.Grid.XAxisStyle.IsVisible = o.Vertical;
+        plot.Grid.YAxisStyle.IsVisible = o.Horizontal || o.Bands;
+        plot.Grid.YAxisStyle.MajorLineStyle.IsVisible = o.Horizontal;
+        plot.Grid.YAxisStyle.MinorLineStyle.IsVisible = o.Horizontal && o.Minor;
+        // Bands: every other interval between horizontal major lines is lightly filled. Translucent, because ScottPlot
+        // paints them after the vertical lines, which an opaque fill would hide.
+        plot.Grid.YAxisStyle.FillColor1 = o.Bands ? axis.WithAlpha(Math.Clamp(o.Intensity * 0.4, 0.04, 0.3)) : ScottPlot.Colors.Transparent;
+        plot.Grid.YAxisStyle.FillColor2 = ScottPlot.Colors.Transparent;
+        plot.Grid.XAxisStyle.FillColor1 = ScottPlot.Colors.Transparent;
+        plot.Grid.XAxisStyle.FillColor2 = ScottPlot.Colors.Transparent;
+    }
+
+    private static ScottPlot.Color Mix(ScottPlot.Color from, ScottPlot.Color to, double amount)
+    {
+        amount = Math.Clamp(amount, 0, 1);
+        byte Channel(byte a, byte b) => (byte)Math.Round(a + (b - a) * amount);
+        return new ScottPlot.Color(Channel(from.R, to.R), Channel(from.G, to.G), Channel(from.B, to.B));
+    }
+
     /// <summary>Left drag zooms on a rectangle and wheel-button drag pans (or the reverse).</summary>
     public static void ApplyMouseButtons(WpfPlot view, bool leftZooms)
     {

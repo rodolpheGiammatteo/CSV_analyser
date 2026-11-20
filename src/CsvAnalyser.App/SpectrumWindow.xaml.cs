@@ -230,7 +230,7 @@ public partial class SpectrumWindow : FluentWindow
         plot.FigureBackground.Color = figure;
         plot.DataBackground.Color = ScottPlot.Color.FromHex(t.DataBackground);
         plot.Axes.Color(axis);
-        plot.Grid.MajorLineColor = ScottPlot.Color.FromHex(t.MajorGrid);
+        PlotTools.ApplyGrid(plot, t.DataBackground, t.AxisColor, _vm.Grid, _scale);
         plot.Legend.BackgroundColor = figure.WithAlpha(0.85);
         plot.Legend.FontColor = axis;
         plot.Legend.OutlineColor = ScottPlot.Color.FromHex(t.MajorGrid);
