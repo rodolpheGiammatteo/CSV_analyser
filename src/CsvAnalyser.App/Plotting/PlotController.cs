@@ -128,11 +128,14 @@ public sealed class PlotController : IPlotView
         menu.Add(L.T("Ajuster X"), _ => AutoScaleWithHistory(x: true, y: false));
         menu.Add(L.T("Tout ajuster (X et Y)"), _ => AutoScaleWithHistory(x: true, y: true));
         menu.AddSeparator();
-        menu.Add(L.T("Placer le curseur A ici"), plot => PlaceMeasureCursorAtMenu(plot, 'A'));
-        menu.Add(L.T("Placer le curseur B ici"), plot => PlaceMeasureCursorAtMenu(plot, 'B'));
-        menu.Add(L.T("Placer le curseur Y1 ici"), plot => PlaceMeasureYAtMenu(plot, '1'));
-        menu.Add(L.T("Placer le curseur Y2 ici"), plot => PlaceMeasureYAtMenu(plot, '2'));
-        menu.AddSeparator();
+        if (axisGraph is null) // "here" means a point of the graph, not of an axis
+        {
+            menu.Add(L.T("Placer le curseur A ici"), plot => PlaceMeasureCursorAtMenu(plot, 'A'));
+            menu.Add(L.T("Placer le curseur B ici"), plot => PlaceMeasureCursorAtMenu(plot, 'B'));
+            menu.Add(L.T("Placer le curseur Y1 ici"), plot => PlaceMeasureYAtMenu(plot, '1'));
+            menu.Add(L.T("Placer le curseur Y2 ici"), plot => PlaceMeasureYAtMenu(plot, '2'));
+            menu.AddSeparator();
+        }
         menu.Add(L.T("Spectre (FFT) de ce graphe…"), plot => _vm.ShowSpectrumCommand.Execute(GraphOf(plot)));
         menu.Add(L.T("Titre, légende et axes…"), plot => _vm.EditAxesCommand.Execute(GraphOf(plot)));
         menu.AddSeparator();
@@ -788,7 +791,7 @@ public sealed class PlotController : IPlotView
         public void Invoke()
         {
             owner.KeepZerosAligned();
-            owner.PlaceMeasureYLabels();
+            owner.PlaceMeasureMarks();
             owner.MatchPaddings();
         }
     }
@@ -1181,8 +1184,9 @@ public sealed class PlotController : IPlotView
             // The labels of the upper graph are just above its data area.
             if (pixel.Y < r.Top - 24 * _scale || pixel.Y > r.Bottom)
                 continue;
-            float pa = g.Plot.GetPixel(new Coordinates(a, 0), g.Plot.Axes.Bottom, g.Plot.Axes.Left).X;
-            float pb = g.Plot.GetPixel(new Coordinates(b, 0), g.Plot.Axes.Bottom, g.Plot.Axes.Left).X;
+            // Where the lines are drawn: at the edge when the cursor is outside the visible range (see PlaceMeasureMarks).
+            float pa = g.Plot.GetPixel(new Coordinates(g.LineA?.X ?? a, 0), g.Plot.Axes.Bottom, g.Plot.Axes.Left).X;
+            float pb = g.Plot.GetPixel(new Coordinates(g.LineB?.X ?? b, 0), g.Plot.Axes.Bottom, g.Plot.Axes.Left).X;
             float da = Math.Abs(pixel.X - pa), db = Math.Abs(pixel.X - pb);
             if (Math.Min(da, db) <= tolerance)
                 return da <= db ? 'A' : 'B';
@@ -1431,7 +1435,7 @@ public sealed class PlotController : IPlotView
             AddMeasureYLine(graph.Plot, axis.Axis, y2, MeasureColorY2),
             AddMeasureYLabel(graph.Plot, axis.Axis, "Y1", MeasureColorY1),
             AddMeasureYLabel(graph.Plot, axis.Axis, "Y2", MeasureColorY2));
-        PlaceMeasureYLabels();
+        PlaceMeasureMarks();
     }
 
     private HorizontalLine AddMeasureYLine(Plot plot, IYAxis axis, double y, ScottPlot.Color color)
@@ -1458,14 +1462,75 @@ public sealed class PlotController : IPlotView
     }
 
     /// <summary>Before each render: the names Y1/Y2 sit at the right end of their line, whatever the X zoom.</summary>
-    private void PlaceMeasureYLabels()
+    /// <summary>
+    /// Before each render: a measurement cursor outside the visible range is drawn dashed against the nearest
+    /// edge, its name with an arrow towards it, so it can be seen and dragged back. The names Y1/Y2 sit at the
+    /// right end of their line.
+    /// </summary>
+    private void PlaceMeasureMarks()
     {
-        if (_yCursors is not { } y)
-            return;
-        double right = y.Graph.Plot.Axes.Bottom.Range.Max;
-        y.Label1.Location = new Coordinates(right, y.Line1.Y);
-        y.Label2.Location = new Coordinates(right, y.Line2.Y);
-        y.Label1.OffsetX = y.Label2.OffsetX = -4 * _scale;
+        if (_vm.IsMeasuring && _vm.MeasureA is { } a && _vm.MeasureB is { } b)
+        {
+            foreach (var g in _graphs)
+            {
+                var r = g.Plot.Axes.Bottom.Range;
+                if (g.LineA is { } la)
+                    PlaceVertical(la, a, r.Min, r.Max, "A", g.IsTop);
+                if (g.LineB is { } lb)
+                    PlaceVertical(lb, b, r.Min, r.Max, "B", g.IsTop);
+            }
+        }
+
+        if (_yCursors is { } y && _vm.MeasureY1 is { } y1 && _vm.MeasureY2 is { } y2)
+        {
+            var yr = y.Axis.Axis.Range;
+            PlaceHorizontal(y.Line1, y.Label1, y1, yr.Min, yr.Max, "Y1");
+            PlaceHorizontal(y.Line2, y.Label2, y2, yr.Min, yr.Max, "Y2");
+            double right = y.Graph.Plot.Axes.Bottom.Range.Max;
+            y.Label1.Location = new Coordinates(right, y.Line1.Y);
+            y.Label2.Location = new Coordinates(right, y.Line2.Y);
+            y.Label1.OffsetX = y.Label2.OffsetX = -4 * _scale;
+            // Lines close together (or both against the same edge): Y2's name goes left of Y1's, not on top of it.
+            var plot = y.Graph.Plot;
+            float p1 = plot.GetPixel(new Coordinates(right, y.Line1.Y), plot.Axes.Bottom, y.Axis.Axis).Y;
+            float p2 = plot.GetPixel(new Coordinates(right, y.Line2.Y), plot.Axes.Bottom, y.Axis.Axis).Y;
+            if (Math.Abs(p1 - p2) < 20 * FontScale)
+                y.Label2.OffsetX = -(8 * _scale + 46 * FontScale);
+        }
+    }
+
+    /// <summary>The value, or the edge it is beyond (side -1 below/left, +1 above/right, 0 visible).</summary>
+    private static (double Position, int Side) ClampToView(double value, double min, double max)
+    {
+        double inset = (max - min) * 0.003; // just inside the frame
+        if (value < min)
+            return (min + inset, -1);
+        if (value > max)
+            return (max - inset, 1);
+        return (value, 0);
+    }
+
+    private static void PlaceVertical(VerticalLine line, double value, double min, double max, string name, bool labelled)
+    {
+        var (x, side) = ClampToView(value, min, max);
+        line.X = x;
+        line.LinePattern = side == 0 ? LinePattern.Solid : LinePattern.Dashed;
+        if (labelled)
+        {
+            line.LabelText = side switch { < 0 => "← " + name, > 0 => name + " →", _ => name };
+            line.LabelFontName = ScottPlot.Fonts.Detect(line.LabelText); // a font that has the arrows
+        }
+    }
+
+    private static void PlaceHorizontal(HorizontalLine line, Text label, double value, double min, double max, string name)
+    {
+        var (y, side) = ClampToView(value, min, max);
+        line.Y = y;
+        line.LinePattern = side == 0 ? LinePattern.Solid : LinePattern.Dashed;
+        label.LabelText = side switch { < 0 => "↓ " + name, > 0 => "↑ " + name, _ => name };
+        label.LabelStyle.FontName = ScottPlot.Fonts.Detect(label.LabelText);
+        // Off the bottom edge, the name goes above the line (else it would be cut).
+        label.Alignment = side < 0 ? Alignment.LowerRight : side > 0 ? Alignment.UpperRight : Alignment.LowerRight;
     }
 
     /// <summary>'1' or '2' when the pixel is on Y1 or Y2 (within a few pixels).</summary>
@@ -1491,11 +1556,9 @@ public sealed class PlotController : IPlotView
             return;
         var plot = y.Graph.Plot;
         double value = plot.GetCoordinates(ToPixel(e), plot.Axes.Bottom, y.Axis.Axis).Y;
-        if (_measureDrag == '1')
-            y.Line1.Y = value;
-        else
-            y.Line2.Y = value;
-        _vm.SetMeasureY(y.Graph.Graph, y.Axis.Key, y.Line1.Y, y.Line2.Y);
+        double y1 = _measureDrag == '1' ? value : _vm.MeasureY1 ?? value;
+        double y2 = _measureDrag == '2' ? value : _vm.MeasureY2 ?? value;
+        _vm.SetMeasureY(y.Graph.Graph, y.Axis.Key, y1, y2); // the lines follow before the render
         _view.Refresh();
     }
 
