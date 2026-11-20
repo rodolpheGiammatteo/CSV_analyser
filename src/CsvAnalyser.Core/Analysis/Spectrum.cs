@@ -28,9 +28,10 @@ public sealed record SpectrumResult(double[] Frequencies, double[] Amplitudes, d
 
     /// <summary>
     /// The <paramref name="count"/> highest peaks above 0 Hz, highest first. A peak is a local maximum; one closer than
-    /// <paramref name="minSeparation"/> bins to a higher one is the same peak (window lobes, shoulders) and is skipped.
+    /// <paramref name="minSeparation"/> bins to a higher one is the same peak (window lobes, shoulders) and is skipped,
+    /// and one below <paramref name="minRelative"/> × the highest is only leakage of the window (a pure sine gives one peak).
     /// </summary>
-    public IReadOnlyList<(double Frequency, double Amplitude)> Peaks(int count = 5, int minSeparation = 5)
+    public IReadOnlyList<(double Frequency, double Amplitude)> Peaks(int count = 5, int minSeparation = 5, double minRelative = 0.01)
     {
         var maxima = new List<int>();
         int n = Amplitudes.Length;
@@ -47,6 +48,8 @@ public sealed record SpectrumResult(double[] Frequencies, double[] Amplitudes, d
         var kept = new List<int>();
         foreach (int i in maxima.OrderByDescending(i => Amplitudes[i]))
         {
+            if (kept.Count > 0 && Amplitudes[i] < minRelative * Amplitudes[kept[0]])
+                break;
             if (kept.All(k => Math.Abs(k - i) >= minSeparation))
                 kept.Add(i);
             if (kept.Count == count)

@@ -193,6 +193,51 @@ public class SpectrumTests
     }
 
     [Fact]
+    public void Peaks_PureSine_OnlyOnePeak()
+    {
+        const int n = 10_000;
+        const double fs = 1000;
+        var t = Enumerable.Range(0, n).Select(i => i / fs).ToArray();
+        var y = t.Select(x => 0.5 * Math.Sin(2 * Math.PI * 25 * x)).ToArray();
+
+        var peaks = Spectrum.Compute(t, y, 0, n, FftWindow.Hann, removeMean: true).Peaks(5);
+
+        var peak = Assert.Single(peaks); // the window leakage around it is not listed
+        Assert.InRange(peak.Frequency, 24.9, 25.1);
+    }
+
+    /// <summary>
+    /// A square wave ±1 at 10 Hz has only odd harmonics, of amplitude 4/(π·n): 1.273, 0.424, 0.255, 0.182, 0.141
+    /// at 10, 30, 50, 70, 90 Hz, and nothing at the even ones.
+    /// </summary>
+    [Theory]
+    [InlineData(FftWindow.FlatTop, 0.02)]
+    [InlineData(FftWindow.Hann, 0.16)]
+    public void SquareWave_OddHarmonicsAtFourOverPiN(FftWindow window, double tolerance)
+    {
+        const int n = 10_000; // 10 s at 1 kHz, 100 samples per period
+        const double fs = 1000;
+        var t = Enumerable.Range(0, n).Select(i => i / fs).ToArray();
+        var y = Enumerable.Range(0, n).Select(i => i % 100 < 50 ? 1.0 : -1.0).ToArray();
+
+        var s = Spectrum.Compute(t, y, 0, n, window, removeMean: true);
+        var peaks = s.Peaks(5);
+
+        Assert.Equal(5, peaks.Count);
+        for (int k = 0; k < 5; k++)
+        {
+            int harmonic = 2 * k + 1;
+            Assert.InRange(peaks[k].Frequency, 10 * harmonic - 0.2, 10 * harmonic + 0.2);
+            double expected = 4 / (Math.PI * harmonic);
+            Assert.InRange(peaks[k].Amplitude, expected * (1 - tolerance), expected * (1 + tolerance));
+        }
+        // Even harmonics: nothing (well under 1 % of the fundamental).
+        double At(double f) => s.Amplitudes[(int)Math.Round(f / s.Frequencies[1])];
+        foreach (double even in new[] { 20.0, 40.0, 60.0 })
+            Assert.True(At(even) < 0.01 * peaks[0].Amplitude, $"{even} Hz: {At(even)}");
+    }
+
+    [Fact]
     public void TooFewPoints_Throws()
     {
         Assert.Throws<InvalidOperationException>(() => Spectrum.Compute([0, 1], [1, 2], 0, 2, FftWindow.Hann, true));
