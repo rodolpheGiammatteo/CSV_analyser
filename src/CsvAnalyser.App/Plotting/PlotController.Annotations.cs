@@ -38,6 +38,10 @@ public sealed partial class PlotController
     // Dragging a note: the bubble's lower-left corner minus the mouse (bubble drag), or where the bubble stays (point drag).
     private Pixel _noteGrab;
 
+    // Each bubble's anchor at the last render, and each note's bubble rectangle relative to its anchor (see PlaceNoteArrows).
+    private readonly Dictionary<Text, Pixel> _noteAnchors = [];
+    private readonly Dictionary<AnnotationViewModel, PixelRect> _noteBoxes = [];
+
     private const int MaxLabelLength = 40;
 
     /// <summary>Recreates the annotation plottables (after each change; cheap, there are few).</summary>
@@ -48,6 +52,7 @@ public sealed partial class PlotController
         _annotationPlottables.Clear();
         _annotationLabels.Clear();
         _notes.Clear();
+        _noteAnchors.Clear(); // those bubbles are gone (their sizes stay known in _noteBoxes)
         if (!_vm.ShowAnnotations || _xs is null || _graphs.Count == 0)
             return;
 
@@ -230,11 +235,21 @@ public sealed partial class PlotController
         {
             var plot = note.Series.Graph.Plot;
             var p = NotePixel(note);
+            var anchor = new Pixel(p.X + note.Text.OffsetX, p.Y + note.Text.OffsetY);
+
+            // The bubble as really drawn (padding and border included), relative to its anchor: learned from the
+            // last render of this same bubble and kept per note, since a drag recreates the bubble at every move.
             var last = note.Text.LabelLastRenderPixelRect;
-            float width = last.Width > 0 ? last.Width : note.Text.LabelText.Length * note.Text.LabelStyle.FontSize * 0.6f;
-            float height = last.Height > 0 ? last.Height : note.Text.LabelStyle.FontSize * 1.6f;
-            float left = p.X + note.Text.OffsetX, bottom = p.Y + note.Text.OffsetY;
-            var q = new Pixel(Math.Clamp(p.X, left, left + width), Math.Clamp(p.Y, bottom - height, bottom));
+            if (last.Width > 0 && _noteAnchors.TryGetValue(note.Text, out var lastAnchor))
+                _noteBoxes[note.Annotation] = new PixelRect(last.Left - lastAnchor.X, last.Right - lastAnchor.X, last.Bottom - lastAnchor.Y, last.Top - lastAnchor.Y);
+            _noteAnchors[note.Text] = anchor;
+            var box = _noteBoxes.TryGetValue(note.Annotation, out var known)
+                ? new PixelRect(anchor.X + known.Left, anchor.X + known.Right, anchor.Y + known.Bottom, anchor.Y + known.Top)
+                : EstimatedBubble(note, anchor);
+
+            // From just outside the bubble's edge to the edge of the circle.
+            float gap = 1 * _scale + note.Leader.LineWidth / 2; // the line's thickness stays outside too
+            var q = new Pixel(Math.Clamp(p.X, box.Left - gap, box.Right + gap), Math.Clamp(p.Y, box.Top - gap, box.Bottom + gap));
             float dx = p.X - q.X, dy = p.Y - q.Y;
             float distance = MathF.Sqrt(dx * dx + dy * dy);
             float radius = note.Marker.MarkerSize / 2;
@@ -245,6 +260,15 @@ public sealed partial class PlotController
             note.Leader.Start = plot.GetCoordinates(q, plot.Axes.Bottom, note.Series.Axis);
             note.Leader.End = plot.GetCoordinates(end, plot.Axes.Bottom, note.Series.Axis);
         }
+    }
+
+    /// <summary>A note's bubble before it was ever drawn: from its text length and font size.</summary>
+    private PixelRect EstimatedBubble(NoteRender note, Pixel anchor)
+    {
+        var style = note.Text.LabelStyle;
+        float width = note.Text.LabelText.Length * style.FontSize * 0.6f + style.PixelPadding.Horizontal;
+        float height = style.FontSize * 1.3f + style.PixelPadding.Vertical;
+        return new PixelRect(anchor.X, anchor.X + width, anchor.Y, anchor.Y - height);
     }
 
     // ---------------------------------------------------------------- finding and dragging
