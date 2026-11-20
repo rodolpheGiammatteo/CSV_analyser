@@ -1,6 +1,5 @@
 using System.Globalization;
 using System.Text;
-
 namespace CsvAnalyser.Core.Export;
 
 /// <summary>One exported column: its header and one value per row of the dataset.</summary>
@@ -36,7 +35,7 @@ public static class CsvExporter
         CancellationToken ct = default)
     {
         if (options.Delimiter == options.DecimalSeparator)
-            throw new ArgumentException("Le séparateur de colonnes et la décimale doivent être différents.");
+            throw new ArgumentException(L.T("Le séparateur de colonnes et la décimale doivent être différents."));
 
         var number = new NumberFormatInfo
         {

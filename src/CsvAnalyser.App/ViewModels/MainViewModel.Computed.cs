@@ -43,16 +43,16 @@ public partial class MainViewModel
         var users = ComputedChannels.Where(c => c != item && UsesCurve(c.Definition!, item)).Select(c => c.Name).ToList();
         if (users.Count > 0)
         {
-            MessageBox.Show($"« {item.Name} » est utilisée par : {string.Join(", ", users)}.\nSupprimez ou modifiez d'abord ces courbes.",
-                "Suppression impossible", MessageBoxButton.OK, MessageBoxImage.Information);
+            MessageBox.Show(L.F("« {0} » est utilisée par : {1}.\nSupprimez ou modifiez d'abord ces courbes.", item.Name, string.Join(", ", users)),
+                L.T("Suppression impossible"), MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }
-        if (MessageBox.Show($"Supprimer la courbe calculée « {item.Name} » ?", "Supprimer", MessageBoxButton.OKCancel,
+        if (MessageBox.Show(L.F("Supprimer la courbe calculée « {0} » ?", item.Name), L.T("Supprimer"), MessageBoxButton.OKCancel,
                 MessageBoxImage.Question) != MessageBoxResult.OK)
             return;
         item.IsPlotted = false;
         Channels.Remove(item);
-        StatusText = $"Courbe calculée supprimée : {item.Name}";
+        StatusText = L.F("Courbe calculée supprimée : {0}", item.Name);
     }
 
     [RelayCommand]
@@ -105,7 +105,7 @@ public partial class MainViewModel
     /// <summary>Computes the values of a definition; throws with a French message when impossible.</summary>
     public double[] ComputeValues(ComputedCurveConfig def)
     {
-        var ds = Dataset ?? throw new InvalidOperationException("Aucun fichier ouvert.");
+        var ds = Dataset ?? throw new InvalidOperationException(L.T("Aucun fichier ouvert."));
         if (def.Kind == ComputedCurveConfig.Formula)
         {
             var formula = Formula.Parse(def.Expression ?? "");
@@ -115,7 +115,7 @@ public partial class MainViewModel
         }
 
         var source = FindCurve(def.Source ?? "")?.Channel.Values
-            ?? throw new InvalidOperationException($"Courbe inconnue : « {def.Source} ».");
+            ?? throw new InvalidOperationException(L.F("Courbe inconnue : « {0} ».", def.Source));
         var time = TimeBase();
         double p = def.Parameter ?? double.NaN;
         return def.Kind switch
@@ -125,9 +125,9 @@ public partial class MainViewModel
             ComputedCurveConfig.HighPass when p > 0 => SignalFilters.HighPass(time, source, p, def.ZeroPhase),
             ComputedCurveConfig.Derivative => SignalFilters.Derivative(time, source),
             ComputedCurveConfig.Integral => SignalFilters.Integral(time, source),
-            ComputedCurveConfig.MovingAverage => throw new InvalidOperationException("La largeur de la moyenne doit être un nombre positif."),
-            ComputedCurveConfig.LowPass or ComputedCurveConfig.HighPass => throw new InvalidOperationException("La fréquence de coupure doit être un nombre positif."),
-            _ => throw new InvalidOperationException($"Type de calcul inconnu : {def.Kind}."),
+            ComputedCurveConfig.MovingAverage => throw new InvalidOperationException(L.T("La largeur de la moyenne doit être un nombre positif.")),
+            ComputedCurveConfig.LowPass or ComputedCurveConfig.HighPass => throw new InvalidOperationException(L.T("La fréquence de coupure doit être un nombre positif.")),
+            _ => throw new InvalidOperationException(L.F("Type de calcul inconnu : {0}.", def.Kind)),
         };
     }
 
@@ -139,13 +139,13 @@ public partial class MainViewModel
     {
         def.Name = def.Name.Trim();
         if (def.Name.Length == 0)
-            return "Donnez un nom à la courbe.";
+            return L.T("Donnez un nom à la courbe.");
         var clash = Channels.FirstOrDefault(c => c != editing
             && (c.Channel.SourceName == def.Name || c.Name == def.Name));
         if (clash is not null)
-            return $"Une courbe s'appelle déjà « {def.Name} ».";
+            return L.F("Une courbe s'appelle déjà « {0} ».", def.Name);
         if (editing is not null && UsesCurve(def, editing))
-            return "Une courbe ne peut pas se calculer à partir d'elle-même.";
+            return L.T("Une courbe ne peut pas se calculer à partir d'elle-même.");
 
         double[] values;
         try
@@ -162,13 +162,13 @@ public partial class MainViewModel
         {
             Channels.Insert(ComputedChannels.Count(), item);
             item.IsPlotted = true;
-            StatusText = $"Courbe calculée ajoutée : {def.Name}";
+            StatusText = L.F("Courbe calculée ajoutée : {0}", def.Name);
         }
         else
         {
             ReplaceItem(editing, item);
             RecomputeDependents(item);
-            StatusText = $"Courbe calculée modifiée : {def.Name}";
+            StatusText = L.F("Courbe calculée modifiée : {0}", def.Name);
         }
         return null;
     }
@@ -229,7 +229,7 @@ public partial class MainViewModel
             }
             catch (Exception ex) when (ex is FormulaException or InvalidOperationException or ArgumentException)
             {
-                StatusText = $"« {item.Name} » n'a pas pu être recalculée : {ex.Message}";
+                StatusText = L.F("« {0} » n'a pas pu être recalculée : {1}", item.Name, ex.Message);
             }
         }
     }
@@ -251,7 +251,7 @@ public partial class MainViewModel
         {
             if (Channels.Any(c => c.Channel.SourceName == def.Name))
             {
-                errors.Add($"{def.Name} (nom déjà pris)");
+                errors.Add(L.F("{0} (nom déjà pris)", def.Name));
                 continue;
             }
             if (!recomputed && previous.Remove(Key(def), out var kept))
@@ -266,7 +266,7 @@ public partial class MainViewModel
             }
             catch (Exception ex) when (ex is FormulaException or InvalidOperationException or ArgumentException)
             {
-                errors.Add($"{def.Name} (courbe calculée : {ex.Message})");
+                errors.Add(L.F("{0} (courbe calculée : {1})", def.Name, ex.Message));
             }
         }
         return errors;

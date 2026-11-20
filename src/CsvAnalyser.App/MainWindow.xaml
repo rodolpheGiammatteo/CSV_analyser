@@ -78,6 +78,11 @@
                         <Setter Property="Margin" Value="4,2,0,2" />
                     </Style>
                 </WrapPanel.Resources>
+                <ui:Button x:Name="CurveListButton"
+                           Margin="0,2,8,2"
+                           Icon="{ui:SymbolIcon PanelLeftContract24}"
+                           ToolTip="Masquer ou afficher la liste des courbes (Ctrl+L)"
+                           Click="OnToggleCurveList" />
                 <ui:Button Margin="0,2,0,2"
                            Appearance="Primary"
                            Content="Ouvrir…"
@@ -355,7 +360,7 @@
                 </ContentControl>
             </Grid>
 
-            <GridSplitter Grid.Column="1" HorizontalAlignment="Stretch" Background="Transparent" />
+            <GridSplitter x:Name="CurveSplitter" Grid.Column="1" HorizontalAlignment="Stretch" Background="Transparent" />
 
             <!-- Graphe (+ emplacement du curseur sous le graphe) -->
             <Grid x:Name="PlotColumn" Grid.Column="2">

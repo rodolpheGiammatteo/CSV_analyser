@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
@@ -8,6 +8,11 @@
 
   <ItemGroup>
     <InternalsVisibleTo Include="CsvAnalyser.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- L.T("texte français") everywhere: see Core/Localization/L.cs -->
+    <Using Include="CsvAnalyser.Core.Localization" />
   </ItemGroup>
 
 </Project>

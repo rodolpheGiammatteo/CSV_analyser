@@ -22,7 +22,11 @@ public enum CurveMarker
 }
 
 /// <summary>An entry of a style combo box. <see cref="Dash"/> draws the line preview (null = no line).</summary>
-public sealed record StyleChoice<T>(T Value, string Label, DoubleCollection? Dash = null);
+public sealed record StyleChoice<T>(T Value, string Label, DoubleCollection? Dash = null)
+{
+    /// <summary>Shown in the lists: translated into the chosen language.</summary>
+    public string Label { get; init; } = L.T(Label);
+}
 
 public static class CurveStyleChoices
 {

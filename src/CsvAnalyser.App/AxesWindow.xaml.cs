@@ -59,8 +59,8 @@ public partial class AxesWindow : FluentWindow
     {
         var layout = _vm.BuildLayout();
         var choices = _vm.Graphs.Select(g => new GraphChoice(g,
-            string.IsNullOrWhiteSpace(g.Name) ? $"Graphe {g.Number}" : $"Graphe {g.Number} — {g.Name.Trim()}")).ToList();
-        choices.Add(new GraphChoice(null, "＋ Nouveau graphe"));
+            string.IsNullOrWhiteSpace(g.Name) ? L.F("Graphe {0}", g.Number) : L.F("Graphe {0}", g.Number) + " — " + g.Name.Trim())).ToList();
+        choices.Add(new GraphChoice(null, L.T("＋ Nouveau graphe")));
 
         var groups = new List<GraphAxesViewModel>();
         for (int i = 0; i < layout.Count; i++)
@@ -119,7 +119,7 @@ public partial class AxesWindow : FluentWindow
         if (GroupOf(sender) is not { } g)
             return;
         if (!g.IsEmpty && System.Windows.MessageBox.Show(
-                $"Supprimer {g.Graph.Title} ? Ses {g.Curves.Count} courbe(s) seront masquées.", "Supprimer le graphe",
+                L.F("Supprimer {0} ? Ses {1} courbe(s) seront masquées.", g.Graph.Title, g.Curves.Count), L.T("Supprimer le graphe"),
                 System.Windows.MessageBoxButton.OKCancel, System.Windows.MessageBoxImage.Question) != System.Windows.MessageBoxResult.OK)
             return;
         _vm.RemoveGraph(g.Graph);
@@ -186,7 +186,7 @@ public partial class AxesWindow : FluentWindow
             };
             swatches.Children.Add(swatch);
         }
-        var auto = new Wpf.Ui.Controls.Button { Content = "Automatique (suit le thème)", Margin = new Thickness(0, 2, 0, 0) };
+        var auto = new Wpf.Ui.Controls.Button { Content = L.T("Automatique (suit le thème)"), Margin = new Thickness(0, 2, 0, 0) };
         auto.Click += (_, _) =>
         {
             popup.IsOpen = false;

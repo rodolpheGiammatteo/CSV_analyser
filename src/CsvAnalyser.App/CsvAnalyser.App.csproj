@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
     <ProjectReference Include="..\CsvAnalyser.Core\CsvAnalyser.Core.csproj" />
@@ -24,6 +24,16 @@
   <ItemGroup>
     <Resource Include="Assets\app.ico" />
     <Resource Include="Assets\app-64.png" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- One file per language besides French (see Localization/Languages.cs). -->
+    <Content Include="Languages\*.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- L.T("texte français") everywhere: see Core/Localization/L.cs -->
+    <Using Include="CsvAnalyser.Core.Localization" />
   </ItemGroup>
 
 </Project>

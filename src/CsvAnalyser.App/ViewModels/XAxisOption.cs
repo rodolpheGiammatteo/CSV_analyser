@@ -16,8 +16,8 @@ public sealed class XAxisOption : ObservableObject
     }
 
     /// <summary>Follows the channel's display name (call <see cref="RefreshLabel"/> after a rename).</summary>
-    public string Label => Channel is null ? "N° de ligne"
-        : _isTime ? $"Temps — {Channel.DisplayName}"
+    public string Label => Channel is null ? L.T("N° de ligne")
+        : _isTime ? L.F("Temps — {0}", Channel.DisplayName)
         : Channel.DisplayName;
 
     public Channel? Channel { get; }

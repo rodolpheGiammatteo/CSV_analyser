@@ -39,7 +39,7 @@ public static class SignalFilters
     public static double[] LowPass(double[] t, double[] y, double cutoff, bool zeroPhase)
     {
         if (!(cutoff > 0))
-            throw new ArgumentOutOfRangeException(nameof(cutoff), "La fréquence de coupure doit être positive.");
+            throw new ArgumentOutOfRangeException(nameof(cutoff), L.T("La fréquence de coupure doit être positive."));
         double rc = 1 / (2 * Math.PI * cutoff);
         int n = Math.Min(t.Length, y.Length);
         var result = new double[n];

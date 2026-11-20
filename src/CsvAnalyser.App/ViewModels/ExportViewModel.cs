@@ -45,12 +45,12 @@ public sealed partial class ExportViewModel : ObservableObject
         if (main.PlotView?.XRange is { } x)
         {
             ranges.Add(new(ExportRangeKind.Visible,
-                $"Plage visible ({MainViewModel.FormatValue(x.Min, "")} → {MainViewModel.FormatValue(x.Max, "")})"));
+                L.F("Plage visible ({0} → {1})", MainViewModel.FormatValue(x.Min, ""), MainViewModel.FormatValue(x.Max, ""))));
         }
         if (main.IsMeasuring && main.MeasureA is { } a && main.MeasureB is { } b)
         {
             ranges.Add(new(ExportRangeKind.BetweenCursors,
-                $"Entre les curseurs A et B ({MainViewModel.FormatValue(Math.Min(a, b), "")} → {MainViewModel.FormatValue(Math.Max(a, b), "")})"));
+                L.F("Entre les curseurs A et B ({0} → {1})", MainViewModel.FormatValue(Math.Min(a, b), ""), MainViewModel.FormatValue(Math.Max(a, b), ""))));
             _range = ExportRangeKind.BetweenCursors;
         }
         RangeChoices = ranges;
@@ -58,8 +58,8 @@ public sealed partial class ExportViewModel : ObservableObject
         int plotted = main.PlottedChannels.Count;
         ColumnChoices =
         [
-            new(true, $"Courbes affichées ({plotted})"),
-            new(false, $"Toutes les colonnes ({main.Channels.Count})"),
+            new(true, L.F("Courbes affichées ({0})", plotted)),
+            new(false, L.F("Toutes les colonnes ({0})", main.Channels.Count)),
         ];
         _plottedOnly = plotted > 0;
         _delimiter = DelimiterChoices.Any(c => c.Value == main.ExportDelimiter) ? main.ExportDelimiter : ";";
@@ -87,7 +87,7 @@ public sealed partial class ExportViewModel : ObservableObject
 
     public bool CanIncludeDate { get; }
 
-    public string? Error => Delimiter == Decimal ? "Le séparateur de colonnes et la décimale doivent être différents." : null;
+    public string? Error => Delimiter == Decimal ? L.T("Le séparateur de colonnes et la décimale doivent être différents.") : null;
 
     public bool CanExport => Error is null;
 
@@ -96,7 +96,7 @@ public sealed partial class ExportViewModel : ObservableObject
         get
         {
             int columns = Columns.Count + (IncludeDate && CanIncludeDate ? 1 : 0);
-            return $"{MainViewModel.CountRows(Rows):N0} lignes × {columns} colonnes (la colonne X en premier)";
+            return L.F("{0:N0} lignes × {1} colonnes (la colonne X en premier)", MainViewModel.CountRows(Rows), columns);
         }
     }
 
@@ -117,7 +117,7 @@ public sealed partial class ExportViewModel : ObservableObject
         Delimiter = Delimiter[0],
         DecimalSeparator = Decimal[0],
         DateColumn = IncludeDate && _main.Dataset?.Time is { Origin: { } origin } time
-            ? new ExportDateColumn("Date et heure", origin, time.Channel.Values)
+            ? new ExportDateColumn(L.T("Date et heure"), origin, time.Channel.Values)
             : null,
     };
 

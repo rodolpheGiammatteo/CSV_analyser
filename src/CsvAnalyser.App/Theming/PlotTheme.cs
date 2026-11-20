@@ -11,7 +11,8 @@ public sealed record PlotTheme(
     string CursorColor,
     string[] Palette)
 {
-    public override string ToString() => Name;
+    /// <summary>The name shown (the French <see cref="Name"/> is the key saved in the settings).</summary>
+    public override string ToString() => L.T(Name);
 }
 
 public static class PlotThemes

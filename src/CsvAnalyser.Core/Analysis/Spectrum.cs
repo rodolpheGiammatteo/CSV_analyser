@@ -1,5 +1,4 @@
 using System.Numerics;
-
 namespace CsvAnalyser.Core.Analysis;
 
 public enum FftWindow
@@ -52,7 +51,7 @@ public static class Spectrum
             }
         }
         if (ts.Count < 4)
-            throw new InvalidOperationException("Pas assez de points pour calculer un spectre (au moins 4).");
+            throw new InvalidOperationException(L.T("Pas assez de points pour calculer un spectre (au moins 4)."));
 
         // Regular grid
         var steps = new double[ts.Count - 1];

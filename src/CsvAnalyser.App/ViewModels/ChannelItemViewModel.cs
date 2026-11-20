@@ -37,7 +37,7 @@ public partial class ChannelItemViewModel : ObservableObject
     [NotifyPropertyChangedFor(nameof(ColorModeLabel))]
     private bool _isColorCustom;
 
-    public string ColorModeLabel => IsColorCustom ? "choisie" : "automatique (suit le thème)";
+    public string ColorModeLabel => IsColorCustom ? L.T("choisie") : L.T("automatique (suit le thème)");
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsLineVisible))]

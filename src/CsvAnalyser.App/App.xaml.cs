@@ -1,4 +1,4 @@
-﻿using System.IO;
+using System.IO;
 using System.Windows;
 using System.Windows.Threading;
 using CsvAnalyser.App.Services;
@@ -13,7 +13,10 @@ public partial class App : Application
         base.OnStartup(e);
         DispatcherUnhandledException += OnUnhandledException;
 
-        var viewModel = new MainViewModel(AppSettings.Load());
+        var settings = AppSettings.Load();
+        // Before any window or list is created: their texts are translated as they are built.
+        Localization.Languages.Apply(settings.Language);
+        var viewModel = new MainViewModel(settings);
         var window = new MainWindow(viewModel);
         window.Show();
 
@@ -23,7 +26,7 @@ public partial class App : Application
 
     private static void OnUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
     {
-        MessageBox.Show(e.Exception.Message, "Erreur inattendue", MessageBoxButton.OK, MessageBoxImage.Error);
+        MessageBox.Show(e.Exception.Message, L.T("Erreur inattendue"), MessageBoxButton.OK, MessageBoxImage.Error);
         e.Handled = true;
     }
 }

@@ -85,7 +85,7 @@ public partial class SpectrumWindow : FluentWindow
 
     private bool IsTime => _vm.SelectedXAxis?.Channel is { } ch && ch == _vm.Dataset?.Time?.Channel;
 
-    private string FrequencyUnit => IsTime ? "Hz" : "cycles/unité X";
+    private string FrequencyUnit => IsTime ? "Hz" : L.T("cycles/unité X");
 
     private void OnOptionChanged(object sender, RoutedEventArgs e)
     {
@@ -102,7 +102,7 @@ public partial class SpectrumWindow : FluentWindow
             return;
         if (!option.IsSorted)
         {
-            ShowMessage("L'axe X doit être croissant pour calculer un spectre (choisissez le temps ou le n° de ligne).");
+            ShowMessage(L.T("L'axe X doit être croissant pour calculer un spectre (choisissez le temps ou le n° de ligne)."));
             return;
         }
 
@@ -119,11 +119,11 @@ public partial class SpectrumWindow : FluentWindow
         var selected = _curves.Where(c => c.Box.IsChecked == true).Select(c => c.Item).ToList();
         if (selected.Count == 0)
         {
-            ShowMessage("Cochez au moins une courbe.");
+            ShowMessage(L.T("Cochez au moins une courbe."));
             return;
         }
 
-        StatusText.Text = "Calcul…";
+        StatusText.Text = L.T("Calcul…");
         List<(ChannelItemViewModel Item, SpectrumResult? Result, string? Error)> results;
         try
         {
@@ -141,7 +141,7 @@ public partial class SpectrumWindow : FluentWindow
         }
         catch (OutOfMemoryException)
         {
-            ShowMessage("Plage trop grande pour la mémoire disponible : réduisez-la.");
+            ShowMessage(L.T("Plage trop grande pour la mémoire disponible : réduisez-la."));
             return;
         }
         if (id != _computeId)
@@ -166,10 +166,10 @@ public partial class SpectrumWindow : FluentWindow
             var line = plot.Add.SignalXY(result.Frequencies, ys, item.Color);
             line.LineWidth = 1.2f * _scale;
             var (pf, pa) = result.Peak;
-            line.LegendText = $"{item.LegendText} — pic à {Format(pf)} {FrequencyUnit} : {Format(pa)} {item.Unit}".TrimEnd();
+            line.LegendText = L.F("{0} — pic à {1} {2} : {3} {4}", item.LegendText, Format(pf), FrequencyUnit, Format(pa), item.Unit).TrimEnd();
         }
 
-        plot.Axes.Bottom.Label.Text = $"Fréquence ({FrequencyUnit})";
+        plot.Axes.Bottom.Label.Text = L.F("Fréquence ({0})", FrequencyUnit);
         string unit = results.Select(r => r.Item.Unit).Distinct().Count() == 1 ? results[0].Item.Unit : "";
         plot.Axes.Left.Label.Text = decibel ? "Amplitude (dB)" : unit.Length > 0 ? $"Amplitude ({unit})" : "Amplitude";
         plot.Legend.IsVisible = first is not null;
@@ -180,8 +180,8 @@ public partial class SpectrumWindow : FluentWindow
 
         if (first is not null)
         {
-            StatusText.Text = $"{first.SampleCount:N0} points — échantillonnage {Format(first.SampleRate)} {FrequencyUnit} — "
-                + $"résolution {Format(first.Frequencies[1])} {FrequencyUnit} — fréquence max {Format(first.Frequencies[^1])} {FrequencyUnit}"
+            StatusText.Text = L.F("{0:N0} points — échantillonnage {1} {2} — résolution {3} {2} — fréquence max {4} {2}",
+                    first.SampleCount, Format(first.SampleRate), FrequencyUnit, Format(first.Frequencies[1]), Format(first.Frequencies[^1]))
                 + (notes.Count > 0 ? " — " + string.Join(" ; ", notes) : "");
         }
         else
@@ -223,7 +223,7 @@ public partial class SpectrumWindow : FluentWindow
         var p = e.GetPosition(PlotView);
         var pixel = new Pixel((float)(p.X * PlotView.DisplayScale), (float)(p.Y * PlotView.DisplayScale));
         var c = PlotView.Plot.GetCoordinates(pixel);
-        MouseText.Text = $"f = {Format(c.X)} {FrequencyUnit}   amplitude = {Format(c.Y)}";
+        MouseText.Text = L.F("f = {0} {1}   amplitude = {2}", Format(c.X), FrequencyUnit, Format(c.Y));
     }
 
     private static string Format(double v) => double.IsFinite(v) ? v.ToString("G4", CultureInfo.CurrentCulture) : "—";

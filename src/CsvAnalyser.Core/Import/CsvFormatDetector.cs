@@ -26,7 +26,7 @@ public static partial class CsvFormatDetector
     {
         var nonEmpty = Enumerable.Range(0, lines.Count).Where(i => !string.IsNullOrWhiteSpace(lines[i])).ToList();
         if (nonEmpty.Count == 0)
-            throw new InvalidDataException("Le fichier est vide.");
+            throw new InvalidDataException(L.T("Le fichier est vide."));
 
         var (delimiter, fieldCount) = DetectDelimiter(lines, nonEmpty);
         char decimalSeparator = DetectDecimalSeparator(lines, nonEmpty, delimiter, fieldCount);
@@ -62,7 +62,7 @@ public static partial class CsvFormatDetector
         }
         else
         {
-            headers = Enumerable.Range(1, fieldCount).Select(i => $"Colonne {i}").ToArray();
+            headers = Enumerable.Range(1, fieldCount).Select(i => $"Colonne {i}") /* not translated: the name is the column key in projects */.ToArray();
         }
 
         if (firstDataLine < 0)

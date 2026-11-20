@@ -34,10 +34,10 @@ public static class GraphLayout
     /// <summary>The axis choices offered for a curve in its settings: automatic, own axis, or one of the other axes of its graph.</summary>
     public static IReadOnlyList<StyleChoice<string>> AxisChoices(ChannelItemViewModel item, IReadOnlyList<GraphSpec> layout)
     {
-        string unit = string.IsNullOrEmpty(item.Unit) ? "sans unité" : item.Unit;
+        string unit = string.IsNullOrEmpty(item.Unit) ? L.T("sans unité") : item.Unit;
         var choices = new List<StyleChoice<string>>
         {
-            new(ChannelItemViewModel.AutoAxis, $"Automatique (axe « {unit} »)"),
+            new(ChannelItemViewModel.AutoAxis, L.F("Automatique (axe « {0} »)", unit)),
             new(ChannelItemViewModel.OwnAxisChoice, "Axe séparé"),
         };
         var graph = layout.FirstOrDefault(g => g.Graph == item.Graph);
@@ -49,11 +49,11 @@ public static class GraphLayout
             var others = axis.Curves.Where(c => c != item).ToList();
             if (others.Count == 0)
                 continue;
-            choices.Add(new(axis.Key, $"Partager l'axe « {AxisLabel(others)} »"));
+            choices.Add(new(axis.Key, L.F("Partager l'axe « {0} »", AxisLabel(others))));
         }
         // Keep the current choice selectable even if its axis has no other curve any more.
         if (choices.All(c => c.Value != item.AxisChoice))
-            choices.Add(new(item.AxisChoice, $"Axe partagé ({item.AxisChoice.Split(':').Last()})"));
+            choices.Add(new(item.AxisChoice, L.F("Axe partagé ({0})", item.AxisChoice.Split(':').Last())));
         return choices;
     }
 

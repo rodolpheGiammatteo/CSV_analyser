@@ -68,9 +68,9 @@ public sealed partial class ComputedCurveViewModel : ObservableObject
 
     public ChannelItemViewModel? Editing { get; }
 
-    public string Title => Editing is null ? "Nouvelle courbe calculée" : "Modifier la courbe calculée";
+    public string Title => Editing is null ? L.T("Nouvelle courbe calculée") : L.T("Modifier la courbe calculée");
 
-    public string OkText => Editing is null ? "Créer" : "Enregistrer";
+    public string OkText => Editing is null ? L.T("Créer") : L.T("Enregistrer");
 
     public IReadOnlyList<ChannelItemViewModel> Curves { get; }
 
@@ -92,19 +92,19 @@ public sealed partial class ComputedCurveViewModel : ObservableObject
 
     public bool HasZeroPhase => Kind is ComputedCurveConfig.LowPass or ComputedCurveConfig.HighPass;
 
-    private string TimeUnit => _main.HasTimeBase ? "s" : "lignes";
+    private string TimeUnit => _main.HasTimeBase ? "s" : L.T("lignes");
 
     public string ParameterLabel => Kind == ComputedCurveConfig.MovingAverage
-        ? $"Largeur de la fenêtre ({TimeUnit})"
-        : _main.HasTimeBase ? "Fréquence de coupure (Hz)" : "Fréquence de coupure (cycles par ligne)";
+        ? L.F("Largeur de la fenêtre ({0})", TimeUnit)
+        : _main.HasTimeBase ? L.T("Fréquence de coupure (Hz)") : L.T("Fréquence de coupure (cycles par ligne)");
 
     public string KindHelp => Kind switch
     {
-        ComputedCurveConfig.MovingAverage => "Moyenne des points dans une fenêtre centrée sur chaque point : lisse le bruit sans décaler la courbe.",
-        ComputedCurveConfig.LowPass => "Garde les variations lentes, enlève celles plus rapides que la fréquence de coupure (filtre RC du 1er ordre).",
-        ComputedCurveConfig.HighPass => "Garde les variations rapides : la courbe moins sa version filtrée passe-bas (enlève la valeur moyenne et la dérive).",
-        ComputedCurveConfig.Derivative => $"Pente de la courbe, par {TimeUnit}.",
-        ComputedCurveConfig.Integral => $"Aire sous la courbe depuis le début du fichier (méthode des trapèzes, en unité × {TimeUnit}).",
+        ComputedCurveConfig.MovingAverage => L.T("Moyenne des points dans une fenêtre centrée sur chaque point : lisse le bruit sans décaler la courbe."),
+        ComputedCurveConfig.LowPass => L.T("Garde les variations lentes, enlève celles plus rapides que la fréquence de coupure (filtre RC du 1er ordre)."),
+        ComputedCurveConfig.HighPass => L.T("Garde les variations rapides : la courbe moins sa version filtrée passe-bas (enlève la valeur moyenne et la dérive)."),
+        ComputedCurveConfig.Derivative => L.F("Pente de la courbe, par {0}.", TimeUnit),
+        ComputedCurveConfig.Integral => L.F("Aire sous la courbe depuis le début du fichier (méthode des trapèzes, en unité × {0}).", TimeUnit),
         _ => "",
     };
 
@@ -120,12 +120,12 @@ public sealed partial class ComputedCurveViewModel : ObservableObject
                 var f = Formula.Parse(Expression);
                 var unknown = f.Variables.Where(v => _main.FindCurve(v) is null && v is not ("t" or "T")).ToList();
                 if (unknown.Count > 0)
-                    return "Courbe inconnue : " + string.Join(", ", unknown.Select(u => $"« {u} »"));
-                return f.Variables.Count == 0 ? "Formule correcte (constante)." : "Formule correcte. Courbes : " + string.Join(", ", f.Variables);
+                    return L.T("Courbe inconnue : ") + string.Join(", ", unknown.Select(u => $"« {u} »"));
+                return f.Variables.Count == 0 ? L.T("Formule correcte (constante).") : L.T("Formule correcte. Courbes : ") + string.Join(", ", f.Variables);
             }
             catch (FormulaException ex)
             {
-                return $"{ex.Message} (position {ex.Position + 1})";
+                return L.F("{0} (position {1})", ex.Message, ex.Position + 1);
             }
         }
     }
@@ -160,12 +160,12 @@ public sealed partial class ComputedCurveViewModel : ObservableObject
         string t = TimeUnit == "s" ? "s" : "";
         (string name, string u) = Kind switch
         {
-            ComputedCurveConfig.MovingAverage => ($"{source} moyenne", unit),
-            ComputedCurveConfig.LowPass => ($"{source} passe-bas", unit),
-            ComputedCurveConfig.HighPass => ($"{source} passe-haut", unit),
+            ComputedCurveConfig.MovingAverage => (L.F("{0} moyenne", source), unit),
+            ComputedCurveConfig.LowPass => (L.F("{0} passe-bas", source), unit),
+            ComputedCurveConfig.HighPass => (L.F("{0} passe-haut", source), unit),
             ComputedCurveConfig.Derivative => ($"d({source})/dt", unit.Length > 0 && t.Length > 0 ? $"{unit}/{t}" : unit),
             ComputedCurveConfig.Integral => ($"∫ {source}", unit.Length > 0 && t.Length > 0 ? $"{unit}·{t}" : unit),
-            _ => ("Calcul", ""),
+            _ => (L.T("Calcul"), ""),
         };
         if (!_nameTouched || string.IsNullOrWhiteSpace(Name))
         {
@@ -199,7 +199,7 @@ public sealed partial class ComputedCurveViewModel : ObservableObject
         {
             if (Source is null)
             {
-                Error = "Choisissez la courbe à traiter.";
+                Error = L.T("Choisissez la courbe à traiter.");
                 return null;
             }
             def.Source = Source.Channel.SourceName;
@@ -208,7 +208,7 @@ public sealed partial class ComputedCurveViewModel : ObservableObject
                 if (!double.TryParse(ParameterText, NumberStyles.Float, CultureInfo.CurrentCulture, out double p)
                     && !double.TryParse(ParameterText, NumberStyles.Float, CultureInfo.InvariantCulture, out p) || !(p > 0))
                 {
-                    Error = $"{ParameterLabel} : entrez un nombre positif.";
+                    Error = L.F("{0} : entrez un nombre positif.", ParameterLabel);
                     return null;
                 }
                 def.Parameter = p;

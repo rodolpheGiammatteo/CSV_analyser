@@ -13,5 +13,14 @@ public partial class SettingsWindow : FluentWindow
         DataContext = viewModel;
     }
 
+    /// <summary>The user asked to restart now to apply another language (done by the main window).</summary>
+    public bool RestartRequested { get; private set; }
+
+    private void OnRestart(object sender, RoutedEventArgs e)
+    {
+        RestartRequested = true;
+        Close();
+    }
+
     private void OnClose(object sender, RoutedEventArgs e) => Close();
 }

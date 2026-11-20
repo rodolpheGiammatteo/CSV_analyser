@@ -31,6 +31,18 @@
             <TextBlock Margin="0,2,0,16" Foreground="{DynamicResource AppSecondaryTextBrush}"
                        Text="Les changements s'appliquent tout de suite et sont mémorisés." />
 
+            <TextBlock FontWeight="SemiBold" Text="Langue" />
+            <ComboBox Margin="0,6,0,4"
+                      ItemsSource="{Binding AvailableLanguages}"
+                      SelectedValuePath="Code"
+                      DisplayMemberPath="Name"
+                      SelectedValue="{Binding LanguageCode}" />
+            <DockPanel Margin="0,0,0,16" Visibility="{Binding LanguageRestartNeeded, Converter={StaticResource BoolToVisibility}}">
+                <ui:Button DockPanel.Dock="Right" Content="Redémarrer maintenant" Icon="{ui:SymbolIcon ArrowClockwise24}" Click="OnRestart" />
+                <TextBlock VerticalAlignment="Center" Foreground="{DynamicResource AppSecondaryTextBrush}" TextWrapping="Wrap"
+                           Text="La langue s'applique au prochain démarrage." />
+            </DockPanel>
+
             <TextBlock FontWeight="SemiBold" Text="Thème du graphe" />
             <ComboBox Margin="0,6,0,20"
                       HorizontalAlignment="Stretch"
@@ -78,9 +90,7 @@
                       ToolTip="Chaque valeur est écrite à côté de son point d'intersection avec le curseur"
                       IsChecked="{Binding ShowCursorLabels}" />
 
-            <TextBlock Margin="0,12,0,0" FontWeight="SemiBold" Text="Souris sur le graphe" />
-            <TextBlock Margin="0,2,0,0" Foreground="{DynamicResource AppSecondaryTextBrush}" TextWrapping="Wrap"
-                       Text="Glisser avec le bouton choisi. Clic molette sans glisser : tout ajuster. Clic droit glissé : zoom par axe." />
+            <TextBlock Margin="0,12,0,0" FontWeight="SemiBold" Text="Choix des actions souris" />
             <ComboBox Margin="0,6,0,8"
                       ItemsSource="{x:Static vm:MainViewModel.MouseChoices}"
                       SelectedValuePath="Value"

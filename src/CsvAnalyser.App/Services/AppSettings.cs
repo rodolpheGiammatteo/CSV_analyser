@@ -11,6 +11,9 @@ public sealed class AppSettings
 
     public string? ThemeName { get; set; }
 
+    /// <summary>Interface language code ("fr", "en"…), applied at startup.</summary>
+    public string? Language { get; set; }
+
     public string? LastDirectory { get; set; }
 
     public double UiScale { get; set; } = 1;
@@ -43,6 +46,9 @@ public sealed class AppSettings
 
     /// <summary>Width of the curve list column.</summary>
     public double? CurveListWidth { get; set; }
+
+    /// <summary>The curve list is hidden (more room for the graphs).</summary>
+    public bool CurveListHidden { get; set; }
 
     /// <summary>Left-button drag zooms on a rectangle (and the wheel button pans); false = the reverse.</summary>
     public bool LeftDragZooms { get; set; } = true;

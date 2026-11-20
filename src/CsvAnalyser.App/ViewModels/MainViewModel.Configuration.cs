@@ -273,7 +273,7 @@ public partial class MainViewModel
         if (!RestoreLayout || SessionStore.TryLoad(path) is not { } session)
             return;
         ApplyConfiguration(session, restoreView: true);
-        StatusText += " — mise en page précédente retrouvée";
+        StatusText += L.T(" — mise en page précédente retrouvée");
     }
 
     // ---------------------------------------------------------------- projects
@@ -301,7 +301,7 @@ public partial class MainViewModel
         {
             var dialog = new SaveFileDialog
             {
-                Title = "Enregistrer le projet",
+                Title = L.T("Enregistrer le projet"),
                 Filter = "Projet CSV Analyser (*.json)|*.json",
                 FileName = ProjectPath is { } current ? Path.GetFileName(current) : Path.GetFileNameWithoutExtension(ds.FilePath) + " - projet.json",
                 InitialDirectory = ExistingFolder(Path.GetDirectoryName(ProjectPath)) ?? ExistingFolder(_settings.LastConfigDirectory) ?? Path.GetDirectoryName(ds.FilePath),
@@ -317,12 +317,12 @@ public partial class MainViewModel
             _settings.LastConfigDirectory = Path.GetDirectoryName(path);
             _settings.Save();
             MarkSaved();
-            StatusText = $"Projet enregistré : {Path.GetFileName(path)}";
+            StatusText = L.F("Projet enregistré : {0}", Path.GetFileName(path));
             return true;
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            MessageBox.Show(ex.Message, "Enregistrement impossible", MessageBoxButton.OK, MessageBoxImage.Error);
+            MessageBox.Show(ex.Message, L.T("Enregistrement impossible"), MessageBoxButton.OK, MessageBoxImage.Error);
             return false;
         }
     }
@@ -335,10 +335,10 @@ public partial class MainViewModel
     {
         if (!IsDirty)
             return true;
-        string name = ProjectPath is { } p ? $"le projet « {Path.GetFileNameWithoutExtension(p)} »" : "le projet (fichier CSV et mise en page)";
+        string name = ProjectPath is { } p ? L.F("le projet « {0} »", Path.GetFileNameWithoutExtension(p)) : L.T("le projet (fichier CSV et mise en page)");
         var answer = MessageBox.Show(
-            $"Enregistrer {name} avant {action} ?\n\nOui : enregistrer\nNon : continuer sans enregistrer\nAnnuler : revenir",
-            "Modifications non enregistrées", MessageBoxButton.YesNoCancel, MessageBoxImage.Question);
+            L.F("Enregistrer {0} avant {1} ?\n\nOui : enregistrer\nNon : continuer sans enregistrer\nAnnuler : revenir", name, action),
+            L.T("Modifications non enregistrées"), MessageBoxButton.YesNoCancel, MessageBoxImage.Question);
         return answer switch
         {
             MessageBoxResult.Yes => TrySaveProject(saveAs: false),
@@ -352,8 +352,8 @@ public partial class MainViewModel
     {
         var dialog = new OpenFileDialog
         {
-            Title = "Ouvrir un projet",
-            Filter = "Projet CSV Analyser (*.json)|*.json|Tous les fichiers (*.*)|*.*",
+            Title = L.T("Ouvrir un projet"),
+            Filter = L.T("Projet CSV Analyser (*.json)|*.json|Tous les fichiers (*.*)|*.*"),
             InitialDirectory = ExistingFolder(_settings.LastConfigDirectory) ?? ExistingFolder(_settings.LastDirectory),
         };
         if (dialog.ShowDialog() == true)
@@ -373,7 +373,7 @@ public partial class MainViewModel
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException)
         {
-            MessageBox.Show(ex.Message, "Projet illisible", MessageBoxButton.OK, MessageBoxImage.Error);
+            MessageBox.Show(ex.Message, L.T("Projet illisible"), MessageBoxButton.OK, MessageBoxImage.Error);
             return;
         }
 
@@ -385,9 +385,8 @@ public partial class MainViewModel
             {
                 string csvName = config.SourceFile ?? (csv is null ? "?" : Path.GetFileName(csv));
                 var answer = MessageBox.Show(
-                    $"Ce projet a été fait avec « {csvName} ».\n\nOui : ouvrir « {csvName} » avec cette mise en page\n"
-                    + $"Non : appliquer la mise en page au fichier ouvert « {Path.GetFileName(ds.FilePath)} »\nAnnuler : ne rien faire",
-                    "Ouvrir le projet", MessageBoxButton.YesNoCancel, MessageBoxImage.Question);
+                    L.F("Ce projet a été fait avec « {0} ».\n\nOui : ouvrir « {0} » avec cette mise en page\nNon : appliquer la mise en page au fichier ouvert « {1} »\nAnnuler : ne rien faire", csvName, Path.GetFileName(ds.FilePath)),
+                    L.T("Ouvrir le projet"), MessageBoxButton.YesNoCancel, MessageBoxImage.Question);
                 if (answer == MessageBoxResult.Cancel)
                     return;
                 if (answer == MessageBoxResult.No)
@@ -396,7 +395,7 @@ public partial class MainViewModel
                     return;
                 }
             }
-            if (!ConfirmSaveChanges("d'ouvrir ce projet"))
+            if (!ConfirmSaveChanges(L.T("d'ouvrir ce projet")))
                 return;
             if (same)
             {
@@ -419,7 +418,7 @@ public partial class MainViewModel
         _settings.LastConfigDirectory = Path.GetDirectoryName(path);
         _settings.Save();
         ResetHistory();
-        StatusText = $"Projet ouvert : {Path.GetFileName(path)}" + (missing.Count > 0 ? $" — {missing.Count} élément(s) ignoré(s)" : "");
+        StatusText = L.F("Projet ouvert : {0}", Path.GetFileName(path)) + (missing.Count > 0 ? L.F(" — {0} élément(s) ignoré(s)", missing.Count) : "");
         ReportMissing(missing);
     }
 
@@ -435,14 +434,14 @@ public partial class MainViewModel
 
     private string? AskForCsv(ViewConfiguration config)
     {
-        string name = config.SourceFile ?? "le fichier CSV";
-        if (MessageBox.Show($"« {name} » est introuvable (déplacé ou renommé ?).\nVoulez-vous le chercher ?", "Fichier introuvable",
+        string name = config.SourceFile ?? L.T("le fichier CSV");
+        if (MessageBox.Show(L.F("« {0} » est introuvable (déplacé ou renommé ?).\nVoulez-vous le chercher ?", name), L.T("Fichier introuvable"),
                 MessageBoxButton.OKCancel, MessageBoxImage.Question) != MessageBoxResult.OK)
             return null;
         var dialog = new OpenFileDialog
         {
-            Title = $"Où est « {name} » ?",
-            Filter = "Fichiers CSV (*.csv;*.txt)|*.csv;*.txt|Tous les fichiers (*.*)|*.*",
+            Title = L.F("Où est « {0} » ?", name),
+            Filter = L.T("Fichiers CSV (*.csv;*.txt)|*.csv;*.txt|Tous les fichiers (*.*)|*.*"),
             FileName = config.SourceFile ?? "",
             InitialDirectory = ExistingFolder(Path.GetDirectoryName(config.SourcePath)) ?? ExistingFolder(_settings.LastDirectory),
         };
@@ -459,8 +458,8 @@ public partial class MainViewModel
         }
         var dialog = new OpenFileDialog
         {
-            Title = "Appliquer une configuration au fichier ouvert",
-            Filter = "Projet ou configuration CSV Analyser (*.json)|*.json|Tous les fichiers (*.*)|*.*",
+            Title = L.T("Appliquer une configuration au fichier ouvert"),
+            Filter = L.T("Projet ou configuration CSV Analyser (*.json)|*.json|Tous les fichiers (*.*)|*.*"),
             InitialDirectory = ExistingFolder(_settings.LastConfigDirectory) ?? ExistingFolder(_settings.LastDirectory),
         };
         if (dialog.ShowDialog() == true)
@@ -483,13 +482,13 @@ public partial class MainViewModel
             CommitNow(); // undoable
             _settings.LastConfigDirectory = Path.GetDirectoryName(path);
             _settings.Save();
-            StatusText = $"Configuration appliquée : {Path.GetFileName(path)}"
-                + (missing.Count > 0 ? $" — {missing.Count} élément(s) ignoré(s)" : "");
+            StatusText = L.F("Configuration appliquée : {0}", Path.GetFileName(path))
+                + (missing.Count > 0 ? L.F(" — {0} élément(s) ignoré(s)", missing.Count) : "");
             ReportMissing(missing);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException)
         {
-            MessageBox.Show(ex.Message, "Configuration illisible", MessageBoxButton.OK, MessageBoxImage.Error);
+            MessageBox.Show(ex.Message, L.T("Configuration illisible"), MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 
@@ -499,13 +498,13 @@ public partial class MainViewModel
             return;
         string list = string.Join("\n", missing.Take(15).Select(m => "• " + m));
         if (missing.Count > 15)
-            list += $"\n… et {missing.Count - 15} autre(s)";
+            list += L.F("\n… et {0} autre(s)", missing.Count - 15);
         MessageBox.Show(
-            $"Ces colonnes n'existent pas dans {Path.GetFileName(ds.FilePath)} ; elles ont été ignorées :\n\n{list}",
-            "Mise en page appliquée", MessageBoxButton.OK, MessageBoxImage.Information);
+            L.F("Ces colonnes n'existent pas dans {0} ; elles ont été ignorées :\n\n{1}", Path.GetFileName(ds.FilePath), list),
+            L.T("Mise en page appliquée"), MessageBoxButton.OK, MessageBoxImage.Information);
     }
     private static void ShowNeedsFile() =>
-        MessageBox.Show("Ouvrez d'abord un fichier CSV.", "Aucun fichier", MessageBoxButton.OK, MessageBoxImage.Information);
+        MessageBox.Show(L.T("Ouvrez d'abord un fichier CSV."), L.T("Aucun fichier"), MessageBoxButton.OK, MessageBoxImage.Information);
 
     private static string? ExistingFolder(string? folder) => folder is not null && Directory.Exists(folder) ? folder : null;
 
@@ -574,7 +573,7 @@ public partial class MainViewModel
         var option = SelectedXAxis!;
         var columns = new List<ExportColumn>
         {
-            new(option.Channel is { } ch ? Header(ch) : "N° de ligne", option.GetValues(ds)),
+            new(option.Channel is { } ch ? Header(ch) : L.T("N° de ligne"), option.GetValues(ds)),
         };
         var curves = plottedOnly ? PlottedChannels.AsEnumerable() : Channels;
         foreach (var item in curves.Where(c => c.Channel != option.Channel))
@@ -590,7 +589,7 @@ public partial class MainViewModel
             return;
         IsLoading = true;
         LoadProgress = 0;
-        StatusText = $"Export vers {Path.GetFileName(path)}…";
+        StatusText = L.F("Export vers {0}…", Path.GetFileName(path));
         var progress = new Progress<double>(p => LoadProgress = p * 100);
         try
         {
@@ -600,12 +599,12 @@ public partial class MainViewModel
                 using var writer = new StreamWriter(path, false, new UTF8Encoding(encoderShouldEmitUTF8Identifier: true), 1 << 16);
                 CsvExporter.Write(writer, columns, rows, options, progress);
             });
-            StatusText = $"Exporté : {Path.GetFileName(path)} — {CountRows(rows):N0} lignes × {columns.Count + (options.DateColumn is null ? 0 : 1)} colonnes";
+            StatusText = L.F("Exporté : {0} — {1:N0} lignes × {2} colonnes", Path.GetFileName(path), CountRows(rows), columns.Count + (options.DateColumn is null ? 0 : 1));
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException)
         {
-            StatusText = $"Export impossible : {ex.Message}";
-            MessageBox.Show(ex.Message, "Export impossible", MessageBoxButton.OK, MessageBoxImage.Error);
+            StatusText = L.F("Export impossible : {0}", ex.Message);
+            MessageBox.Show(ex.Message, L.T("Export impossible"), MessageBoxButton.OK, MessageBoxImage.Error);
         }
         finally
         {

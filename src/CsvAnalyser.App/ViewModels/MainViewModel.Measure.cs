@@ -90,7 +90,7 @@ public partial class MainViewModel
         if (!IsMeasuring || Dataset is not { } ds || SelectedXAxis is not { } option
             || MeasureA is not { } a || MeasureB is not { } b || RowsBetweenCursors is not { } rows)
         {
-            MeasureSummary = IsMeasuring ? "Cochez des courbes pour voir les mesures." : "";
+            MeasureSummary = IsMeasuring ? L.T("Cochez des courbes pour voir les mesures.") : "";
             return;
         }
 
@@ -105,7 +105,7 @@ public partial class MainViewModel
         bool isSeconds = option.Channel is not null && option.Channel == ds.Time?.Channel || xUnit == "s";
         if (isSeconds && Math.Abs(delta) > 0)
             summary += $"   (1/Δ = {Number(1 / Math.Abs(delta))} Hz)";
-        MeasureSummary = summary + $"   —   {count:N0} points";
+        MeasureSummary = summary + L.F("   —   {0:N0} points", count);
 
         foreach (var item in PlottedChannels)
         {
@@ -225,7 +225,7 @@ public partial class MainViewModel
             {
                 foreach (var axis in spec.Axes)
                 {
-                    string label = string.IsNullOrEmpty(axis.Label) ? "(sans unité)" : axis.Label;
+                    string label = string.IsNullOrEmpty(axis.Label) ? L.T("(sans unité)") : axis.Label;
                     MeasureYAxisChoices.Add(new($"{spec.Graph.Id}|{axis.Key}", Graphs.Count > 1 ? $"{spec.Graph.Title} — {label}" : label));
                 }
             }
@@ -255,7 +255,7 @@ public partial class MainViewModel
     {
         if (!IsMeasuringY || MeasureY1 is not { } y1 || MeasureY2 is not { } y2)
         {
-            MeasureYSummary = IsMeasuringY ? "Cochez des courbes pour placer Y1 et Y2." : "";
+            MeasureYSummary = IsMeasuringY ? L.T("Cochez des courbes pour placer Y1 et Y2.") : "";
             return;
         }
         var axis = BuildLayout().FirstOrDefault(g => g.Graph == MeasureYGraph)?.Axes.FirstOrDefault(a => a.Key == MeasureYAxisKey);

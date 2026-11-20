@@ -40,7 +40,7 @@ public partial class SearchPicker : UserControl
 
     public static readonly DependencyProperty PlaceholderProperty = DependencyProperty.Register(
         nameof(Placeholder), typeof(string), typeof(SearchPicker),
-        new PropertyMetadata("Choisir…", (d, _) => ((SearchPicker)d).UpdateSelectedText()));
+        new PropertyMetadata(L.T("Choisir…"), (d, _) => ((SearchPicker)d).UpdateSelectedText()));
 
     public static readonly DependencyProperty KeepSelectionProperty = DependencyProperty.Register(
         nameof(KeepSelection), typeof(bool), typeof(SearchPicker), new PropertyMetadata(true));

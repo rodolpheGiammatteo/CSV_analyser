@@ -100,7 +100,7 @@ public sealed class PlotController : IPlotView
         if (_view.Menu is not WpfPlotMenu menu)
             return;
         menu.Clear();
-        menu.Add("Ajuster ce graphe en Y", plot =>
+        menu.Add(L.T("Ajuster ce graphe en Y"), plot =>
         {
             if (_graphs.FirstOrDefault(g => g.Plot == plot) is { } graph)
             {
@@ -110,31 +110,35 @@ public sealed class PlotController : IPlotView
                 _view.Refresh();
             }
         });
-        menu.Add("Ajuster X", _ => AutoScaleWithHistory(x: true, y: false));
-        menu.Add("Tout ajuster (X et Y)", _ => AutoScaleWithHistory(x: true, y: true));
+        menu.Add(L.T("Ajuster X"), _ => AutoScaleWithHistory(x: true, y: false));
+        menu.Add(L.T("Tout ajuster (X et Y)"), _ => AutoScaleWithHistory(x: true, y: true));
         menu.AddSeparator();
-        menu.Add("Placer le curseur A ici", plot => PlaceMeasureCursorAtMenu(plot, 'A'));
-        menu.Add("Placer le curseur B ici", plot => PlaceMeasureCursorAtMenu(plot, 'B'));
-        menu.Add("Placer le curseur Y1 ici", plot => PlaceMeasureYAtMenu(plot, '1'));
-        menu.Add("Placer le curseur Y2 ici", plot => PlaceMeasureYAtMenu(plot, '2'));
+        menu.Add(L.T("Placer le curseur A ici"), plot => PlaceMeasureCursorAtMenu(plot, 'A'));
+        menu.Add(L.T("Placer le curseur B ici"), plot => PlaceMeasureCursorAtMenu(plot, 'B'));
+        menu.Add(L.T("Placer le curseur Y1 ici"), plot => PlaceMeasureYAtMenu(plot, '1'));
+        menu.Add(L.T("Placer le curseur Y2 ici"), plot => PlaceMeasureYAtMenu(plot, '2'));
         menu.AddSeparator();
-        menu.Add("Spectre (FFT) de ce graphe…", plot => _vm.ShowSpectrumCommand.Execute(GraphOf(plot)));
-        menu.Add("Titre, légende et axes…", plot => _vm.EditAxesCommand.Execute(GraphOf(plot)));
+        menu.Add(L.T("Spectre (FFT) de ce graphe…"), plot => _vm.ShowSpectrumCommand.Execute(GraphOf(plot)));
+        menu.Add(L.T("Titre, légende et axes…"), plot => _vm.EditAxesCommand.Execute(GraphOf(plot)));
         menu.AddSeparator();
-        menu.Add("Copier l'image", WpfPlotMenu.CopyImageToClipboard);
-        menu.Add("Enregistrer l'image…", menu.OpenSaveImageDialog);
+        menu.Add(L.T("Copier l'image"), WpfPlotMenu.CopyImageToClipboard);
+        menu.Add(L.T("Enregistrer l'image…"), menu.OpenSaveImageDialog);
     }
 
     /// <summary>Left drag zooms on a rectangle and wheel-button drag pans, or the reverse (Paramètres).</summary>
-    private void ApplyMouseButtons()
+    /// <param name="leftPans">For one gesture: a left drag started on an axis moves that axis, whatever the setting.</param>
+    private void ApplyMouseButtons(bool leftPans = false)
     {
         var responses = _view.UserInputProcessor.UserActionResponses;
         responses.RemoveAll(r => r is MouseDragPan or MouseDragZoomRectangle);
         var left = ScottPlot.Interactivity.StandardMouseButtons.Left;
         var middle = ScottPlot.Interactivity.StandardMouseButtons.Middle;
-        responses.Add(new MouseDragZoomRectangle(_vm.LeftDragZooms ? left : middle));
-        responses.Add(new MouseDragPan(_vm.LeftDragZooms ? middle : left));
+        bool leftZooms = _vm.LeftDragZooms && !leftPans;
+        responses.Add(new MouseDragZoomRectangle(leftZooms ? left : middle));
+        responses.Add(new MouseDragPan(leftZooms ? middle : left));
     }
+
+    private bool _axisPanGesture;
 
     private GraphViewModel? GraphOf(Plot plot) => _graphs.FirstOrDefault(g => g.Plot == plot)?.Graph;
 
@@ -960,6 +964,11 @@ public sealed class PlotController : IPlotView
         if (TryStartLegendDrag(e) || TryStartMeasureDrag(e))
             return;
         RememberAxisClick(e);
+        if (_axisClick is not null && _vm.LeftDragZooms)
+        {
+            ApplyMouseButtons(leftPans: true);
+            _axisPanGesture = true;
+        }
 
         RememberInteractionAxis(e);
         if (_wheelTimer.IsEnabled)
@@ -981,6 +990,11 @@ public sealed class PlotController : IPlotView
         {
             EndMeasureDrag();
             return;
+        }
+        if (_axisPanGesture)
+        {
+            _axisPanGesture = false;
+            _view.Dispatcher.BeginInvoke(() => ApplyMouseButtons(), DispatcherPriority.Input);
         }
         if (_axisClick is not null && e.ChangedButton == MouseButton.Left)
             _view.Dispatcher.BeginInvoke(() => TryOpenAxisEditor(e), DispatcherPriority.Input);
@@ -1238,12 +1252,12 @@ public sealed class PlotController : IPlotView
         {
             bool max = pixel.Y < (data.Top + data.Bottom) / 2;
             var range = a.Axis.Range;
-            string name = string.IsNullOrEmpty(a.Spec.Label) ? "Axe Y" : a.Spec.Label;
-            ShowBoundEditor(position, $"{name} — {(max ? "maximum" : "minimum")}", max ? range.Max : range.Min, value =>
+            string name = string.IsNullOrEmpty(a.Spec.Label) ? L.T("Axe Y") : a.Spec.Label;
+            ShowBoundEditor(position, $"{name} — {(max ? L.T("maximum") : L.T("minimum"))}", max ? range.Max : range.Min, value =>
             {
                 double min = max ? range.Min : value, top = max ? value : range.Max;
                 if (!(min < top))
-                    return "Le minimum doit rester inférieur au maximum.";
+                    return L.T("Le minimum doit rester inférieur au maximum.");
                 a.Spec.Settings.Apply(manual: true, min, top); // a setting: kept by "Ajuster"
                 return null;
             });
@@ -1253,11 +1267,11 @@ public sealed class PlotController : IPlotView
         {
             bool max = pixel.X > (data.Left + data.Right) / 2;
             var range = g.Plot.Axes.Bottom.Range;
-            ShowBoundEditor(position, $"Axe X — {(max ? "maximum" : "minimum")}", max ? range.Max : range.Min, value =>
+            ShowBoundEditor(position, $"{L.T("Axe X")} — {(max ? L.T("maximum") : L.T("minimum"))}", max ? range.Max : range.Min, value =>
             {
                 double min = max ? range.Min : value, top = max ? value : range.Max;
                 if (!(min < top))
-                    return "Le minimum doit rester inférieur au maximum.";
+                    return L.T("Le minimum doit rester inférieur au maximum.");
                 var before = Capture();
                 SetX(min, top);
                 Record(before);
@@ -1276,7 +1290,7 @@ public sealed class PlotController : IPlotView
         var error = new System.Windows.Controls.TextBlock { Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0xD1, 0x34, 0x38)), TextWrapping = TextWrapping.Wrap, MaxWidth = 220 };
         var header = new System.Windows.Controls.TextBlock { Text = title, FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 0, 0, 6) };
         header.SetResourceReference(System.Windows.Controls.TextBlock.ForegroundProperty, "AppMenuForeground");
-        var hint = new System.Windows.Controls.TextBlock { Text = "Entrée : appliquer — Échap : annuler", FontSize = 11, Margin = new Thickness(0, 6, 0, 0) };
+        var hint = new System.Windows.Controls.TextBlock { Text = L.T("Entrée : appliquer — Échap : annuler"), FontSize = 11, Margin = new Thickness(0, 6, 0, 0) };
         hint.SetResourceReference(System.Windows.Controls.TextBlock.ForegroundProperty, "AppSecondaryTextBrush");
         var panel = new System.Windows.Controls.StackPanel { Children = { header, box, error, hint } };
         var border = new System.Windows.Controls.Border
@@ -1313,7 +1327,7 @@ public sealed class PlotController : IPlotView
                     && !double.TryParse(text, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out value)
                     || !double.IsFinite(value))
                 {
-                    error.Text = "Entrez un nombre.";
+                    error.Text = L.T("Entrez un nombre.");
                     return;
                 }
                 if (apply(value) is { } message)
@@ -1608,7 +1622,7 @@ public sealed class PlotController : IPlotView
             s.Label.IsVisible = false;
             s.Item.CursorText = "";
         }
-        _vm.CursorXText = "Survolez le graphe";
+        _vm.CursorXText = L.T("Survolez le graphe");
         _view.Refresh();
     }
 

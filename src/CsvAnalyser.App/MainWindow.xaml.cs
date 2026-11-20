@@ -49,7 +49,7 @@ public partial class MainWindow : FluentWindow
         {
             if (viewModel.PlottedChannels.Count == 0)
             {
-                System.Windows.MessageBox.Show("Cochez d'abord les courbes à analyser.", "Spectre", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
+                System.Windows.MessageBox.Show(L.T("Cochez d'abord les courbes à analyser."), L.T("Spectre"), System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
                 return;
             }
             new SpectrumWindow(viewModel, graph) { Owner = this }.Show();
@@ -57,7 +57,7 @@ public partial class MainWindow : FluentWindow
         RestorePlacement();
         Closing += (_, e) =>
         {
-            if (!viewModel.ConfirmSaveChanges("de fermer"))
+            if (!viewModel.ConfirmSaveChanges(L.T("de fermer")))
             {
                 e.Cancel = true;
                 return;
@@ -87,6 +87,44 @@ public partial class MainWindow : FluentWindow
         _lastCheckClick = item;
     }
 
+    // ---- Curve list shown or hidden (Ctrl+L) ----
+
+    private double _curveListWidth = 330;
+
+    private void OnToggleCurveList(object sender, RoutedEventArgs e) => SetCurveListHidden(LeftPanel.Visibility == Visibility.Visible);
+
+    private void SetCurveListHidden(bool hidden)
+    {
+        if (hidden == (LeftPanel.Visibility != Visibility.Visible))
+            return;
+        if (hidden)
+        {
+            _curveListWidth = CurveColumn.ActualWidth > 150 ? CurveColumn.ActualWidth : _curveListWidth;
+            CurveColumn.MinWidth = 0;
+            CurveColumn.Width = new GridLength(0);
+        }
+        else
+        {
+            CurveColumn.MinWidth = 200;
+            CurveColumn.Width = new GridLength(_curveListWidth);
+        }
+        LeftPanel.Visibility = hidden ? Visibility.Collapsed : Visibility.Visible;
+        CurveSplitter.Visibility = LeftPanel.Visibility;
+        CurveListButton.Icon = new SymbolIcon(hidden ? SymbolRegular.PanelLeftExpand24 : SymbolRegular.PanelLeftContract24);
+        _viewModel.Settings.CurveListHidden = hidden;
+    }
+
+    protected override void OnPreviewKeyDown(KeyEventArgs e)
+    {
+        if (e.Key == Key.L && Keyboard.Modifiers == ModifierKeys.Control)
+        {
+            SetCurveListHidden(LeftPanel.Visibility == Visibility.Visible);
+            e.Handled = true;
+            return;
+        }
+        base.OnPreviewKeyDown(e);
+    }
+
     // ---- Window size and curve list width, kept between sessions ----
 
     private void RestorePlacement()
@@ -110,7 +148,12 @@ public partial class MainWindow : FluentWindow
         if (s.WindowMaximized)
             WindowState = WindowState.Maximized;
         if (s.CurveListWidth is > 150 and < 2000 and var listWidth)
+        {
             CurveColumn.Width = new GridLength(listWidth);
+            _curveListWidth = listWidth;
+        }
+        if (s.CurveListHidden)
+            SetCurveListHidden(true);
     }
 
     private void SavePlacement()
@@ -125,7 +168,7 @@ public partial class MainWindow : FluentWindow
             s.WindowHeight = bounds.Height;
         }
         s.WindowMaximized = WindowState == WindowState.Maximized;
-        s.CurveListWidth = CurveColumn.ActualWidth;
+        s.CurveListWidth = LeftPanel.Visibility == Visibility.Visible ? CurveColumn.ActualWidth : _curveListWidth;
         s.Save();
     }
 
@@ -200,8 +243,26 @@ public partial class MainWindow : FluentWindow
         Application.Current.Resources[key] = brush;
     }
 
-    private void OnOpenSettings(object sender, RoutedEventArgs e) =>
-        new SettingsWindow(_viewModel) { Owner = this }.ShowDialog();
+    private void OnOpenSettings(object sender, RoutedEventArgs e)
+    {
+        var settings = new SettingsWindow(_viewModel) { Owner = this };
+        settings.ShowDialog();
+        if (settings.RestartRequested)
+            Restart();
+    }
+
+    /// <summary>Closes (offering to save) and starts again on the same file: a new language applies.</summary>
+    private void Restart()
+    {
+        string? reopen = _viewModel.ProjectPath is { } project && !_viewModel.IsDirty ? project : _viewModel.Dataset?.FilePath;
+        Close();
+        if (IsVisible)
+            return; // the user cancelled
+        var start = new System.Diagnostics.ProcessStartInfo(Environment.ProcessPath!) { UseShellExecute = false };
+        if (reopen is not null)
+            start.ArgumentList.Add(reopen);
+        System.Diagnostics.Process.Start(start);
+    }
 
     // ---- Drag a curve (from the list or the cursor card) onto a graph ----
 

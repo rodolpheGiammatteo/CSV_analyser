@@ -26,8 +26,8 @@ public partial class ExportWindow : FluentWindow
     {
         var dialog = new SaveFileDialog
         {
-            Title = "Exporter en CSV",
-            Filter = "Fichier CSV (*.csv)|*.csv|Fichier texte (*.txt)|*.txt",
+            Title = L.T("Exporter en CSV"),
+            Filter = L.T("Fichier CSV (*.csv)|*.csv|Fichier texte (*.txt)|*.txt"),
             FileName = _viewModel.SuggestedFileName,
         };
         if (InitialFolder is { } folder && Directory.Exists(folder))

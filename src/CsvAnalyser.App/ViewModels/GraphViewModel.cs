@@ -28,6 +28,7 @@ public sealed partial class GraphViewModel : ObservableObject
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(Title))]
+    [NotifyPropertyChangedFor(nameof(NumberLabel))]
     private int _number;
 
     /// <summary>Title given by the user, drawn above the graph (empty = none, "Graphe n" in lists).</summary>
@@ -74,7 +75,10 @@ public sealed partial class GraphViewModel : ObservableObject
     /// <summary>Stable identity (the number changes when an upper graph is removed).</summary>
     public int Id { get; }
 
-    public string Title => string.IsNullOrWhiteSpace(Name) ? $"Graphe {Number}" : Name.Trim();
+    /// <summary>"Graphe 2".</summary>
+    public string NumberLabel => L.F("Graphe {0}", Number);
+
+    public string Title => string.IsNullOrWhiteSpace(Name) ? L.F("Graphe {0}", Number) : Name.Trim();
 
     public static IReadOnlyList<StyleChoice<LegendCorner>> LegendChoices { get; } =
     [

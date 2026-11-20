@@ -79,12 +79,12 @@ public sealed class ViewConfiguration
         }
         catch (JsonException ex)
         {
-            throw new InvalidDataException("Ce fichier n'est pas une configuration valide : " + ex.Message, ex);
+            throw new InvalidDataException(L.T("Ce fichier n'est pas une configuration valide : ") + ex.Message, ex);
         }
         if (config is null || config.Format != FormatName)
-            throw new InvalidDataException("Ce fichier n'est pas une configuration de CSV Analyser.");
+            throw new InvalidDataException(L.T("Ce fichier n'est pas une configuration de CSV Analyser."));
         if (config.Version > CurrentVersion)
-            throw new InvalidDataException("Cette configuration vient d'une version plus récente de CSV Analyser.");
+            throw new InvalidDataException(L.T("Cette configuration vient d'une version plus récente de CSV Analyser."));
         return config;
     }
 

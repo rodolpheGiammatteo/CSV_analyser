@@ -69,13 +69,13 @@ public partial class MainViewModel : ObservableObject, IChannelHost
     private double _loadProgress;
 
     [ObservableProperty]
-    private string _statusText = "Ouvrez un fichier CSV ou glissez-le dans la fenêtre.";
+    private string _statusText = L.T("Ouvrez un fichier CSV ou glissez-le dans la fenêtre.");
 
     [ObservableProperty]
     private string _title = AppInfo.FullTitle;
 
     [ObservableProperty]
-    private string _cursorXText = "Survolez le graphe";
+    private string _cursorXText = L.T("Survolez le graphe");
 
     /// <summary>Set by the plot controller from its zoom history. Only grays the buttons out (see HistoryButton style).</summary>
     [ObservableProperty]
@@ -136,7 +136,7 @@ public partial class MainViewModel : ObservableObject, IChannelHost
     /// <summary>Before any file is open, the plot area is a drop zone.</summary>
     public bool ShowFileDropZone => !HasData;
 
-    public string PlotHint => "Cochez des courbes dans la liste pour les afficher, ou faites-les glisser sur le graphe";
+    public string PlotHint => L.T("Cochez des courbes dans la liste pour les afficher, ou faites-les glisser sur le graphe");
 
     public string XAxisLabel
     {
@@ -144,9 +144,9 @@ public partial class MainViewModel : ObservableObject, IChannelHost
         {
             var option = SelectedXAxis;
             if (option?.Channel is null)
-                return "N° de ligne";
+                return L.T("N° de ligne");
             if (option.Channel == Dataset?.Time?.Channel)
-                return string.IsNullOrEmpty(option.Channel.Unit) ? "Temps" : $"Temps ({option.Channel.Unit})";
+                return string.IsNullOrEmpty(option.Channel.Unit) ? L.T("Temps") : L.F("Temps ({0})", option.Channel.Unit);
             return string.IsNullOrEmpty(option.Channel.Unit) ? option.Channel.DisplayName : $"{option.Channel.DisplayName} ({option.Channel.Unit})";
         }
     }
@@ -180,8 +180,8 @@ public partial class MainViewModel : ObservableObject, IChannelHost
     {
         var dialog = new OpenFileDialog
         {
-            Title = "Ouvrir un fichier CSV ou un projet",
-            Filter = "Fichiers CSV ou projets (*.csv;*.txt;*.json)|*.csv;*.txt;*.json|Fichiers CSV (*.csv;*.txt)|*.csv;*.txt|Projets (*.json)|*.json|Tous les fichiers (*.*)|*.*",
+            Title = L.T("Ouvrir un fichier CSV ou un projet"),
+            Filter = L.T("Fichiers CSV ou projets (*.csv;*.txt;*.json)|*.csv;*.txt;*.json|Fichiers CSV (*.csv;*.txt)|*.csv;*.txt|Projets (*.json)|*.json|Tous les fichiers (*.*)|*.*"),
         };
         if (_settings.LastDirectory is { } dir && Directory.Exists(dir))
             dialog.InitialDirectory = dir;
@@ -200,7 +200,7 @@ public partial class MainViewModel : ObservableObject, IChannelHost
             await OpenProjectFileAsync(path);
             return;
         }
-        if (Dataset is not null && !ConfirmSaveChanges("d'ouvrir un autre fichier"))
+        if (Dataset is not null && !ConfirmSaveChanges(L.T("d'ouvrir un autre fichier")))
             return;
         if (await LoadCsvAsync(path, restoreSession: true))
         {
@@ -218,7 +218,7 @@ public partial class MainViewModel : ObservableObject, IChannelHost
         SaveSession();
         IsLoading = true;
         LoadProgress = 0;
-        StatusText = $"Chargement de {Path.GetFileName(path)}…";
+        StatusText = L.F("Chargement de {0}…", Path.GetFileName(path));
         var progress = new Progress<double>(p => LoadProgress = p * 100);
         try
         {
@@ -232,8 +232,8 @@ public partial class MainViewModel : ObservableObject, IChannelHost
         }
         catch (Exception ex)
         {
-            StatusText = $"Impossible de lire {Path.GetFileName(path)} : {ex.Message}";
-            MessageBox.Show(ex.Message, "Erreur de lecture", MessageBoxButton.OK, MessageBoxImage.Error);
+            StatusText = L.F("Impossible de lire {0} : {1}", Path.GetFileName(path), ex.Message);
+            MessageBox.Show(ex.Message, L.T("Erreur de lecture"), MessageBoxButton.OK, MessageBoxImage.Error);
             return false;
         }
         finally
@@ -284,12 +284,12 @@ public partial class MainViewModel : ObservableObject, IChannelHost
     private static string BuildStatus(Dataset ds)
     {
         var f = ds.Format;
-        string delimiter = f.Delimiter switch { '\t' => "tabulation", ';' => "« ; »", ',' => "« , »", var c => $"« {c} »" };
-        string status = $"{ds.RowCount:N0} lignes × {ds.Channels.Count} courbes — séparateur {delimiter}, décimale « {f.DecimalSeparator} » — chargé en {ds.LoadDuration.TotalSeconds:0.00} s";
+        string delimiter = f.Delimiter switch { '\t' => L.T("tabulation"), ';' => "« ; »", ',' => "« , »", var c => $"« {c} »" };
+        string status = L.F("{0:N0} lignes × {1} courbes — séparateur {2}, décimale « {3} » — chargé en {4:0.00} s", ds.RowCount, ds.Channels.Count, delimiter, f.DecimalSeparator, ds.LoadDuration.TotalSeconds);
         if (ds.Time?.Origin is { } origin)
-            status += $" — début {origin:dd/MM/yyyy HH:mm:ss}";
+            status += L.F(" — début {0:dd/MM/yyyy HH:mm:ss}", origin);
         if (ds.IgnoredColumns.Count > 0)
-            status += $" — {ds.IgnoredColumns.Count} colonne(s) texte ignorée(s)";
+            status += L.F(" — {0} colonne(s) texte ignorée(s)", ds.IgnoredColumns.Count);
         return status;
     }
 

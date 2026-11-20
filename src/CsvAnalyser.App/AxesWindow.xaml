@@ -92,7 +92,7 @@
                                         <ColumnDefinition Width="Auto" />
                                     </Grid.ColumnDefinitions>
                                     <TextBlock Grid.Column="0" VerticalAlignment="Center" FontSize="15" FontWeight="SemiBold"
-                                               Text="{Binding Graph.Number, StringFormat=Graphe {0}}" />
+                                               Text="{Binding Graph.NumberLabel}" />
                                     <ui:TextBox Grid.Column="1"
                                                 PlaceholderText="Titre du graphe"
                                                 Text="{Binding Graph.Name, UpdateSourceTrigger=PropertyChanged}" />
@@ -140,7 +140,7 @@
                                                     <ColumnDefinition Width="*" />
                                                     <ColumnDefinition Width="210" />
                                                     <ColumnDefinition Width="170" />
-                                                    <ColumnDefinition Width="Auto" />
+                                                    <ColumnDefinition Width="72" />
                                                 </Grid.ColumnDefinitions>
                                                 <StackPanel Grid.Column="0" Orientation="Horizontal">
                                                     <ui:Button Style="{StaticResource IconButton}" Margin="0" Icon="{ui:SymbolIcon ChevronUp20}"
@@ -175,12 +175,23 @@
                                         </DataTemplate>
                                     </ItemsControl.ItemTemplate>
                                 </ItemsControl>
-                                <controls:SearchPicker Width="320" Margin="86,6,0,0" HorizontalAlignment="Left"
-                                                       ItemsSource="{Binding AllCurves}"
-                                                       DisplayMemberPath="LegendText"
-                                                       Placeholder="＋ Ajouter une courbe…"
-                                                       KeepSelection="False"
-                                                       Picked="OnAddCurve" />
+                                <!-- Same columns as the curve rows: starts under the color squares, ends where the axis lists start. -->
+                                <Grid Margin="0,6,0,0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="56" />
+                                        <ColumnDefinition Width="30" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="210" />
+                                        <ColumnDefinition Width="170" />
+                                        <ColumnDefinition Width="72" />
+                                    </Grid.ColumnDefinitions>
+                                    <controls:SearchPicker Grid.Column="1" Grid.ColumnSpan="2" Margin="0,0,8,0"
+                                                           ItemsSource="{Binding AllCurves}"
+                                                           DisplayMemberPath="LegendText"
+                                                           Placeholder="＋ Ajouter une courbe…"
+                                                           KeepSelection="False"
+                                                           Picked="OnAddCurve" />
+                                </Grid>
 
                                 <!-- Axes Y -->
                                 <TextBlock Style="{StaticResource SectionTitle}" Text="Axes Y"

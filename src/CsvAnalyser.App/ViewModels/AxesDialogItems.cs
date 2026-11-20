@@ -5,17 +5,17 @@ namespace CsvAnalyser.App.ViewModels;
 /// <summary>A Y axis as shown in the graphs window.</summary>
 public sealed class AxisRowViewModel(AxisSpec spec)
 {
-    public string Label => string.IsNullOrEmpty(spec.Label) ? "(sans unité)" : spec.Label;
+    public string Label => string.IsNullOrEmpty(spec.Label) ? L.T("(sans unité)") : spec.Label;
 
     /// <summary>The title the axis gets when none is typed.</summary>
-    public string AutoLabel => GraphLayout.AxisLabel(spec.Curves) is { Length: > 0 } label ? label : "(sans unité)";
+    public string AutoLabel => GraphLayout.AxisLabel(spec.Curves) is { Length: > 0 } label ? label : L.T("(sans unité)");
 
     public string Curves => string.Join(", ", spec.Curves.Select(c => c.Name));
 
-    public string Side => spec.IsRight ? "droite" : "gauche";
+    public string Side => spec.IsRight ? L.T("droite") : L.T("gauche");
 
     /// <summary>"à gauche — courbe A, courbe B".</summary>
-    public string Description => $"à {Side} — {Curves}";
+    public string Description => L.F("à {0} — {1}", Side, Curves);
 
     public Brush Brush { get; } = MakeBrush(spec.Color);
 

@@ -1,6 +1,5 @@
 using System.Globalization;
 using System.Text;
-
 namespace CsvAnalyser.Core.Analysis;
 
 /// <summary>A formula error, with the position (0-based) of the faulty text.</summary>
@@ -51,7 +50,7 @@ public sealed class Formula
         var arrays = new Dictionary<string, double[]>(StringComparer.Ordinal);
         foreach (var name in Variables)
         {
-            var values = resolve(name) ?? throw new FormulaException($"Courbe inconnue : « {name} ».", 0);
+            var values = resolve(name) ?? throw new FormulaException(L.F("Courbe inconnue : « {0} ».", name), 0);
             arrays[name] = values;
         }
         var compiled = _root.Compile(arrays);
@@ -130,11 +129,11 @@ public sealed class Formula
         public Node ParseAll()
         {
             if (string.IsNullOrWhiteSpace(text))
-                throw new FormulaException("La formule est vide.", 0);
+                throw new FormulaException(L.T("La formule est vide."), 0);
             var node = ParseComparison();
             SkipSpaces();
             if (_pos < text.Length)
-                throw new FormulaException($"Caractère inattendu « {text[_pos]} ».", _pos);
+                throw new FormulaException(L.F("Caractère inattendu « {0} ».", text[_pos]), _pos);
             return node;
         }
 
@@ -218,7 +217,7 @@ public sealed class Formula
         {
             SkipSpaces();
             if (_pos >= text.Length)
-                throw new FormulaException("La formule est incomplète.", _pos);
+                throw new FormulaException(L.T("La formule est incomplète."), _pos);
 
             char c = text[_pos];
             if (c == '(')
@@ -250,7 +249,7 @@ public sealed class Formula
                 }
                 return Use(name);
             }
-            throw new FormulaException($"Caractère inattendu « {c} ».", _pos);
+            throw new FormulaException(L.F("Caractère inattendu « {0} ».", c), _pos);
         }
 
         private Node ParseBracketVariable()
@@ -268,13 +267,13 @@ public sealed class Formula
                     return Use(name.ToString().Trim());
                 name.Append(c);
             }
-            throw new FormulaException("Crochet « ] » manquant.", start);
+            throw new FormulaException(L.T("Crochet « ] » manquant."), start);
         }
 
         private Node Use(string name)
         {
             if (name.Length == 0)
-                throw new FormulaException("Nom de courbe vide.", _pos);
+                throw new FormulaException(L.T("Nom de courbe vide."), _pos);
             if (!Variables.Contains(name))
                 Variables.Add(name);
             return new Variable(name);
@@ -294,7 +293,7 @@ public sealed class Formula
             }
             string s = text[start.._pos];
             if (!double.TryParse(s, NumberStyles.Float, CultureInfo.InvariantCulture, out double value))
-                throw new FormulaException($"Nombre invalide « {s} » (décimales avec un point).", start);
+                throw new FormulaException(L.F("Nombre invalide « {0} » (décimales avec un point).", s), start);
             return new Constant(value);
         }
 
@@ -318,7 +317,7 @@ public sealed class Formula
 
             Node Arg(int count, Func<Node> make) => args.Count == count
                 ? make()
-                : throw new FormulaException($"{name}() attend {count} argument(s), {args.Count} donné(s).", start);
+                : throw new FormulaException(L.F("{0}() attend {1} argument(s), {2} donné(s).", name, count, args.Count), start);
             Node One(Func<double, double> f) => Arg(1, () => new Unary(f, args[0]));
             Node Two(Func<double, double, double> f) => Arg(2, () => new Binary(f, args[0], args[1]));
 
@@ -344,7 +343,7 @@ public sealed class Formula
                 "ceil" => One(Math.Ceiling),
                 "sign" => One(v => double.IsNaN(v) ? double.NaN : Math.Sign(v)),
                 "if" => Arg(3, () => new Conditional(args[0], args[1], args[2])),
-                _ => throw new FormulaException($"Fonction inconnue : {name}().", start),
+                _ => throw new FormulaException(L.F("Fonction inconnue : {0}().", name), start),
             };
         }
 
@@ -370,7 +369,7 @@ public sealed class Formula
         private void Expect(char c)
         {
             if (!Accept(c))
-                throw new FormulaException($"« {c} » attendu.", _pos);
+                throw new FormulaException(L.F("« {0} » attendu.", c), _pos);
         }
     }
 }
