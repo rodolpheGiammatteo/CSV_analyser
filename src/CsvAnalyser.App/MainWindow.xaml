@@ -94,6 +94,12 @@
                        Command="{Binding RedoViewCommand}" />
             <ui:Button DockPanel.Dock="Left"
                        Margin="12,0,0,0"
+                       Content="Axes"
+                       Icon="{ui:SymbolIcon DataLine24}"
+                       ToolTip="Axes Y automatiques ou manuels, alignement des zéros (aussi : clic droit sur un graphe)"
+                       Command="{Binding EditAxesCommand}" />
+            <ui:Button DockPanel.Dock="Left"
+                       Margin="8,0,0,0"
                        Content="Tout désélectionner"
                        Icon="{ui:SymbolIcon Eraser24}"
                        Command="{Binding ClearSelectionCommand}" />
@@ -130,6 +136,10 @@
 
                 <ListBox Grid.Row="1"
                          Margin="0,8,0,0"
+                         ToolTip="Faites glisser une courbe vers un graphe, ou vers « Nouveau graphe » en bas du tracé"
+                         ToolTipService.InitialShowDelay="1500"
+                         PreviewMouseLeftButtonDown="OnCurvePreviewMouseDown"
+                         PreviewMouseMove="OnCurvePreviewMouseMove"
                          ItemsSource="{Binding ChannelsView}"
                          VirtualizingPanel.IsVirtualizing="True"
                          VirtualizingPanel.VirtualizationMode="Recycling">
@@ -196,7 +206,11 @@
                     <StackPanel>
                         <TextBlock FontWeight="SemiBold" Text="Curseur" />
                         <TextBlock Margin="0,4,0,6" Foreground="{DynamicResource AppSecondaryTextBrush}" TextWrapping="Wrap" Text="{Binding CursorXText}" />
-                        <ItemsControl ItemsSource="{Binding PlottedChannels}">
+                        <ItemsControl ItemsSource="{Binding PlottedChannels}"
+                                      Cursor="SizeAll"
+                                      ToolTip="Faites glisser une courbe vers un autre graphe"
+                                      PreviewMouseLeftButtonDown="OnCurvePreviewMouseDown"
+                                      PreviewMouseMove="OnCurvePreviewMouseMove">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate DataType="{x:Type vm:ChannelItemViewModel}">
                                     <Grid Margin="0,2">
@@ -220,8 +234,32 @@
 
             <!-- Graphe -->
             <Border Grid.Column="2" Margin="0,0,0,8" CornerRadius="6" ClipToBounds="True">
-                <Grid>
+                <Grid AllowDrop="True"
+                      DragEnter="OnPlotDragOver"
+                      DragOver="OnPlotDragOver"
+                      DragLeave="OnPlotDragLeave"
+                      Drop="OnPlotDrop">
                     <scottplot:WpfPlot x:Name="PlotView" />
+
+                    <!-- Drop targets, shown while a curve is dragged -->
+                    <Canvas IsHitTestVisible="False">
+                        <Border x:Name="DropHighlight" Visibility="Collapsed" CornerRadius="4" BorderThickness="2"
+                                BorderBrush="{DynamicResource SystemAccentColorPrimaryBrush}" />
+                    </Canvas>
+                    <Border x:Name="NewGraphZone"
+                            Height="44"
+                            Margin="8,0,8,8"
+                            VerticalAlignment="Bottom"
+                            Visibility="Collapsed"
+                            IsHitTestVisible="False"
+                            CornerRadius="6"
+                            BorderThickness="2"
+                            BorderBrush="{DynamicResource SystemAccentColorPrimaryBrush}"
+                            Background="{DynamicResource ApplicationBackgroundBrush}">
+                        <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center" FontWeight="SemiBold"
+                                   Foreground="{DynamicResource SystemAccentColorPrimaryBrush}"
+                                   Text="＋ Nouveau graphe" />
+                    </Border>
                     <TextBlock HorizontalAlignment="Center"
                                VerticalAlignment="Center"
                                FontSize="16"

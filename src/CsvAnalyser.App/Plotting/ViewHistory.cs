@@ -1,21 +1,32 @@
-using ScottPlot;
-
 namespace CsvAnalyser.App.Plotting;
 
-/// <summary>Back/forward history of the plot axis limits, like a web browser.</summary>
+/// <summary>
+/// The ranges of every axis shown, keyed by a name that survives a rebuild of the plots
+/// ("X", or "graph id|axis key" for a Y axis).
+/// </summary>
+public sealed class ViewSnapshot(Dictionary<string, (double Min, double Max)> ranges)
+{
+    public IReadOnlyDictionary<string, (double Min, double Max)> Ranges { get; } = ranges;
+
+    public bool SameAs(ViewSnapshot other) =>
+        Ranges.Count == other.Ranges.Count
+        && Ranges.All(kv => other.Ranges.TryGetValue(kv.Key, out var r) && r == kv.Value);
+}
+
+/// <summary>Back/forward history of the plot views, like a web browser.</summary>
 public sealed class ViewHistory
 {
     private const int MaxDepth = 100;
 
-    private readonly List<AxisLimits> _back = [];
-    private readonly List<AxisLimits> _forward = [];
+    private readonly List<ViewSnapshot> _back = [];
+    private readonly List<ViewSnapshot> _forward = [];
 
     public bool CanUndo => _back.Count > 0;
 
     public bool CanRedo => _forward.Count > 0;
 
     /// <summary>Records the view that was shown before a change made by the user.</summary>
-    public void Push(AxisLimits previous)
+    public void Push(ViewSnapshot previous)
     {
         _back.Add(previous);
         if (_back.Count > MaxDepth)
@@ -23,9 +34,9 @@ public sealed class ViewHistory
         _forward.Clear();
     }
 
-    public bool TryUndo(AxisLimits current, out AxisLimits target) => Move(_back, _forward, current, out target);
+    public bool TryUndo(ViewSnapshot current, out ViewSnapshot target) => Move(_back, _forward, current, out target);
 
-    public bool TryRedo(AxisLimits current, out AxisLimits target) => Move(_forward, _back, current, out target);
+    public bool TryRedo(ViewSnapshot current, out ViewSnapshot target) => Move(_forward, _back, current, out target);
 
     public void Clear()
     {
@@ -33,10 +44,7 @@ public sealed class ViewHistory
         _forward.Clear();
     }
 
-    public static bool AreSame(AxisLimits a, AxisLimits b) =>
-        a.Left == b.Left && a.Right == b.Right && a.Bottom == b.Bottom && a.Top == b.Top;
-
-    private static bool Move(List<AxisLimits> from, List<AxisLimits> to, AxisLimits current, out AxisLimits target)
+    private static bool Move(List<ViewSnapshot> from, List<ViewSnapshot> to, ViewSnapshot current, out ViewSnapshot target)
     {
         if (from.Count == 0)
         {

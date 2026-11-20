@@ -56,6 +56,14 @@ public partial class ChannelItemViewModel : ObservableObject
     [ObservableProperty]
     private string _cursorText = "";
 
+    /// <summary>The stacked graph showing this curve (kept when unchecked, so it comes back to the same place).</summary>
+    [ObservableProperty]
+    private GraphViewModel? _graph;
+
+    /// <summary>Draw against a Y axis of its own instead of sharing one with the curves of the same unit.</summary>
+    [ObservableProperty]
+    private bool _ownAxis;
+
     public ChannelItemViewModel(Channel channel, IChannelHost host)
     {
         Channel = channel;
@@ -157,6 +165,7 @@ public partial class ChannelItemViewModel : ObservableObject
         LineWidth = CurveStyleChoices.DefaultLineWidth;
         Marker = CurveMarker.None;
         MarkerSize = CurveStyleChoices.DefaultMarkerSize;
+        OwnAxis = false;
         UseAutoColor();
     }
 
@@ -181,4 +190,6 @@ public partial class ChannelItemViewModel : ObservableObject
     partial void OnMarkerChanged(CurveMarker value) => _host.OnAppearanceChanged(this);
 
     partial void OnMarkerSizeChanged(double value) => _host.OnAppearanceChanged(this);
+
+    partial void OnOwnAxisChanged(bool value) => _host.OnAppearanceChanged(this);
 }

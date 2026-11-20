@@ -191,6 +191,12 @@
             </Grid>
             <TextBlock Foreground="{DynamicResource AppSecondaryTextBrush}" TextWrapping="Wrap"
                        Text="Un point par échantillon : utile pour voir les mesures réelles en zoomant." />
+
+            <!-- Axe Y -->
+            <TextBlock Margin="0,18,0,6" FontWeight="SemiBold" Text="Axe Y" />
+            <CheckBox Content="Axe Y séparé" IsChecked="{Binding OwnAxis}" />
+            <TextBlock Margin="0,2,0,0" Foreground="{DynamicResource AppSecondaryTextBrush}" TextWrapping="Wrap"
+                       Text="Sinon, la courbe partage l'axe des courbes de même unité dans son graphe. Bornes et alignement des zéros : bouton Axes." />
         </StackPanel>
 
         <DockPanel Grid.Row="2" Margin="24,20,24,20" LastChildFill="False">

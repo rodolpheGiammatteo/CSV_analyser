@@ -23,6 +23,8 @@ public enum PlotChange
     PlotFont,
     /// <summary>Name, unit, color or style of a curve: updated in place, the view is kept.</summary>
     Appearance,
+    /// <summary>Auto/manual range of an axis or zero alignment of a graph: Y ranges are recomputed.</summary>
+    AxisSettings,
     AutoScale,
     UndoView,
     RedoView,
@@ -204,6 +206,8 @@ public partial class MainViewModel : ObservableObject, IChannelHost
             PlottedChannels.Clear();
             Channels.Clear();
             XAxisOptions.Clear();
+            Graphs.Clear();
+            Graphs.Add(NewGraph());
 
             foreach (var channel in dataset.Channels)
                 Channels.Add(new ChannelItemViewModel(channel, this));
@@ -249,6 +253,8 @@ public partial class MainViewModel : ObservableObject, IChannelHost
         {
             if (PlottedChannels.Contains(item))
                 return;
+            if (item.Graph is null || !Graphs.Contains(item.Graph))
+                item.Graph = Graphs[0];
             if (!item.IsColorCustom)
                 item.Color = NextColor(except: item);
             PlottedChannels.Add(item);
@@ -257,9 +263,70 @@ public partial class MainViewModel : ObservableObject, IChannelHost
         {
             PlottedChannels.Remove(item);
             item.CursorText = "";
+            RemoveEmptyGraphs();
         }
         RaisePlotChanged(PlotChange.Curves);
     }
+
+    // ---- Stacked graphs ----
+
+    private int _nextGraphId;
+
+    /// <summary>The stacked graphs, top to bottom. There is always at least one.</summary>
+    public ObservableCollection<GraphViewModel> Graphs { get; } = [];
+
+    /// <summary>Lets the axes window show the current range when switching an axis to manual. Set by the plot controller.</summary>
+    public Func<GraphViewModel, string, (double Min, double Max)?>? CurrentAxisRange { get; set; }
+
+    public IReadOnlyList<GraphSpec> BuildLayout() => GraphLayout.Build(Graphs, PlottedChannels);
+
+    private GraphViewModel NewGraph() => new(++_nextGraphId, () => RaisePlotChanged(PlotChange.AxisSettings)) { Number = Graphs.Count + 1 };
+
+    /// <summary>Puts a curve in a graph (null = a new graph at the bottom) and plots it if needed.</summary>
+    public void MoveChannelToGraph(ChannelItemViewModel item, GraphViewModel? target)
+    {
+        if (target is null)
+        {
+            if (item.IsPlotted && item.Graph is { } current && Graphs.Contains(current)
+                && PlottedChannels.All(c => c == item || c.Graph != current))
+                return; // Already alone in its graph: a new graph would change nothing.
+            target = NewGraph();
+            Graphs.Add(target);
+        }
+
+        bool wasPlotted = item.IsPlotted;
+        item.Graph = target;
+        if (wasPlotted)
+        {
+            RemoveEmptyGraphs();
+            RaisePlotChanged(PlotChange.Curves);
+        }
+        else
+        {
+            item.IsPlotted = true; // Raises the change itself.
+        }
+    }
+
+    /// <summary>Graph number <paramref name="index"/> (0-based), or null.</summary>
+    public GraphViewModel? GraphAt(int index) => index >= 0 && index < Graphs.Count ? Graphs[index] : null;
+
+    private void RemoveEmptyGraphs()
+    {
+        for (int i = Graphs.Count - 1; i >= 0 && Graphs.Count > 1; i--)
+        {
+            var graph = Graphs[i];
+            if (!PlottedChannels.Any(c => c.Graph == graph))
+                Graphs.RemoveAt(i);
+        }
+        for (int i = 0; i < Graphs.Count; i++)
+            Graphs[i].Number = i + 1;
+    }
+
+    /// <summary>Opens the axes window, scrolled to a graph when one is given (context menu of a graph).</summary>
+    public event EventHandler<GraphViewModel?>? EditAxesRequested;
+
+    [RelayCommand]
+    private void EditAxes(GraphViewModel? graph) => EditAxesRequested?.Invoke(this, graph);
 
     void IChannelHost.OnAppearanceChanged(ChannelItemViewModel item)
     {
