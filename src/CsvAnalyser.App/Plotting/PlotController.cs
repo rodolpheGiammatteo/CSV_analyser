@@ -1,5 +1,7 @@
+using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Threading;
 using CsvAnalyser.App.ViewModels;
 using ScottPlot;
 using ScottPlot.Plottables;
@@ -22,6 +24,11 @@ public sealed class PlotController
     // ScottPlot renders in physical pixels: sizes must follow the Windows display scaling.
     private float _scale = 1;
 
+    // Zoom/pan history: the view before a mouse gesture (or a burst of wheel ticks) is recorded when it ends.
+    private readonly ViewHistory _history = new();
+    private readonly DispatcherTimer _wheelTimer = new() { Interval = TimeSpan.FromMilliseconds(400) };
+    private AxisLimits? _gestureStart;
+
     private sealed record Series(ChannelItemViewModel Item, double[] Ys, Marker Marker);
 
     public PlotController(WpfPlot view, MainViewModel vm)
@@ -32,6 +39,16 @@ public sealed class PlotController
         _view.MouseMove += OnMouseMove;
         _view.MouseLeave += (_, _) => HideCursor();
         _view.Loaded += (_, _) => UpdateScale();
+
+        _view.PreviewMouseDown += OnPreviewMouseDown;
+        _view.PreviewMouseWheel += OnPreviewMouseWheel;
+        // handledEventsToo: ScottPlot handles the mouse-up itself (e.g. end of a zoom rectangle).
+        _view.AddHandler(UIElement.MouseUpEvent, new MouseButtonEventHandler(OnMouseUpAfterPlot), handledEventsToo: true);
+        _wheelTimer.Tick += (_, _) =>
+        {
+            _wheelTimer.Stop();
+            CommitGesture();
+        };
 
         ApplyTheme();
         _view.Refresh();
@@ -55,6 +72,10 @@ public sealed class PlotController
         {
             case PlotChange.Dataset:
             case PlotChange.XAxis:
+                // Previous views are meaningless on another X axis.
+                _gestureStart = null;
+                _history.Clear();
+                UpdateHistoryState();
                 Rebuild(resetView: true);
                 break;
             case PlotChange.Curves:
@@ -64,11 +85,101 @@ public sealed class PlotController
                 ApplyTheme();
                 Rebuild(resetView: false);
                 break;
-            case PlotChange.AutoScale:
-                AutoScaleAll();
+            case PlotChange.PlotFont:
+                ApplyTheme();
                 _view.Refresh();
                 break;
+            case PlotChange.AutoScale:
+                var before = Plot.Axes.GetLimits();
+                AutoScaleAll();
+                Record(before);
+                _view.Refresh();
+                break;
+            case PlotChange.UndoView:
+                Undo();
+                break;
+            case PlotChange.RedoView:
+                Redo();
+                break;
         }
+    }
+
+    private void OnPreviewMouseDown(object sender, MouseButtonEventArgs e)
+    {
+        switch (e.ChangedButton)
+        {
+            case MouseButton.XButton1:
+                Undo();
+                e.Handled = true;
+                return;
+            case MouseButton.XButton2:
+                Redo();
+                e.Handled = true;
+                return;
+        }
+
+        if (_wheelTimer.IsEnabled)
+        {
+            _wheelTimer.Stop();
+            CommitGesture();
+        }
+        _gestureStart ??= Plot.Axes.GetLimits();
+    }
+
+    private void OnMouseUpAfterPlot(object sender, MouseButtonEventArgs e) =>
+        _view.Dispatcher.BeginInvoke(CommitGesture, DispatcherPriority.Background);
+
+    private void OnPreviewMouseWheel(object sender, MouseWheelEventArgs e)
+    {
+        _gestureStart ??= Plot.Axes.GetLimits();
+        _wheelTimer.Stop();
+        _wheelTimer.Start();
+    }
+
+    private void CommitGesture()
+    {
+        if (_gestureStart is not { } start || Mouse.LeftButton == MouseButtonState.Pressed
+            || Mouse.RightButton == MouseButtonState.Pressed || Mouse.MiddleButton == MouseButtonState.Pressed)
+            return;
+        _gestureStart = null;
+        Record(start);
+    }
+
+    private void Record(AxisLimits previous)
+    {
+        if (ViewHistory.AreSame(previous, Plot.Axes.GetLimits()))
+            return;
+        _history.Push(previous);
+        UpdateHistoryState();
+    }
+
+    private void Undo()
+    {
+        _wheelTimer.Stop();
+        CommitGesture();
+        if (_history.TryUndo(Plot.Axes.GetLimits(), out var target))
+            ShowView(target);
+    }
+
+    private void Redo()
+    {
+        _wheelTimer.Stop();
+        CommitGesture();
+        if (_history.TryRedo(Plot.Axes.GetLimits(), out var target))
+            ShowView(target);
+    }
+
+    private void ShowView(AxisLimits limits)
+    {
+        Plot.Axes.SetLimits(limits);
+        UpdateHistoryState();
+        _view.Refresh();
+    }
+
+    private void UpdateHistoryState()
+    {
+        _vm.CanUndoView = _history.CanUndo;
+        _vm.CanRedoView = _history.CanRedo;
     }
 
     private void Rebuild(bool resetView)
@@ -151,12 +262,13 @@ public sealed class PlotController
         Plot.Legend.BackgroundColor = figure.WithAlpha(0.85);
         Plot.Legend.FontColor = axis;
         Plot.Legend.OutlineColor = ScottPlot.Color.FromHex(t.MajorGrid);
-        Plot.Legend.FontSize = 12 * _scale;
+        float font = _scale * (float)_vm.PlotFontScale;
+        Plot.Legend.FontSize = 12 * font;
 
         foreach (var a in Plot.Axes.GetAxes())
         {
-            a.TickLabelStyle.FontSize = 12 * _scale;
-            a.Label.FontSize = 14 * _scale;
+            a.TickLabelStyle.FontSize = 12 * font;
+            a.Label.FontSize = 14 * font;
             a.MajorTickStyle.Length = 4 * _scale;
             a.MinorTickStyle.Length = 2 * _scale;
             a.FrameLineStyle.Width = _scale;

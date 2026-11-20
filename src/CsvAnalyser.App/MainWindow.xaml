@@ -6,6 +6,7 @@
                  xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
                  xmlns:scottplot="clr-namespace:ScottPlot.WPF;assembly=ScottPlot.WPF"
                  xmlns:vm="clr-namespace:CsvAnalyser.App.ViewModels"
+                 xmlns:sys="clr-namespace:System;assembly=System.Runtime"
                  mc:Ignorable="d"
                  d:DataContext="{d:DesignInstance Type=vm:MainViewModel}"
                  Title="{Binding Title}"
@@ -19,6 +20,26 @@
                  AllowDrop="True"
                  DragOver="OnDragOver"
                  Drop="OnDrop">
+    <ui:FluentWindow.Resources>
+        <!-- Undo/redo stay enabled; Tag = "something to undo". The WPF-UI disabled look is semi-transparent,
+             which renders invisible here, so "nothing to undo" is shown with an opaque gray instead. -->
+        <Style x:Key="HistoryButton" TargetType="ui:Button" BasedOn="{StaticResource {x:Type ui:Button}}">
+            <Style.Triggers>
+                <Trigger Property="Tag">
+                    <Trigger.Value>
+                        <sys:Boolean>False</sys:Boolean>
+                    </Trigger.Value>
+                    <Setter Property="Foreground" Value="{DynamicResource AppDisabledTextBrush}" />
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+    </ui:FluentWindow.Resources>
+    <ui:FluentWindow.InputBindings>
+        <KeyBinding Modifiers="Ctrl" Key="O" Command="{Binding OpenCommand}" />
+        <KeyBinding Modifiers="Ctrl" Key="Z" Command="{Binding UndoViewCommand}" />
+        <KeyBinding Modifiers="Ctrl" Key="Y" Command="{Binding RedoViewCommand}" />
+        <KeyBinding Modifiers="Ctrl+Shift" Key="Z" Command="{Binding RedoViewCommand}" />
+    </ui:FluentWindow.InputBindings>
     <Grid Background="{DynamicResource ApplicationBackgroundBrush}">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
@@ -35,10 +56,14 @@
 
         <!-- Barre d'outils -->
         <DockPanel Grid.Row="1" Margin="12,4,12,10" LastChildFill="False">
+            <DockPanel.LayoutTransform>
+                <ScaleTransform ScaleX="{Binding UiScale}" ScaleY="{Binding UiScale}" />
+            </DockPanel.LayoutTransform>
             <ui:Button DockPanel.Dock="Left"
                        Appearance="Primary"
                        Content="Ouvrir…"
                        Icon="{ui:SymbolIcon FolderOpen24}"
+                       ToolTip="Ouvrir un fichier CSV (Ctrl+O)"
                        Command="{Binding OpenCommand}" />
             <TextBlock DockPanel.Dock="Left" Margin="20,0,8,0" VerticalAlignment="Center" Text="Axe X" />
             <ComboBox DockPanel.Dock="Left"
@@ -54,15 +79,28 @@
                        Command="{Binding AutoScaleCommand}" />
             <ui:Button DockPanel.Dock="Left"
                        Margin="8,0,0,0"
+                       Icon="{ui:SymbolIcon ArrowUndo24}"
+                       ToolTip="Vue précédente (Ctrl+Z ou bouton « précédent » de la souris)"
+                       Style="{StaticResource HistoryButton}"
+                       Tag="{Binding CanUndoView}"
+                       Command="{Binding UndoViewCommand}" />
+            <ui:Button DockPanel.Dock="Left"
+                       Margin="4,0,0,0"
+                       Icon="{ui:SymbolIcon ArrowRedo24}"
+                       ToolTip="Vue suivante (Ctrl+Y ou bouton « suivant » de la souris)"
+                       Style="{StaticResource HistoryButton}"
+                       Tag="{Binding CanRedoView}"
+                       Command="{Binding RedoViewCommand}" />
+            <ui:Button DockPanel.Dock="Left"
+                       Margin="12,0,0,0"
                        Content="Tout désélectionner"
                        Icon="{ui:SymbolIcon Eraser24}"
                        Command="{Binding ClearSelectionCommand}" />
 
-            <ComboBox DockPanel.Dock="Right"
-                      Width="170"
-                      ItemsSource="{Binding Themes}"
-                      SelectedItem="{Binding SelectedTheme}" />
-            <TextBlock DockPanel.Dock="Right" Margin="0,0,8,0" VerticalAlignment="Center" Text="Thème" />
+            <ui:Button DockPanel.Dock="Right"
+                       Content="Paramètres"
+                       Icon="{ui:SymbolIcon Settings24}"
+                       Click="OnOpenSettings" />
         </DockPanel>
 
         <Grid Grid.Row="2" Margin="12,0,12,0">
@@ -74,6 +112,9 @@
 
             <!-- Panneau gauche : courbes + curseur -->
             <Grid Grid.Column="0">
+                <Grid.LayoutTransform>
+                    <ScaleTransform ScaleX="{Binding UiScale}" ScaleY="{Binding UiScale}" />
+                </Grid.LayoutTransform>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="*" MinHeight="120" />
@@ -163,6 +204,9 @@
 
         <!-- Barre d'état -->
         <Grid Grid.Row="3" Margin="12,0,12,8">
+            <Grid.LayoutTransform>
+                <ScaleTransform ScaleX="{Binding UiScale}" ScaleY="{Binding UiScale}" />
+            </Grid.LayoutTransform>
             <TextBlock Margin="0,0,260,0" VerticalAlignment="Center" Foreground="{DynamicResource AppSecondaryTextBrush}" TextTrimming="CharacterEllipsis" Text="{Binding StatusText}" />
             <ProgressBar Width="240"
                          HorizontalAlignment="Right"

@@ -31,11 +31,23 @@ public partial class MainWindow : FluentWindow
         bool dark = _viewModel.SelectedTheme.IsDarkApp;
         ApplicationThemeManager.Apply(dark ? ApplicationTheme.Dark : ApplicationTheme.Light, WindowBackdropType.None);
 
-        // Opaque equivalent of the Fluent secondary text: semi-transparent text renders far too light here.
-        var secondary = new SolidColorBrush(dark ? Color.FromRgb(0xC8, 0xC8, 0xC8) : Color.FromRgb(0x5C, 0x5C, 0x5C));
-        secondary.Freeze();
-        Application.Current.Resources["AppSecondaryTextBrush"] = secondary;
+        // Opaque equivalents of the Fluent secondary/placeholder text: semi-transparent text renders far too
+        // light here. Top-level resources override the theme dictionaries.
+        SetBrush("AppSecondaryTextBrush", dark ? 0xC8 : 0x5C);
+        SetBrush("AppDisabledTextBrush", dark ? 0x6A : 0x90);
+        SetBrush("TextControlPlaceholderForeground", dark ? 0xA8 : 0x70);
+        SetBrush("TextPlaceholderColorBrush", dark ? 0xA8 : 0x70);
     }
+
+    private static void SetBrush(string key, int gray)
+    {
+        var brush = new SolidColorBrush(Color.FromRgb((byte)gray, (byte)gray, (byte)gray));
+        brush.Freeze();
+        Application.Current.Resources[key] = brush;
+    }
+
+    private void OnOpenSettings(object sender, RoutedEventArgs e) =>
+        new SettingsWindow(_viewModel) { Owner = this }.ShowDialog();
 
     private void OnDragOver(object sender, DragEventArgs e)
     {

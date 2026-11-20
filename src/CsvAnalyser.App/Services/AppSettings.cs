@@ -13,6 +13,10 @@ public sealed class AppSettings
 
     public string? LastDirectory { get; set; }
 
+    public double UiScale { get; set; } = 1;
+
+    public double PlotFontScale { get; set; } = 1;
+
     public static AppSettings Load()
     {
         try

@@ -20,7 +20,10 @@ public enum PlotChange
     Curves,
     XAxis,
     Theme,
+    PlotFont,
     AutoScale,
+    UndoView,
+    RedoView,
 }
 
 public partial class MainViewModel : ObservableObject
@@ -59,10 +62,30 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty]
     private string _cursorXText = "Survolez le graphe";
 
+    /// <summary>Set by the plot controller from its zoom history. Only grays the buttons out (see HistoryButton style).</summary>
+    [ObservableProperty]
+    private bool _canUndoView;
+
+    [ObservableProperty]
+    private bool _canRedoView;
+
+    /// <summary>Zoom factor of the toolbar, side panel and status bar (1 = 100 %).</summary>
+    [ObservableProperty]
+    private double _uiScale;
+
+    /// <summary>Zoom factor of the plot texts (ticks, axis labels, legend).</summary>
+    [ObservableProperty]
+    private double _plotFontScale;
+
+    public const double MinUiScale = 0.7, MaxUiScale = 1.5;
+    public const double MinPlotFontScale = 0.6, MaxPlotFontScale = 2.0;
+
     public MainViewModel(AppSettings settings)
     {
         _settings = settings;
         _selectedTheme = PlotThemes.ByName(settings.ThemeName);
+        _uiScale = ClampOrDefault(settings.UiScale, MinUiScale, MaxUiScale);
+        _plotFontScale = ClampOrDefault(settings.PlotFontScale, MinPlotFontScale, MaxPlotFontScale);
         ChannelsView = CollectionViewSource.GetDefaultView(Channels);
         ChannelsView.Filter = o => MatchesSearch((ChannelItemViewModel)o);
         PlottedChannels.CollectionChanged += (_, _) =>
@@ -289,6 +312,35 @@ public partial class MainViewModel : ObservableObject
 
     [RelayCommand]
     private void AutoScale() => RaisePlotChanged(PlotChange.AutoScale);
+
+    [RelayCommand]
+    private void UndoView() => RaisePlotChanged(PlotChange.UndoView);
+
+    [RelayCommand]
+    private void RedoView() => RaisePlotChanged(PlotChange.RedoView);
+
+    partial void OnUiScaleChanged(double value)
+    {
+        _settings.UiScale = Math.Round(value, 2);
+        _settings.Save();
+    }
+
+    partial void OnPlotFontScaleChanged(double value)
+    {
+        _settings.PlotFontScale = Math.Round(value, 2);
+        _settings.Save();
+        RaisePlotChanged(PlotChange.PlotFont);
+    }
+
+    [RelayCommand]
+    private void ResetDisplaySizes()
+    {
+        UiScale = 1;
+        PlotFontScale = 1;
+    }
+
+    private static double ClampOrDefault(double value, double min, double max) =>
+        double.IsFinite(value) && value > 0 ? Math.Clamp(value, min, max) : 1;
 
     private void RaisePlotChanged(PlotChange change)
     {
