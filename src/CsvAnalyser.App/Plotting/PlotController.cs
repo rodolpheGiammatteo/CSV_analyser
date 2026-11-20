@@ -120,7 +120,8 @@ public sealed partial class PlotController : IPlotView
             if (_graphs.FirstOrDefault(g => g.Plot == plot) is { } graph)
             {
                 var before = Capture();
-                FitGraphY(graph);
+                FitGraphY(graph, fitManual: true);
+                KeepManualBoundsOnScreen();
                 Record(before);
                 _view.Refresh();
             }
@@ -676,6 +677,10 @@ public sealed partial class PlotController : IPlotView
     // ---------------------------------------------------------------- scaling
 
     /// <summary>Fits X (whole data), Y (all graphs, in the visible X range) or both.</summary>
+    /// <summary>
+    /// The fit buttons (and Ajuster in the menus, middle click): manual axes are fitted to the data too, and keep
+    /// the bounds now shown as their manual bounds (as after a zoom with the mouse).
+    /// </summary>
     private void AutoScaleWithHistory(bool x, bool y)
     {
         var before = Capture();
@@ -684,7 +689,8 @@ public sealed partial class PlotController : IPlotView
         if (y)
         {
             foreach (var g in _graphs)
-                FitGraphY(g);
+                FitGraphY(g, fitManual: true);
+            KeepManualBoundsOnScreen();
         }
         Record(before);
         _view.Refresh();
@@ -721,7 +727,8 @@ public sealed partial class PlotController : IPlotView
     /// Y range of every axis of a graph: manual axes take their bounds, auto axes fit the data visible in the
     /// current X range (NaN ignored), then zeros are aligned if the graph asks for it.
     /// </summary>
-    private void FitGraphY(GraphRender g)
+    /// <summary>Y of a graph fitted to the data in the visible X range; a manual axis keeps its bounds unless <paramref name="fitManual"/>.</summary>
+    private void FitGraphY(GraphRender g, bool fitManual = false)
     {
         if (g.Axes.Count == 0)
         {
@@ -735,7 +742,7 @@ public sealed partial class PlotController : IPlotView
         for (int i = 0; i < g.Axes.Count; i++)
         {
             var a = g.Axes[i];
-            if (a.Spec.Settings.ManualRange is { } manual)
+            if (!fitManual && a.Spec.Settings.ManualRange is { } manual)
             {
                 ranges[i] = manual;
                 isFixed[i] = true;
@@ -1097,7 +1104,8 @@ public sealed partial class PlotController : IPlotView
                 _gestureStart = null;
                 SetFullX();
                 foreach (var g in _graphs)
-                    FitGraphY(g);
+                    FitGraphY(g, fitManual: true);
+                KeepManualBoundsOnScreen();
                 if (start is not null)
                     Record(start);
                 _view.Refresh();

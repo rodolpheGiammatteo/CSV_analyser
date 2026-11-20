@@ -36,15 +36,6 @@
             </Style.Triggers>
         </Style>
         <!-- Right-click on the fit buttons (one copy per button). -->
-        <ContextMenu x:Key="FitMenu" x:Shared="False">
-            <MenuItem Header="Tout ajuster (X et Y)"
-                      Icon="{ui:SymbolIcon ArrowMaximize24}"
-                      Command="{Binding AutoScaleCommand}" />
-            <MenuItem Header="Tout remettre en automatique et ajuster"
-                      ToolTip="Les bornes manuelles de tous les axes Y sont abandonnées (Ctrl+Z pour annuler)"
-                      Icon="{ui:SymbolIcon ArrowReset24}"
-                      Command="{Binding AutoAllAxesCommand}" />
-        </ContextMenu>
     </ui:FluentWindow.Resources>
     <ui:FluentWindow.InputBindings>
         <KeyBinding Modifiers="Ctrl" Key="O" Command="{Binding OpenCommand}" />
@@ -148,17 +139,26 @@
                 <ui:Button Margin="12,2,0,2"
                            Content="Ajuster"
                            Icon="{ui:SymbolIcon ArrowMaximize24}"
-                           ToolTip="Tout ajuster : X sur l'ensemble des données, Y de tous les graphes (aussi : clic molette). Clic droit : tout remettre en automatique"
-                           ContextMenu="{StaticResource FitMenu}"
-                           Command="{Binding AutoScaleCommand}" />
+                           ToolTip="Tout ajuster : X sur l'ensemble des données, Y de tous les graphes, axes manuels compris (aussi : clic molette). Clic droit : tout remettre en automatique et ajuster"
+                           Command="{Binding AutoScaleCommand}">
+                    <ui:Button.InputBindings>
+                        <MouseBinding MouseAction="RightClick" Command="{Binding AutoAllAxesCommand}" CommandParameter="xy" />
+                    </ui:Button.InputBindings>
+                </ui:Button>
                 <ui:Button Icon="{ui:SymbolIcon ArrowAutofitWidth24}"
-                           ToolTip="Ajuster X seulement (le zoom vertical est gardé)"
-                           ContextMenu="{StaticResource FitMenu}"
-                           Command="{Binding AutoScaleXCommand}" />
+                           ToolTip="Ajuster X seulement (le zoom vertical est gardé). Clic droit : tout remettre en automatique et ajuster"
+                           Command="{Binding AutoScaleXCommand}">
+                    <ui:Button.InputBindings>
+                        <MouseBinding MouseAction="RightClick" Command="{Binding AutoAllAxesCommand}" CommandParameter="xy" />
+                    </ui:Button.InputBindings>
+                </ui:Button>
                 <ui:Button Icon="{ui:SymbolIcon ArrowAutofitHeight24}"
-                           ToolTip="Ajuster Y de tous les graphes sur la plage X visible. Pour un seul graphe : clic droit sur ce graphe"
-                           ContextMenu="{StaticResource FitMenu}"
-                           Command="{Binding AutoScaleYCommand}" />
+                           ToolTip="Ajuster Y de tous les graphes sur la plage X visible, axes manuels compris (pour un seul graphe : clic droit sur ce graphe). Clic droit : tous les axes Y en automatique"
+                           Command="{Binding AutoScaleYCommand}">
+                    <ui:Button.InputBindings>
+                        <MouseBinding MouseAction="RightClick" Command="{Binding AutoAllAxesCommand}" CommandParameter="y" />
+                    </ui:Button.InputBindings>
+                </ui:Button>
                 <ui:Button Margin="8,2,0,2"
                            Icon="{ui:SymbolIcon ArrowUndo24}"
                            ToolTip="Annuler la dernière action (Ctrl+Z ou bouton « précédent » de la souris)"

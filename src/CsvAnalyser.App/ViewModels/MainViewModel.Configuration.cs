@@ -282,9 +282,12 @@ public partial class MainViewModel
         StatusText = L.T("Mise en page réinitialisée (Ctrl+Z pour annuler)");
     }
 
-    /// <summary>Every Y axis of every graph back to automatic (typed bounds dropped), then everything fitted (right-click on the fit buttons).</summary>
+    /// <summary>
+    /// Right click on a fit button: every Y axis of every graph back to automatic (typed bounds dropped), then
+    /// fitted; <paramref name="scope"/> "y" keeps the X range (the Y button), anything else fits X too.
+    /// </summary>
     [RelayCommand]
-    private void AutoAllAxes()
+    private void AutoAllAxes(string? scope)
     {
         if (Dataset is null)
             return;
@@ -301,7 +304,8 @@ public partial class MainViewModel
         {
             _suppressPlotEvents = false;
         }
-        RaisePlotChanged(PlotChange.AutoScale); // one fit (and one undo step)
+        RaisePlotChanged(scope == "y" ? PlotChange.AutoScaleY : PlotChange.AutoScale); // one fit (and one undo step)
+        StatusText = L.T("Tous les axes Y en automatique (Ctrl+Z pour annuler)");
     }
 
     // ---------------------------------------------------------------- session (per file)

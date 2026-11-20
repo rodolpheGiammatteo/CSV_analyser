@@ -58,8 +58,6 @@
     "Ajouter une colonne avec la date et l'heure de chaque ligne": "Add a column with the date and time of each row",
     "Ajuster": "Fit",
     "Ajuster X": "Fit X",
-    "Ajuster X seulement (le zoom vertical est gardé)": "Fit X only (the vertical zoom is kept)",
-    "Ajuster Y de tous les graphes sur la plage X visible. Pour un seul graphe : clic droit sur ce graphe": "Fit Y of every graph to the visible X range. For a single graph: right-click it",
     "Ajuster ce graphe en Y": "Fit this graph in Y",
     "Aligner les axes Y": "Align Y axes",
     "Amplitude en dB": "Amplitude in dB",
@@ -351,10 +349,6 @@
     "Titre, légende et axes…": "Title, legend and axes…",
     "Tous les réglages : nom, unité, trait, points, opacité": "All settings: name, unit, line, points, opacity",
     "Tout ajuster (X et Y)": "Fit all (X and Y)",
-    "Tout ajuster : X sur l'ensemble des données, Y de tous les graphes (aussi : clic molette)": "Fit all: X to the whole data, Y of every graph (also: wheel click)",
-    "Tout ajuster : X sur l'ensemble des données, Y de tous les graphes (aussi : clic molette). Clic droit : tout remettre en automatique": "Fit all: X to the whole data, Y of every graph (also: wheel click). Right-click: everything back to automatic",
-    "Tout remettre en automatique et ajuster": "Everything back to automatic and fit",
-    "Les bornes manuelles de tous les axes Y sont abandonnées (Ctrl+Z pour annuler)": "The manual bounds of every Y axis are dropped (Ctrl+Z to undo)",
     "Tout désélectionner": "Clear selection",
     "Tout désélectionner (masquer toutes les courbes). Clic droit : réinitialiser la mise en page": "Clear selection (hide every curve). Right-click: reset the layout",
     "Réinitialiser la mise en page": "Reset the layout",
@@ -464,6 +458,10 @@
     "Afficher ou masquer cette annotation": "Show or hide this annotation",
     "Zone A–B": "A–B zone",
     "Créer une zone surlignée entre les curseurs A et B (annotation)": "Create a highlighted zone between cursors A and B (annotation)",
-    "Ajouter une colonne « zone » (nom des zones surlignées)": "Add a \"zone\" column (names of the highlighted zones)"
+    "Ajouter une colonne « zone » (nom des zones surlignées)": "Add a \"zone\" column (names of the highlighted zones)",
+    "Tout ajuster : X sur l'ensemble des données, Y de tous les graphes, axes manuels compris (aussi : clic molette). Clic droit : tout remettre en automatique et ajuster": "Fit all: X over all the data, Y of every graph, manual axes included (also: middle click). Right-click: everything back to automatic and fitted",
+    "Ajuster X seulement (le zoom vertical est gardé). Clic droit : tout remettre en automatique et ajuster": "Fit X only (the vertical zoom is kept). Right-click: everything back to automatic and fitted",
+    "Ajuster Y de tous les graphes sur la plage X visible, axes manuels compris (pour un seul graphe : clic droit sur ce graphe). Clic droit : tous les axes Y en automatique": "Fit Y of every graph over the visible X range, manual axes included (for one graph: right-click on that graph). Right-click: every Y axis to automatic",
+    "Tous les axes Y en automatique (Ctrl+Z pour annuler)": "Every Y axis to automatic (Ctrl+Z to undo)"
   }
 }
