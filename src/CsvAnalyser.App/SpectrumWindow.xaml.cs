@@ -38,6 +38,7 @@ public partial class SpectrumWindow : FluentWindow
     private double _binWidth;
     private (IAxis Axis, Pixel Pixel)? _axisClick;
     private Point _middleDown;
+    private bool _axisPanGesture;
 
     public SpectrumWindow(MainViewModel vm, GraphViewModel? graph)
     {
@@ -401,6 +402,12 @@ public partial class SpectrumWindow : FluentWindow
                 break;
             case MouseButton.Left when AxisAt(ToPixel(e)) is { } axis:
                 _axisClick = (axis, ToPixel(e));
+                if (_vm.LeftDragZooms)
+                {
+                    // Like the main graph: a left drag that starts on an axis moves that axis, even when left drag zooms.
+                    PlotTools.ApplyMouseButtons(PlotView, leftZooms: false);
+                    _axisPanGesture = true;
+                }
                 break;
             case MouseButton.Middle:
                 _middleDown = e.GetPosition(PlotView);
@@ -412,6 +419,11 @@ public partial class SpectrumWindow : FluentWindow
     {
         var click = _axisClick;
         _axisClick = null;
+        if (_axisPanGesture)
+        {
+            _axisPanGesture = false;
+            Dispatcher.BeginInvoke(() => PlotTools.ApplyMouseButtons(PlotView, _vm.LeftDragZooms), System.Windows.Threading.DispatcherPriority.Input);
+        }
         var pixel = ToPixel(e);
         var position = e.GetPosition(PlotView);
         var button = e.ChangedButton;
