@@ -19,6 +19,8 @@ public partial class MainWindow : FluentWindow
         _plotController = new PlotController(PlotView, viewModel);
 
         ApplyAppTheme();
+        viewModel.EditChannelRequested += (_, item) =>
+            new CurveSettingsWindow(item) { Owner = this }.ShowDialog();
         viewModel.PlotChanged += (_, change) =>
         {
             if (change == PlotChange.Theme)

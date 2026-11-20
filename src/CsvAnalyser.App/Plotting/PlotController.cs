@@ -29,7 +29,9 @@ public sealed class PlotController
     private readonly DispatcherTimer _wheelTimer = new() { Interval = TimeSpan.FromMilliseconds(400) };
     private AxisLimits? _gestureStart;
 
-    private sealed record Series(ChannelItemViewModel Item, double[] Ys, Marker Marker);
+    /// <param name="Curve">The SignalXY (sorted X) or Scatter (unsorted X) drawing the data.</param>
+    /// <param name="Marker">The dot that follows the vertical cursor.</param>
+    private sealed record Series(ChannelItemViewModel Item, double[] Ys, IPlottable Curve, Marker Marker);
 
     public PlotController(WpfPlot view, MainViewModel vm)
     {
@@ -87,6 +89,12 @@ public sealed class PlotController
                 break;
             case PlotChange.PlotFont:
                 ApplyTheme();
+                _view.Refresh();
+                break;
+            case PlotChange.Appearance:
+                foreach (var s in _series)
+                    ApplyAppearance(s);
+                UpdateAxisLabels();
                 _view.Refresh();
                 break;
             case PlotChange.AutoScale:
@@ -194,30 +202,26 @@ public sealed class PlotController
 
         if (_xs is not null)
         {
+            var curves = new List<IPlottable>();
             foreach (var item in _vm.PlottedChannels)
             {
                 var ys = item.Channel.Values;
-                if (_xSorted)
-                {
-                    var signal = Plot.Add.SignalXY(_xs, ys, item.Color);
-                    signal.LineWidth = 1.5f * _scale;
-                    signal.LegendText = item.LegendText;
-                }
-                else
-                {
-                    var scatter = Plot.Add.ScatterPoints(_xs, ys, item.Color);
-                    scatter.MarkerSize = 3 * _scale;
-                    scatter.LegendText = item.LegendText;
-                }
+                IPlottable curve = _xSorted
+                    ? Plot.Add.SignalXY(_xs, ys, item.Color)
+                    : Plot.Add.ScatterPoints(_xs, ys, item.Color);
+                curves.Add(curve);
             }
 
             // Markers and cursor are added last so they are drawn on top of the curves.
-            foreach (var item in _vm.PlottedChannels)
+            for (int i = 0; i < _vm.PlottedChannels.Count; i++)
             {
+                var item = _vm.PlottedChannels[i];
                 var marker = Plot.Add.Marker(0, 0, MarkerShape.FilledCircle, 8 * _scale, item.Color);
                 marker.IsVisible = false;
                 marker.LegendText = "";
-                _series.Add(new Series(item, item.Channel.Values, marker));
+                var series = new Series(item, item.Channel.Values, curves[i], marker);
+                _series.Add(series);
+                ApplyAppearance(series);
             }
 
             _cursorLine = Plot.Add.VerticalLine(0);
@@ -227,9 +231,7 @@ public sealed class PlotController
             _cursorLine.IsVisible = false;
         }
 
-        Plot.XLabel(_vm.XAxisLabel);
-        var units = _vm.PlottedChannels.Select(c => c.Unit).Distinct().ToList();
-        Plot.YLabel(units.Count == 1 ? units[0] : "");
+        UpdateAxisLabels();
         Plot.Legend.IsVisible = _series.Count > 0;
         Plot.Legend.Alignment = Alignment.UpperRight;
 
@@ -245,6 +247,59 @@ public sealed class PlotController
 
         _view.Refresh();
     }
+
+    private void UpdateAxisLabels()
+    {
+        Plot.XLabel(_vm.XAxisLabel);
+        var units = _vm.PlottedChannels.Select(c => c.Unit).Distinct().ToList();
+        Plot.YLabel(units.Count == 1 ? units[0] : "");
+    }
+
+    /// <summary>Copies the curve settings (color, line, markers, legend) onto its plottables.</summary>
+    private void ApplyAppearance(Series s)
+    {
+        var item = s.Item;
+        s.Marker.Color = item.Color;
+
+        switch (s.Curve)
+        {
+            case ScottPlot.Plottables.SignalXY signal:
+                signal.Color = item.Color;
+                signal.LegendText = item.LegendText;
+                signal.LineWidth = item.IsLineVisible ? (float)item.LineWidth * _scale : 0;
+                signal.LinePattern = ToPattern(item.Line);
+                signal.MarkerShape = ToShape(item.Marker);
+                signal.MarkerSize = item.HasMarkers ? (float)item.MarkerSize * _scale : 0;
+                break;
+
+            case ScottPlot.Plottables.Scatter scatter:
+                // Unsorted X: points only, a line would zigzag across the plot.
+                scatter.Color = item.Color;
+                scatter.LegendText = item.LegendText;
+                scatter.LineWidth = 0;
+                scatter.MarkerShape = item.HasMarkers ? ToShape(item.Marker) : MarkerShape.FilledCircle;
+                scatter.MarkerSize = (float)(item.HasMarkers ? item.MarkerSize : 3) * _scale;
+                break;
+        }
+    }
+
+    private static LinePattern ToPattern(CurveLine line) => line switch
+    {
+        CurveLine.Dashed => LinePattern.Dashed,
+        CurveLine.DenselyDashed => LinePattern.DenselyDashed,
+        CurveLine.Dotted => LinePattern.Dotted,
+        _ => LinePattern.Solid,
+    };
+
+    private static MarkerShape ToShape(CurveMarker marker) => marker switch
+    {
+        CurveMarker.Circle => MarkerShape.FilledCircle,
+        CurveMarker.Square => MarkerShape.FilledSquare,
+        CurveMarker.Triangle => MarkerShape.FilledTriangleUp,
+        CurveMarker.Diamond => MarkerShape.FilledDiamond,
+        CurveMarker.Cross => MarkerShape.Cross,
+        _ => MarkerShape.None,
+    };
 
     private void ApplyTheme()
     {

@@ -21,12 +21,14 @@ public enum PlotChange
     XAxis,
     Theme,
     PlotFont,
+    /// <summary>Name, unit, color or style of a curve: updated in place, the view is kept.</summary>
+    Appearance,
     AutoScale,
     UndoView,
     RedoView,
 }
 
-public partial class MainViewModel : ObservableObject
+public partial class MainViewModel : ObservableObject, IChannelHost
 {
     private readonly AppSettings _settings;
     private bool _suppressPlotEvents;
@@ -204,18 +206,18 @@ public partial class MainViewModel : ObservableObject
             XAxisOptions.Clear();
 
             foreach (var channel in dataset.Channels)
-                Channels.Add(new ChannelItemViewModel(channel, OnChannelPlottedChanged));
+                Channels.Add(new ChannelItemViewModel(channel, this));
 
             XAxisOption? timeOption = null;
             if (dataset.Time is { } time)
             {
-                timeOption = new XAxisOption($"Temps — {time.Channel.DisplayName}", time.Channel);
+                timeOption = new XAxisOption(time.Channel, isTime: true);
                 XAxisOptions.Add(timeOption);
             }
-            var rowOption = new XAxisOption("N° de ligne", null);
+            var rowOption = new XAxisOption(null);
             XAxisOptions.Add(rowOption);
             foreach (var channel in dataset.Channels.Where(c => c != dataset.Time?.Channel))
-                XAxisOptions.Add(new XAxisOption(channel.DisplayName, channel));
+                XAxisOptions.Add(new XAxisOption(channel));
 
             Dataset = dataset;
             SelectedXAxis = timeOption ?? rowOption;
@@ -241,13 +243,14 @@ public partial class MainViewModel : ObservableObject
         return status;
     }
 
-    private void OnChannelPlottedChanged(ChannelItemViewModel item)
+    void IChannelHost.OnPlottedChanged(ChannelItemViewModel item)
     {
         if (item.IsPlotted)
         {
             if (PlottedChannels.Contains(item))
                 return;
-            item.Color = NextColor();
+            if (!item.IsColorCustom)
+                item.Color = NextColor(except: item);
             PlottedChannels.Add(item);
         }
         else
@@ -258,10 +261,34 @@ public partial class MainViewModel : ObservableObject
         RaisePlotChanged(PlotChange.Curves);
     }
 
-    private ScottPlot.Color NextColor()
+    void IChannelHost.OnAppearanceChanged(ChannelItemViewModel item)
+    {
+        foreach (var option in XAxisOptions)
+        {
+            if (option.Channel == item.Channel)
+                option.RefreshLabel();
+        }
+        if (SelectedXAxis?.Channel == item.Channel)
+            OnPropertyChanged(nameof(XAxisLabel));
+        RaisePlotChanged(PlotChange.Appearance);
+    }
+
+    ScottPlot.Color IChannelHost.PickAutoColor(ChannelItemViewModel item) => NextColor(except: item);
+
+    /// <summary>Opens the settings of a curve (pencil button or double-click in the list).</summary>
+    public event EventHandler<ChannelItemViewModel>? EditChannelRequested;
+
+    [RelayCommand]
+    private void EditChannel(ChannelItemViewModel? item)
+    {
+        if (item is not null)
+            EditChannelRequested?.Invoke(this, item);
+    }
+
+    private ScottPlot.Color NextColor(ChannelItemViewModel? except = null)
     {
         var palette = SelectedTheme.Palette;
-        var used = PlottedChannels.Select(c => c.Color).ToHashSet();
+        var used = PlottedChannels.Where(c => c != except).Select(c => c.Color).ToHashSet();
         foreach (var hex in palette)
         {
             var color = ScottPlot.Color.FromHex(hex);
@@ -286,8 +313,20 @@ public partial class MainViewModel : ObservableObject
 
     partial void OnSelectedThemeChanged(PlotTheme value)
     {
-        for (int i = 0; i < PlottedChannels.Count; i++)
-            PlottedChannels[i].Color = ScottPlot.Color.FromHex(value.Palette[i % value.Palette.Length]);
+        // Curves whose color was picked by hand keep it; the others take the new palette.
+        _suppressPlotEvents = true;
+        try
+        {
+            for (int i = 0; i < PlottedChannels.Count; i++)
+            {
+                if (!PlottedChannels[i].IsColorCustom)
+                    PlottedChannels[i].Color = ScottPlot.Color.FromHex(value.Palette[i % value.Palette.Length]);
+            }
+        }
+        finally
+        {
+            _suppressPlotEvents = false;
+        }
 
         _settings.ThemeName = value.Name;
         _settings.Save();

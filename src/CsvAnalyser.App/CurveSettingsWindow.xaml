@@ -1,0 +1,210 @@
+<ui:FluentWindow x:Class="CsvAnalyser.App.CurveSettingsWindow"
+                 xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                 xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+                 xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+                 xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+                 xmlns:vm="clr-namespace:CsvAnalyser.App.ViewModels"
+                 mc:Ignorable="d"
+                 d:DataContext="{d:DesignInstance Type=vm:ChannelItemViewModel}"
+                 Title="Réglages de la courbe"
+                 Width="480"
+                 SizeToContent="Height"
+                 ResizeMode="NoResize"
+                 ShowInTaskbar="False"
+                 WindowStartupLocation="CenterOwner"
+                 ExtendsContentIntoTitleBar="True"
+                 WindowBackdropType="None"
+                 Background="{DynamicResource ApplicationBackgroundBrush}"
+                 WindowCornerPreference="Round">
+    <ui:FluentWindow.Resources>
+        <!-- Color swatch: a plain colored square, outlined on hover. -->
+        <Style x:Key="Swatch" TargetType="Button">
+            <Setter Property="Width" Value="30" />
+            <Setter Property="Height" Value="30" />
+            <Setter Property="Margin" Value="0,0,6,6" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="BorderBrush" Value="{DynamicResource AppSecondaryTextBrush}" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Frame" CornerRadius="5" BorderThickness="1" Padding="2"
+                                BorderBrush="{DynamicResource AppDisabledTextBrush}">
+                            <Border CornerRadius="3" Background="{TemplateBinding Background}" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Frame" Property="BorderThickness" Value="2" />
+                                <Setter TargetName="Frame" Property="Padding" Value="1" />
+                                <Setter TargetName="Frame" Property="BorderBrush" Value="{DynamicResource AppSecondaryTextBrush}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style x:Key="SectionTitle" TargetType="TextBlock">
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Margin" Value="0,0,0,6" />
+        </Style>
+    </ui:FluentWindow.Resources>
+
+    <Grid Background="{DynamicResource ApplicationBackgroundBrush}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <ui:TitleBar Grid.Row="0" Title="Réglages de la courbe" ShowMinimize="False" ShowMaximize="False" />
+
+        <StackPanel Grid.Row="1" Margin="24,4,24,0">
+            <!-- En-tête : aperçu de la courbe + colonne d'origine -->
+            <DockPanel Margin="0,0,0,16">
+                <Border DockPanel.Dock="Left" Width="44" Height="28" Margin="0,0,12,0" VerticalAlignment="Center"
+                        CornerRadius="4" BorderThickness="1" BorderBrush="{DynamicResource AppDisabledTextBrush}">
+                    <Grid>
+                        <Line X1="4" Y1="13" X2="38" Y2="13" Stroke="{Binding Brush}"
+                              StrokeThickness="{Binding LineWidth}"
+                              StrokeDashArray="{Binding SelectedItem.Dash, ElementName=LineCombo}"
+                              Visibility="{Binding IsLineVisible, Converter={StaticResource BoolToVisibility}}" />
+                        <Ellipse Width="7" Height="7" Fill="{Binding Brush}"
+                                 Visibility="{Binding HasMarkers, Converter={StaticResource BoolToVisibility}}" />
+                    </Grid>
+                </Border>
+                <StackPanel VerticalAlignment="Center">
+                    <TextBlock FontSize="16" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" Text="{Binding LegendText}" />
+                    <TextBlock Foreground="{DynamicResource AppSecondaryTextBrush}" TextTrimming="CharacterEllipsis">
+                        <Run Text="Colonne du fichier :" />
+                        <Run Text="{Binding Channel.SourceName, Mode=OneWay}" />
+                    </TextBlock>
+                </StackPanel>
+            </DockPanel>
+
+            <!-- Nom et unité -->
+            <Grid Margin="0,0,0,18">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="12" />
+                    <ColumnDefinition Width="120" />
+                </Grid.ColumnDefinitions>
+                <StackPanel Grid.Column="0">
+                    <TextBlock Style="{StaticResource SectionTitle}" Text="Nom" />
+                    <ui:TextBox x:Name="NameBox" Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}" />
+                </StackPanel>
+                <StackPanel Grid.Column="2">
+                    <TextBlock Style="{StaticResource SectionTitle}" Text="Unité" />
+                    <ui:TextBox Text="{Binding Unit, UpdateSourceTrigger=PropertyChanged}" />
+                </StackPanel>
+            </Grid>
+
+            <!-- Couleur -->
+            <DockPanel Margin="0,0,0,6">
+                <TextBlock DockPanel.Dock="Right" Foreground="{DynamicResource AppSecondaryTextBrush}" Text="{Binding ColorModeLabel}" />
+                <TextBlock FontWeight="SemiBold" Text="Couleur" />
+            </DockPanel>
+            <ItemsControl ItemsSource="{x:Static vm:CurveStyleChoices.Swatches}">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <WrapPanel />
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Button Style="{StaticResource Swatch}"
+                                Background="{Binding}"
+                                ToolTip="{Binding}"
+                                Command="{Binding DataContext.SetColorCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                CommandParameter="{Binding}" />
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+            <DockPanel Margin="0,4,0,18">
+                <ui:Button DockPanel.Dock="Right"
+                           Content="Automatique"
+                           Icon="{ui:SymbolIcon ColorBackground24}"
+                           ToolTip="Reprendre la couleur du thème du graphe"
+                           Command="{Binding UseAutoColorCommand}" />
+                <TextBlock VerticalAlignment="Center" Margin="0,0,8,0" Text="Code" />
+                <ui:TextBox Width="110" HorizontalAlignment="Left" FontFamily="Consolas"
+                            ToolTip="Couleur en hexadécimal, par exemple #1F77B4 (Entrée pour valider)"
+                            Text="{Binding ColorHex}" KeyDown="OnHexKeyDown" />
+            </DockPanel>
+
+            <!-- Trait -->
+            <TextBlock Style="{StaticResource SectionTitle}" Text="Trait" />
+            <Grid Margin="0,0,0,18">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="16" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <ComboBox x:Name="LineCombo" Grid.Column="0"
+                          ItemsSource="{x:Static vm:CurveStyleChoices.Lines}"
+                          SelectedValuePath="Value"
+                          SelectedValue="{Binding Line}">
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate>
+                            <StackPanel Orientation="Horizontal">
+                                <Line x:Name="Preview" X1="0" Y1="0" X2="32" Y2="0" Margin="0,0,10,0" VerticalAlignment="Center"
+                                      StrokeThickness="2" Stroke="{DynamicResource TextFillColorPrimaryBrush}"
+                                      StrokeDashArray="{Binding Dash}" />
+                                <TextBlock VerticalAlignment="Center" Text="{Binding Label}" />
+                            </StackPanel>
+                            <DataTemplate.Triggers>
+                                <DataTrigger Binding="{Binding Dash}" Value="{x:Null}">
+                                    <Setter TargetName="Preview" Property="Visibility" Value="Hidden" />
+                                </DataTrigger>
+                            </DataTemplate.Triggers>
+                        </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                </ComboBox>
+                <StackPanel Grid.Column="2" IsEnabled="{Binding IsLineVisible}">
+                    <DockPanel>
+                        <TextBlock DockPanel.Dock="Right" FontFamily="Consolas" Text="{Binding LineWidth, StringFormat={}{0:0.0}}" />
+                        <TextBlock Text="Épaisseur" />
+                    </DockPanel>
+                    <Slider Minimum="0.5" Maximum="6" TickFrequency="0.5" IsSnapToTickEnabled="True" Value="{Binding LineWidth}" />
+                </StackPanel>
+            </Grid>
+
+            <!-- Points -->
+            <TextBlock Style="{StaticResource SectionTitle}" Text="Points" />
+            <Grid Margin="0,0,0,4">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="16" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <ComboBox Grid.Column="0"
+                          ItemsSource="{x:Static vm:CurveStyleChoices.Markers}"
+                          SelectedValuePath="Value"
+                          DisplayMemberPath="Label"
+                          SelectedValue="{Binding Marker}" />
+                <StackPanel Grid.Column="2" IsEnabled="{Binding HasMarkers}">
+                    <DockPanel>
+                        <TextBlock DockPanel.Dock="Right" FontFamily="Consolas" Text="{Binding MarkerSize, StringFormat={}{0:0}}" />
+                        <TextBlock Text="Taille" />
+                    </DockPanel>
+                    <Slider Minimum="2" Maximum="16" TickFrequency="1" IsSnapToTickEnabled="True" Value="{Binding MarkerSize}" />
+                </StackPanel>
+            </Grid>
+            <TextBlock Foreground="{DynamicResource AppSecondaryTextBrush}" TextWrapping="Wrap"
+                       Text="Un point par échantillon : utile pour voir les mesures réelles en zoomant." />
+        </StackPanel>
+
+        <DockPanel Grid.Row="2" Margin="24,20,24,20" LastChildFill="False">
+            <ui:Button DockPanel.Dock="Left"
+                       Content="Réinitialiser"
+                       Icon="{ui:SymbolIcon ArrowReset24}"
+                       ToolTip="Nom, unité, couleur et style d'origine"
+                       Command="{Binding ResetAppearanceCommand}" />
+            <ui:Button DockPanel.Dock="Right"
+                       MinWidth="100"
+                       Appearance="Primary"
+                       Content="Fermer"
+                       IsCancel="True"
+                       Click="OnClose" />
+        </DockPanel>
+    </Grid>
+</ui:FluentWindow>

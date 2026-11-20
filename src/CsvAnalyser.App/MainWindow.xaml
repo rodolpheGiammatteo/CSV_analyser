@@ -69,6 +69,7 @@
             <ComboBox DockPanel.Dock="Left"
                       Width="280"
                       ItemsSource="{Binding XAxisOptions}"
+                      DisplayMemberPath="Label"
                       SelectedItem="{Binding SelectedXAxis}"
                       IsEnabled="{Binding HasData}" />
             <ui:Button DockPanel.Dock="Left"
@@ -140,16 +141,47 @@
                     </ListBox.ItemContainerStyle>
                     <ListBox.ItemTemplate>
                         <DataTemplate DataType="{x:Type vm:ChannelItemViewModel}">
-                            <CheckBox IsChecked="{Binding IsPlotted}" MinHeight="0" Padding="6,0,0,0" ToolTip="{Binding Channel.SourceName}">
-                                <StackPanel Orientation="Horizontal">
-                                    <Rectangle Width="12" Height="12" Margin="0,0,8,0" RadiusX="2" RadiusY="2"
-                                               VerticalAlignment="Center"
-                                               Fill="{Binding Brush}"
-                                               Visibility="{Binding IsPlotted, Converter={StaticResource BoolToVisibility}}" />
-                                    <TextBlock VerticalAlignment="Center" Text="{Binding Name}" />
-                                    <TextBlock Margin="6,0,0,0" VerticalAlignment="Center" Foreground="{DynamicResource AppSecondaryTextBrush}" Text="{Binding UnitLabel}" />
-                                </StackPanel>
-                            </CheckBox>
+                            <!-- Tag carries the main view model to the context menu, which is outside the visual tree. -->
+                            <Grid Background="Transparent" Tag="{Binding DataContext, RelativeSource={RelativeSource AncestorType=ListBox}}">
+                                <Grid.ContextMenu>
+                                    <ContextMenu>
+                                        <MenuItem Header="Réglages de la courbe…"
+                                                  Icon="{ui:SymbolIcon Edit20}"
+                                                  Command="{Binding PlacementTarget.Tag.EditChannelCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                                  CommandParameter="{Binding}" />
+                                    </ContextMenu>
+                                </Grid.ContextMenu>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <CheckBox IsChecked="{Binding IsPlotted}" MinHeight="0" Padding="6,0,0,0" ToolTip="{Binding Channel.SourceName}">
+                                    <StackPanel Orientation="Horizontal">
+                                        <Rectangle Width="12" Height="12" Margin="0,0,8,0" RadiusX="2" RadiusY="2"
+                                                   VerticalAlignment="Center"
+                                                   Fill="{Binding Brush}"
+                                                   Visibility="{Binding IsPlotted, Converter={StaticResource BoolToVisibility}}" />
+                                        <TextBlock VerticalAlignment="Center" Text="{Binding Name}" />
+                                        <TextBlock Margin="6,0,0,0" VerticalAlignment="Center" Foreground="{DynamicResource AppSecondaryTextBrush}" Text="{Binding UnitLabel}" />
+                                    </StackPanel>
+                                </CheckBox>
+                                <ui:Button x:Name="EditButton"
+                                           Grid.Column="1"
+                                           Padding="6,2"
+                                           MinHeight="0"
+                                           Appearance="Transparent"
+                                           BorderThickness="0"
+                                           Icon="{ui:SymbolIcon Edit20}"
+                                           ToolTip="Réglages de la courbe : nom, unité, couleur, trait (ou clic droit)"
+                                           Visibility="Hidden"
+                                           Command="{Binding DataContext.EditChannelCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
+                                           CommandParameter="{Binding}" />
+                            </Grid>
+                            <DataTemplate.Triggers>
+                                <DataTrigger Binding="{Binding IsMouseOver, RelativeSource={RelativeSource AncestorType=ListBoxItem}}" Value="True">
+                                    <Setter TargetName="EditButton" Property="Visibility" Value="Visible" />
+                                </DataTrigger>
+                            </DataTemplate.Triggers>
                         </DataTemplate>
                     </ListBox.ItemTemplate>
                 </ListBox>

@@ -1,23 +1,30 @@
+using CommunityToolkit.Mvvm.ComponentModel;
 using CsvAnalyser.Core.Data;
 
 namespace CsvAnalyser.App.ViewModels;
 
 /// <summary>A possible X axis: a channel, or the row number when <see cref="Channel"/> is null.</summary>
-public sealed class XAxisOption
+public sealed class XAxisOption : ObservableObject
 {
+    private readonly bool _isTime;
     private double[]? _rowIndex;
 
-    public XAxisOption(string label, Channel? channel)
+    public XAxisOption(Channel? channel, bool isTime = false)
     {
-        Label = label;
         Channel = channel;
+        _isTime = isTime;
     }
 
-    public string Label { get; }
+    /// <summary>Follows the channel's display name (call <see cref="RefreshLabel"/> after a rename).</summary>
+    public string Label => Channel is null ? "N° de ligne"
+        : _isTime ? $"Temps — {Channel.DisplayName}"
+        : Channel.DisplayName;
 
     public Channel? Channel { get; }
 
     public bool IsSorted => Channel?.IsSortedAscending ?? true;
+
+    public void RefreshLabel() => OnPropertyChanged(nameof(Label));
 
     public double[] GetValues(Dataset dataset)
     {
