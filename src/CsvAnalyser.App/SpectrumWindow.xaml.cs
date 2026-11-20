@@ -482,7 +482,8 @@ public partial class SpectrumWindow : FluentWindow
         if (axis is not null && axis == PlotView.Plot.Axes.Left)
         {
             string label = PlotView.Plot.Axes.Left.Label.Text;
-            menu.Add(L.F("Axe « {0} » en automatique", string.IsNullOrEmpty(label) ? L.T("Axe Y") : label), _ => SetAuto(x: false, y: true));
+            // "_" is an access key in a menu header: doubled so it shows.
+            menu.Add(L.F("Axe « {0} » en automatique", (string.IsNullOrEmpty(label) ? L.T("Axe Y") : label).Replace("_", "__")), _ => SetAuto(x: false, y: true));
             menu.AddSeparator();
         }
         else if (axis is not null && axis == PlotView.Plot.Axes.Bottom)

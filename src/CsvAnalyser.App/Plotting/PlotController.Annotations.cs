@@ -22,17 +22,21 @@ public sealed partial class PlotController
         Start,
         End,
         Inside,
-        Note,
+        NotePoint,
+        NoteLabel,
     }
 
     private sealed record AnnotationLabel(AnnotationViewModel Annotation, GraphRender Graph, Text Text);
 
-    private sealed record NoteRender(AnnotationViewModel Annotation, Series Series, Marker Marker, Text Text);
+    private sealed record NoteRender(AnnotationViewModel Annotation, Series Series, Marker Marker, Text Text, Arrow Arrow);
 
     private readonly List<(Plot Plot, IPlottable Plottable)> _annotationPlottables = [];
     private readonly List<AnnotationLabel> _annotationLabels = [];
     private readonly List<NoteRender> _notes = [];
     private (AnnotationViewModel Annotation, AnnotationPart Part)? _annotationDrag;
+
+    // Dragging a note: the bubble's lower-left corner minus the mouse (bubble drag), or where the bubble stays (point drag).
+    private Pixel _noteGrab;
 
     private const int MaxLabelLength = 40;
 
@@ -126,8 +130,8 @@ public sealed partial class PlotController
         var text = plot.Add.Text(a.Text.Length > 0 ? a.Text : a.KindLabel, x, y);
         text.Axes.YAxis = series.Axis;
         text.Alignment = Alignment.LowerLeft;
-        text.OffsetX = 9 * _scale;
-        text.OffsetY = -9 * _scale;
+        text.OffsetX = (float)a.LabelOffsetX * _scale;
+        text.OffsetY = (float)a.LabelOffsetY * _scale;
         text.LabelStyle.FontSize = (float)a.FontSize * FontScale;
         text.LabelStyle.ForeColor = ScottPlot.Color.FromHex(_vm.SelectedTheme.AxisColor);
         text.LabelStyle.BackgroundColor = ScottPlot.Color.FromHex(_vm.SelectedTheme.DataBackground).WithAlpha(0.92);
@@ -135,9 +139,20 @@ public sealed partial class PlotController
         text.LabelStyle.BorderWidth = (float)Math.Max(1, a.LineWidth) * _scale;
         text.LabelStyle.BorderRadius = 4 * _scale;
         text.LabelStyle.Padding = 4 * _scale;
+        // From the bubble to the point when the bubble was dragged away (placed before each render).
+        var arrow = plot.Add.Arrow(new Coordinates(x, y), new Coordinates(x, y));
+        arrow.Axes.YAxis = series.Axis;
+        arrow.ArrowLineWidth = 0;
+        arrow.ArrowFillColor = color;
+        arrow.ArrowWidth = (float)Math.Max(1, a.LineWidth) * _scale;
+        arrow.ArrowheadWidth = 9 * _scale;
+        arrow.ArrowheadLength = 10 * _scale;
+        arrow.IsVisible = false;
+        arrow.LegendText = "";
         _annotationPlottables.Add((plot, marker));
+        _annotationPlottables.Add((plot, arrow));
         _annotationPlottables.Add((plot, text));
-        _notes.Add(new NoteRender(a, series, marker, text));
+        _notes.Add(new NoteRender(a, series, marker, text, arrow));
     }
 
     private static LinePattern Pattern(CurveLine line) => line switch
@@ -147,6 +162,9 @@ public sealed partial class PlotController
         CurveLine.Dotted => LinePattern.Dotted,
         _ => LinePattern.Solid,
     };
+
+    /// <summary>A name inside a menu entry: "_" would be taken as an access key (and disappear), so it is doubled.</summary>
+    private static string MenuText(string text) => Shorten(text).Replace("_", "__");
 
     private static string Shorten(string text) => text.Length <= MaxLabelLength ? text : text[..(MaxLabelLength - 1)] + "…";
 
@@ -160,6 +178,7 @@ public sealed partial class PlotController
     /// </summary>
     private void PlaceAnnotationLabels()
     {
+        PlaceNoteArrows();
         foreach (var group in _annotationLabels.GroupBy(l => l.Graph))
         {
             var plot = group.Key.Plot;
@@ -199,6 +218,37 @@ public sealed partial class PlotController
         }
     }
 
+    /// <summary>Pixel of a note's point.</summary>
+    private static Pixel NotePixel(NoteRender note)
+    {
+        var plot = note.Series.Graph.Plot;
+        return plot.GetPixel(note.Marker.Location, plot.Axes.Bottom, note.Series.Axis);
+    }
+
+    /// <summary>Before each render: an arrow from the bubble's nearest edge to the point, when they are apart.</summary>
+    private void PlaceNoteArrows()
+    {
+        foreach (var note in _notes)
+        {
+            var plot = note.Series.Graph.Plot;
+            var p = NotePixel(note);
+            var last = note.Text.LabelLastRenderPixelRect;
+            float width = last.Width > 0 ? last.Width : note.Text.LabelText.Length * note.Text.LabelStyle.FontSize * 0.6f;
+            float height = last.Height > 0 ? last.Height : note.Text.LabelStyle.FontSize * 1.6f;
+            float left = p.X + note.Text.OffsetX, bottom = p.Y + note.Text.OffsetY;
+            var q = new Pixel(Math.Clamp(p.X, left, left + width), Math.Clamp(p.Y, bottom - height, bottom));
+            float dx = p.X - q.X, dy = p.Y - q.Y;
+            float distance = MathF.Sqrt(dx * dx + dy * dy);
+            float radius = note.Marker.MarkerSize / 2 + 2 * _scale;
+            note.Arrow.IsVisible = distance > radius + 12 * _scale;
+            if (!note.Arrow.IsVisible)
+                continue;
+            var tip = new Pixel(p.X - dx / distance * radius, p.Y - dy / distance * radius); // stops at the circle
+            note.Arrow.Base = plot.GetCoordinates(q, plot.Axes.Bottom, note.Series.Axis);
+            note.Arrow.Tip = plot.GetCoordinates(tip, plot.Axes.Bottom, note.Series.Axis);
+        }
+    }
+
     // ---------------------------------------------------------------- finding and dragging
 
     /// <summary>The annotation under a pixel: a note, a marker line or its name, a zone edge, the inside of a zone.</summary>
@@ -208,13 +258,17 @@ public sealed partial class PlotController
             return null;
         float tolerance = 6 * _scale;
 
+        // The point first (the bubble may cover it), then the bubble.
         foreach (var note in _notes)
         {
-            var plot = note.Series.Graph.Plot;
-            var p = plot.GetPixel(note.Marker.Location, plot.Axes.Bottom, note.Series.Axis);
-            if (Math.Abs(p.X - pixel.X) <= 2 * tolerance && Math.Abs(p.Y - pixel.Y) <= 2 * tolerance
-                || note.Text.LabelLastRenderPixelRect.Contains(pixel))
-                return (note.Annotation, AnnotationPart.Note);
+            var p = NotePixel(note);
+            if (Math.Abs(p.X - pixel.X) <= 1.5f * tolerance && Math.Abs(p.Y - pixel.Y) <= 1.5f * tolerance)
+                return (note.Annotation, AnnotationPart.NotePoint);
+        }
+        foreach (var note in _notes)
+        {
+            if (note.Text.LabelLastRenderPixelRect.Contains(pixel))
+                return (note.Annotation, AnnotationPart.NoteLabel);
         }
         foreach (var label in _annotationLabels.Where(l => l.Text.IsVisible))
         {
@@ -273,6 +327,14 @@ public sealed partial class PlotController
         if (e.ChangedButton != MouseButton.Left || AnnotationAt(ToPixel(e)) is not { } hit || !IsDraggable(hit.Part))
             return false;
         _annotationDrag = hit;
+        if (_notes.FirstOrDefault(n => n.Annotation == hit.Annotation) is { } note)
+        {
+            var p = NotePixel(note);
+            var corner = new Pixel(p.X + note.Text.OffsetX, p.Y + note.Text.OffsetY);
+            var mouse = ToPixel(e);
+            // Bubble: keep the grab point under the mouse. Point: the bubble stays where it is on screen.
+            _noteGrab = hit.Part == AnnotationPart.NoteLabel ? new Pixel(corner.X - mouse.X, corner.Y - mouse.Y) : corner;
+        }
         _view.CaptureMouse();
         e.Handled = true; // no pan while moving an annotation
         return true;
@@ -282,12 +344,32 @@ public sealed partial class PlotController
     {
         if (_annotationDrag is not { } drag || _xs is null)
             return;
+        var a = drag.Annotation;
+        var mouse = ToPixel(e);
+        if (drag.Part == AnnotationPart.NoteLabel)
+        {
+            if (_notes.FirstOrDefault(n => n.Annotation == a) is { } dragged)
+            {
+                var p = NotePixel(dragged);
+                (a.LabelOffsetX, a.LabelOffsetY) = ((mouse.X + _noteGrab.X - p.X) / _scale, (mouse.Y + _noteGrab.Y - p.Y) / _scale);
+            }
+            return;
+        }
         var plot = _graphs[0].Plot;
-        double x = plot.GetCoordinates(ToPixel(e), plot.Axes.Bottom, plot.Axes.Left).X;
+        double x = plot.GetCoordinates(mouse, plot.Axes.Bottom, plot.Axes.Left).X;
         int row = _xSorted ? NearestSorted(_xs, x) : NearestUnsorted(_xs, x);
         if (row < 0)
             return;
-        var a = drag.Annotation;
+        if (drag.Part == AnnotationPart.NotePoint)
+        {
+            a.Row = row; // redrawn: the point moves along its curve
+            if (_notes.FirstOrDefault(n => n.Annotation == a) is { } moved)
+            {
+                var p = NotePixel(moved); // the bubble stays put: its offset follows the point
+                (a.LabelOffsetX, a.LabelOffsetY) = ((_noteGrab.X - p.X) / _scale, (_noteGrab.Y - p.Y) / _scale);
+            }
+            return;
+        }
         // Zone ends: the dragged edge moves (Row is the first edge, EndRow the second, whatever their order).
         if (drag.Part == AnnotationPart.End)
             a.EndRow = row;
@@ -313,7 +395,7 @@ public sealed partial class PlotController
         if (AnnotationAt(_lastMenuPixel) is { } hit)
         {
             var a = hit.Annotation;
-            string name = Shorten(a.ListText);
+            string name = MenuText(a.ListText);
             menu.Add(L.F("Modifier « {0} »…", name), _ => _vm.EditAnnotationCommand.Execute(a));
             if (a.Kind == AnnotationKind.Zone)
                 menu.Add(L.T("Mesurer cette zone (curseurs A et B)"), _ => _vm.MeasureZoneCommand.Execute(a));
@@ -323,7 +405,7 @@ public sealed partial class PlotController
 
         menu.Add(L.T("Ajouter un repère ici"), plot => AddAnnotationAtMenu(plot, AnnotationKind.Marker, null));
         if (NearestSeries(_lastMenuPixel) is { } series)
-            menu.Add(L.F("Ajouter une note sur « {0} » ici", Shorten(series.Item.Name)), plot => AddAnnotationAtMenu(plot, AnnotationKind.Note, series.Item));
+            menu.Add(L.F("Ajouter une note sur « {0} » ici", MenuText(series.Item.Name)), plot => AddAnnotationAtMenu(plot, AnnotationKind.Note, series.Item));
         menu.Add(L.T("Surligner une zone ici"), plot => AddAnnotationAtMenu(plot, AnnotationKind.Zone, null));
         menu.AddSeparator();
     }

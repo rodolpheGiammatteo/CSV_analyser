@@ -107,7 +107,7 @@ public sealed partial class PlotController : IPlotView
         if (axisGraph is not null && axis is IYAxis yAxis && axisGraph.Axes.FirstOrDefault(a => a.Axis == yAxis) is { } axisRender)
         {
             string name = string.IsNullOrEmpty(axisRender.Spec.Label) ? L.T("Axe Y") : axisRender.Spec.Label;
-            menu.Add(L.F("Axe « {0} » en automatique", name), _ => SetAxisAuto(axisGraph, axisRender));
+            menu.Add(L.F("Axe « {0} » en automatique", MenuText(name)), _ => SetAxisAuto(axisGraph, axisRender));
             menu.AddSeparator();
         }
         else if (axisGraph is not null && axis is not null && axis == axisGraph.Plot.Axes.Bottom)
@@ -1602,6 +1602,7 @@ public sealed partial class PlotController : IPlotView
         var annotationUnder = lineUnder is null ? _annotationDrag ?? AnnotationAt(pixel) : null;
         _view.Cursor = lineUnder is '1' or '2' ? Cursors.SizeNS
             : lineUnder is not null ? Cursors.SizeWE
+            : annotationUnder is { Part: AnnotationPart.NoteLabel } ? Cursors.SizeAll
             : annotationUnder is { } hit && IsDraggable(hit.Part) ? Cursors.SizeWE
             : LegendAt(pixel) is not null ? Cursors.SizeAll
             : null;

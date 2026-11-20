@@ -216,16 +216,6 @@
                         <TextBlock VerticalAlignment="Center" Text="Mesures Y" />
                     </StackPanel>
                 </ToggleButton>
-                <ToggleButton Margin="4,2,0,2"
-                              Padding="11,5"
-                              ToolTip="Afficher ou masquer les annotations (repères, zones surlignées, notes). Pour en ajouter : clic droit dans un graphe"
-                              IsChecked="{Binding ShowAnnotations}"
-                              IsEnabled="{Binding HasData}">
-                    <StackPanel Orientation="Horizontal">
-                        <ui:SymbolIcon Margin="0,0,8,0" Symbol="Highlight24" />
-                        <TextBlock VerticalAlignment="Center" Text="Annotations" />
-                    </StackPanel>
-                </ToggleButton>
                 <ui:Button Margin="8,2,0,2"
                            Icon="{ui:SymbolIcon Eraser24}"
                            ToolTip="Tout désélectionner (masquer toutes les courbes). Clic droit : réinitialiser la mise en page"
@@ -362,10 +352,23 @@
                                        Icon="{ui:SymbolIcon Delete16}"
                                        ToolTip="Supprimer toutes les annotations"
                                        Command="{Binding DeleteAllAnnotationsCommand}" />
+                            <ui:Button DockPanel.Dock="Right" Padding="4" MinHeight="0"
+                                       Appearance="Transparent" BorderThickness="0"
+                                       Icon="{ui:SymbolIcon Eye16}"
+                                       ToolTip="Masquer toutes les annotations sur le graphe (la liste les garde)"
+                                       Visibility="{Binding ShowAnnotations, Converter={StaticResource BoolToVisibility}}"
+                                       Command="{Binding ToggleShowAnnotationsCommand}" />
+                            <ui:Button DockPanel.Dock="Right" Padding="4" MinHeight="0"
+                                       Appearance="Transparent" BorderThickness="0"
+                                       Icon="{ui:SymbolIcon EyeOff16}"
+                                       ToolTip="Afficher les annotations sur le graphe"
+                                       Visibility="{Binding AnnotationsHidden, Converter={StaticResource BoolToVisibility}}"
+                                       Command="{Binding ToggleShowAnnotationsCommand}" />
                             <TextBlock VerticalAlignment="Center" FontWeight="SemiBold" Text="Annotations" />
                         </DockPanel>
                         <ScrollViewer MaxHeight="180" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Focusable="False">
-                            <ItemsControl ItemsSource="{Binding Annotations}" Focusable="False">
+                            <!-- Right margin: the scroll bar is drawn over the content, not beside it. -->
+                            <ItemsControl Margin="0,0,14,0" ItemsSource="{Binding Annotations}" Focusable="False">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate DataType="{x:Type vm:AnnotationViewModel}">
                                         <!-- Tag carries the main view model to the context menu, which is outside the visual tree. -->

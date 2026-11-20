@@ -35,6 +35,7 @@ public partial class AnnotationViewModel : ObservableObject
 {
     public const double DefaultFontSize = 12;
     public const double DefaultLineWidth = 1.5;
+    public const double DefaultLabelOffsetX = 9, DefaultLabelOffsetY = -9;
     public const double DefaultOpacity = 0.25; // lighter fills are barely visible on some screens
 
     /// <summary>Colors offered for annotations (the hex box takes any other).</summary>
@@ -118,6 +119,13 @@ public partial class AnnotationViewModel : ObservableObject
     [ObservableProperty]
     private bool _isVisible = true;
 
+    /// <summary>Lower-left corner of a note's bubble from its point (device-independent units, Y down).</summary>
+    [ObservableProperty]
+    private double _labelOffsetX = DefaultLabelOffsetX;
+
+    [ObservableProperty]
+    private double _labelOffsetY = DefaultLabelOffsetY;
+
     /// <summary>The scope choice of the settings window: null = every graph.</summary>
     public IReadOnlyList<StyleChoice<GraphViewModel?>> GraphChoices { get; set; } = [];
 
@@ -192,7 +200,8 @@ public partial class AnnotationViewModel : ObservableObject
     {
         base.OnPropertyChanged(e);
         if (e.PropertyName is nameof(Text) or nameof(Row) or nameof(EndRow) or nameof(Curve) or nameof(Graph) or nameof(Color)
-            or nameof(FontSize) or nameof(LineWidth) or nameof(Line) or nameof(Opacity) or nameof(IsVisible) or nameof(Kind))
+            or nameof(FontSize) or nameof(LineWidth) or nameof(Line) or nameof(Opacity) or nameof(IsVisible) or nameof(Kind)
+            or nameof(LabelOffsetX) or nameof(LabelOffsetY))
         {
             if (!_quiet)
                 _host.OnAnnotationChanged(this);
@@ -218,6 +227,8 @@ public partial class AnnotationViewModel : ObservableObject
             Line = Line != (Kind == AnnotationKind.Marker ? CurveLine.Dashed : CurveLine.Solid) ? Line.ToString() : null,
             Opacity = Kind == AnnotationKind.Zone && Opacity != DefaultOpacity ? Opacity : null,
             Hidden = !IsVisible,
+            LabelOffsetX = Kind == AnnotationKind.Note && LabelOffsetX != DefaultLabelOffsetX ? LabelOffsetX : null,
+            LabelOffsetY = Kind == AnnotationKind.Note && LabelOffsetY != DefaultLabelOffsetY ? LabelOffsetY : null,
         };
     }
 
@@ -246,6 +257,8 @@ public partial class AnnotationViewModel : ObservableObject
         if (c.Opacity is { } op && double.IsFinite(op))
             a.Opacity = Math.Clamp(op, 0.02, 0.9);
         a.IsVisible = !c.Hidden;
+        if (c.LabelOffsetX is { } ox && double.IsFinite(ox) && c.LabelOffsetY is { } oy && double.IsFinite(oy))
+            (a.LabelOffsetX, a.LabelOffsetY) = (Math.Clamp(ox, -5000, 5000), Math.Clamp(oy, -5000, 5000));
         a._quiet = false;
         return a;
     }

@@ -280,6 +280,11 @@ public sealed class AnnotationConfig
     /// <summary>Fill opacity of a zone.</summary>
     public double? Opacity { get; set; }
 
+    /// <summary>Position of a note's bubble from its point (device-independent units, Y down).</summary>
+    public double? LabelOffsetX { get; set; }
+
+    public double? LabelOffsetY { get; set; }
+
     public bool Hidden { get; set; }
 
     /// <summary>

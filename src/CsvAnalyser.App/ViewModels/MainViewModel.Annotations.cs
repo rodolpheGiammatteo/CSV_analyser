@@ -14,9 +14,15 @@ public partial class MainViewModel : IAnnotationHost
 {
     public ObservableCollection<AnnotationViewModel> Annotations { get; } = [];
 
-    /// <summary>Toolbar toggle: every annotation shown or hidden (the list keeps them).</summary>
+    /// <summary>Eye button of the annotation panel: every annotation shown or hidden (the list keeps them).</summary>
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(AnnotationsHidden))]
     private bool _showAnnotations = true;
+
+    public bool AnnotationsHidden => !ShowAnnotations;
+
+    [RelayCommand]
+    private void ToggleShowAnnotations() => ShowAnnotations = !ShowAnnotations;
 
     public bool HasAnnotations => Annotations.Count > 0;
 

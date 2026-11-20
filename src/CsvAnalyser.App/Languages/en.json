@@ -431,6 +431,8 @@
     "＋ Ajouter une courbe…": "＋ Add a curve…",
     "＋ Nouveau graphe": "＋ New graph",
     "Zone": "Zone",
+    "Masquer toutes les annotations sur le graphe (la liste les garde)": "Hide every annotation on the graph (the list keeps them)",
+    "Afficher les annotations sur le graphe": "Show the annotations on the graph",
     "Note": "Note",
     "Repère": "Marker",
     "ligne {0}": "row {0}",
@@ -460,7 +462,6 @@
     "Réglages de l'annotation…": "Annotation settings…",
     "Supprimer l'annotation": "Delete the annotation",
     "Afficher ou masquer cette annotation": "Show or hide this annotation",
-    "Afficher ou masquer les annotations (repères, zones surlignées, notes). Pour en ajouter : clic droit dans un graphe": "Show or hide the annotations (markers, highlighted zones, notes). To add one: right-click in a graph",
     "Zone A–B": "A–B zone",
     "Créer une zone surlignée entre les curseurs A et B (annotation)": "Create a highlighted zone between cursors A and B (annotation)",
     "Ajouter une colonne « zone » (nom des zones surlignées)": "Add a \"zone\" column (names of the highlighted zones)"
