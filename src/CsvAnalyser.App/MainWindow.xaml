@@ -363,7 +363,9 @@
                                         <TextBlock Margin="6,0,0,0" VerticalAlignment="Center" Foreground="{DynamicResource AppSecondaryTextBrush}" Text="{Binding UnitLabel}" />
                                     </StackPanel>
                                 </CheckBox>
+                                <!-- Not focusable: a dialog closing gives the focus back to this button, hidden once the mouse leaves the row, and the window shortcuts (Ctrl+Z…) stopped working -->
                                 <ui:Button x:Name="FormulaButton"
+                                           Focusable="False"
                                            Grid.Column="1"
                                            Padding="6,2"
                                            MinHeight="0"
@@ -376,6 +378,7 @@
                                     <TextBlock FontStyle="Italic" FontWeight="SemiBold" FontSize="13" Text="fx" />
                                 </ui:Button>
                                 <ui:Button x:Name="EditButton"
+                                           Focusable="False"
                                            Grid.Column="2"
                                            Padding="6,2"
                                            MinHeight="0"

@@ -21,8 +21,9 @@ public partial class App : Application
         var window = new MainWindow(viewModel);
         window.Show();
 
+        // Absolute: a relative path would be remembered as such (last folder, recent files).
         if (e.Args.Length > 0 && File.Exists(e.Args[0]))
-            _ = viewModel.LoadFileAsync(e.Args[0]);
+            _ = viewModel.LoadFileAsync(Path.GetFullPath(e.Args[0]));
     }
 
     private static void OnUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
