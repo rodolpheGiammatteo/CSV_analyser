@@ -37,7 +37,6 @@ public partial class SpectrumWindow : FluentWindow
     private double _maxFrequency;
     private double _binWidth;
     private (IAxis Axis, Pixel Pixel)? _axisClick;
-    private Point _middleDown;
     private bool _axisPanGesture;
 
     public SpectrumWindow(MainViewModel vm, GraphViewModel? graph)
@@ -413,9 +412,6 @@ public partial class SpectrumWindow : FluentWindow
                     _axisPanGesture = true;
                 }
                 break;
-            case MouseButton.Middle:
-                _middleDown = e.GetPosition(PlotView);
-                break;
         }
     }
 
@@ -434,11 +430,6 @@ public partial class SpectrumWindow : FluentWindow
         // After ScottPlot has applied the gesture.
         Dispatcher.BeginInvoke(() =>
         {
-            if (button == MouseButton.Middle && (position - _middleDown).Length < 4)
-            {
-                SetAuto(x: true, y: true); // middle click without dragging: fit everything, like the main graph
-                return;
-            }
             NoticeUserView();
             if (button == MouseButton.Left && click is { } c
                 && Math.Abs(pixel.X - c.Pixel.X) <= 4 * _scale && Math.Abs(pixel.Y - c.Pixel.Y) <= 4 * _scale)

@@ -139,7 +139,7 @@
                 <ui:Button Margin="12,2,0,2"
                            Content="Ajuster"
                            Icon="{ui:SymbolIcon ArrowMaximize24}"
-                           ToolTip="Tout ajuster : X et Y, axes manuels compris (aussi : clic molette).&#10;Clic droit : tout remettre en automatique."
+                           ToolTip="Tout ajuster : X et Y, axes manuels compris.&#10;Clic droit : tout remettre en automatique."
                            Command="{Binding AutoScaleCommand}">
                     <ui:Button.InputBindings>
                         <MouseBinding MouseAction="RightClick" Command="{Binding AutoAllAxesCommand}" CommandParameter="xy" />
@@ -174,7 +174,7 @@
                 <ui:Button Margin="12,2,0,2"
                            Content="Graphes"
                            Icon="{ui:SymbolIcon DataLine24}"
-                           ToolTip="Titres, légendes et axes Y des graphes (aussi : clic droit sur un graphe)"
+                           ToolTip="Titres, légendes et axes Y des graphes"
                            Command="{Binding EditAxesCommand}" />
                 <ui:Button Margin="12,2,0,2"
                            Content="Calculs"
@@ -685,7 +685,7 @@
                                        Command="{Binding ToggleMeasureYCommand}" />
                             <TextBlock VerticalAlignment="Center" FontWeight="SemiBold" Text="Mesures entre Y1 et Y2" />
                             <ComboBox Margin="12,0,0,0" MinWidth="220" HorizontalAlignment="Left" VerticalAlignment="Center"
-                                      ToolTip="Axe Y mesuré par Y1 et Y2 (aussi : clic droit sur un graphe)"
+                                      ToolTip="Axe Y mesuré par Y1 et Y2"
                                       ItemsSource="{Binding MeasureYAxisChoices}"
                                       SelectedValuePath="Value"
                                       DisplayMemberPath="Label"

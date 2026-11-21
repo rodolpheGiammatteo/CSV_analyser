@@ -36,7 +36,6 @@ public sealed partial class PlotController : IPlotView
     // Zoom/pan history: the view before a mouse gesture (or a burst of wheel ticks) is recorded when it ends.
     private readonly DispatcherTimer _wheelTimer = new() { Interval = TimeSpan.FromMilliseconds(400) };
     private ViewSnapshot? _gestureStart;
-    private Point _middleDownPosition;
 
     private readonly PaddingMatcher _paddingMatcher;
 
@@ -86,7 +85,7 @@ public sealed partial class PlotController : IPlotView
             CommitGesture();
         };
 
-        // Middle click = our NaN-aware autoscale (handled in OnMouseUpAfterPlot); no benchmark overlay.
+        // No autoscale on a middle click (ScottPlot's), no benchmark overlay.
         _view.UserInputProcessor.UserActionResponses.RemoveAll(r => r is SingleClickAutoscale);
         _view.UserInputProcessor.DoubleLeftClickBenchmark(false);
         ApplyMouseButtons();
@@ -678,7 +677,7 @@ public sealed partial class PlotController : IPlotView
 
     /// <summary>Fits X (whole data), Y (all graphs, in the visible X range) or both.</summary>
     /// <summary>
-    /// The fit buttons (and Ajuster in the menus, middle click): manual axes are fitted to the data too, and keep
+    /// The fit buttons (and Ajuster in the menus): manual axes are fitted to the data too, and keep
     /// the bounds now shown as their manual bounds (as after a zoom with the mouse).
     /// </summary>
     private void AutoScaleWithHistory(bool x, bool y)
@@ -1043,9 +1042,6 @@ public sealed partial class PlotController : IPlotView
                 Redo();
                 e.Handled = true;
                 return;
-            case MouseButton.Middle:
-                _middleDownPosition = e.GetPosition(_view);
-                break;
             case MouseButton.Right:
                 _lastMenuPixel = ToPixel(e);
                 var (axisGraph, axisUnder) = AxisAt(_lastMenuPixel);
@@ -1095,23 +1091,6 @@ public sealed partial class PlotController : IPlotView
         }
         if (_axisClick is not null && e.ChangedButton == MouseButton.Left)
             _view.Dispatcher.BeginInvoke(() => TryOpenAxisEditor(e), DispatcherPriority.Input);
-        if (e.ChangedButton == MouseButton.Middle && (e.GetPosition(_view) - _middleDownPosition).Length < 4)
-        {
-            // Middle click without dragging: fit everything (a middle drag is ScottPlot's zoom rectangle).
-            _view.Dispatcher.BeginInvoke(() =>
-            {
-                var start = _gestureStart;
-                _gestureStart = null;
-                SetFullX();
-                foreach (var g in _graphs)
-                    FitGraphY(g, fitManual: true);
-                KeepManualBoundsOnScreen();
-                if (start is not null)
-                    Record(start);
-                _view.Refresh();
-            }, DispatcherPriority.Background);
-            return;
-        }
         _view.Dispatcher.BeginInvoke(CommitGesture, DispatcherPriority.Background);
     }
 
