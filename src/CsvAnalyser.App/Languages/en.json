@@ -476,6 +476,7 @@
     "La recherche de mise à jour a échoué : {0}": "The update check failed: {0}",
     "Nouvelle version disponible : {0} (Paramètres → Rechercher une mise à jour)": "New version available: {0} (Settings → Check for updates)",
     "Réponse de GitHub illisible.": "Unreadable answer from GitHub.",
-    "CSV Analyser, développé par Rodolphe Giammatteo.": "CSV Analyser, developed by Rodolphe Giammatteo."
+    "CSV Analyser, développé par Rodolphe Giammatteo.": "CSV Analyser, developed by Rodolphe Giammatteo.",
+    "({0} note(s) supprimée(s))": "({0} note(s) deleted)"
   }
 }

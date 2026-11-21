@@ -199,6 +199,13 @@ public partial class MainViewModel : IAnnotationHost
         OnPropertyChanged(nameof(HasZones));
     }
 
+    /// <summary>Notes whose curve item was replaced (computed curves rebuilt) point at the new item of the same column.</summary>
+    private void RetargetNoteCurves()
+    {
+        foreach (var note in Annotations.Where(a => a.Curve is not null && !Channels.Contains(a.Curve)))
+            note.Curve = Channels.FirstOrDefault(c => c.Channel.SourceName == note.Curve!.Channel.SourceName) ?? note.Curve;
+    }
+
     /// <summary>The X axis changed: positions are shown in the new unit.</summary>
     private void RefreshAnnotationPositions()
     {

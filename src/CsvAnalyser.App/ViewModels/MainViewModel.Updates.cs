@@ -51,7 +51,15 @@ public partial class MainViewModel
     {
         if (!CheckUpdatesAtStartup)
             return;
-        var result = await UpdateChecker.CheckAsync(AppInfo.Version);
+        UpdateCheckResult result;
+        try
+        {
+            result = await UpdateChecker.CheckAsync(AppInfo.Version);
+        }
+        catch (Exception ex) when (ex is not OutOfMemoryException)
+        {
+            return; // quiet at startup: the button reports errors
+        }
         if (result.Status == UpdateStatus.Available)
             StatusText = L.F("Nouvelle version disponible : {0} (Paramètres → Rechercher une mise à jour)", result.LatestVersion);
     }

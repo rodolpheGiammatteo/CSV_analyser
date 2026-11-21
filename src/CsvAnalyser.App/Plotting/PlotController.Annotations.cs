@@ -117,6 +117,9 @@ public sealed partial class PlotController
             }
         }
         PlaceAnnotationLabels();
+        // The line from a bubble to its point needs the bubble's real size, known only after it is drawn once.
+        if (_notes.Count > 0)
+            _view.Dispatcher.BeginInvoke(_view.Refresh, System.Windows.Threading.DispatcherPriority.Background);
     }
 
     private void AddNote(AnnotationViewModel a, ScottPlot.Color color)

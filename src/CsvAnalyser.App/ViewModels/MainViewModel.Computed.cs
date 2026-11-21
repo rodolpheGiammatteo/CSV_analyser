@@ -53,6 +53,15 @@ public partial class MainViewModel
         item.IsPlotted = false;
         Channels.Remove(item);
         StatusText = L.F("Courbe calculée supprimée : {0}", item.Name);
+        // Its notes have nothing to point at any more (Ctrl+Z brings both back).
+        var notes = Annotations.Where(a => a.Curve == item).ToList();
+        foreach (var note in notes)
+            Annotations.Remove(note);
+        if (notes.Count > 0)
+        {
+            AnnotationsChanged();
+            StatusText += " " + L.F("({0} note(s) supprimée(s))", notes.Count);
+        }
     }
 
     [RelayCommand]
@@ -196,6 +205,8 @@ public partial class MainViewModel
 
             int index = Channels.IndexOf(old);
             Channels[index] = replacement;
+            foreach (var note in Annotations.Where(a => a.Curve == old))
+                note.Curve = replacement; // the notes stay on the edited curve
             int plotted = PlottedChannels.IndexOf(old);
             if (plotted >= 0)
             {

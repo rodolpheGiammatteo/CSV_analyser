@@ -156,6 +156,8 @@ public partial class MainViewModel
             foreach (var item in Channels)
                 bySource.TryAdd(item.Channel.SourceName, item);
 
+            // The annotations kept (layout applied to the same file) find their graph again by its position.
+            var annotationGraphs = Annotations.Select(a => a.Graph is { } g ? Graphs.IndexOf(g) : -1).ToList();
             Graphs.Clear();
             foreach (var gc in config.Graphs.Count > 0 ? config.Graphs : [new GraphConfig()])
             {
@@ -218,7 +220,15 @@ public partial class MainViewModel
             // Annotations belong to the file: restored with its view (session, project, undo), kept when only a
             // layout is applied.
             if (restoreView)
+            {
                 LoadAnnotations(config.Annotations);
+            }
+            else
+            {
+                for (int i = 0; i < Annotations.Count; i++)
+                    Annotations[i].Graph = annotationGraphs[i] >= 0 && annotationGraphs[i] < created.Count ? created[annotationGraphs[i]] : null;
+                RetargetNoteCurves();
+            }
             RemoveEmptyGraphs();
         }
         finally

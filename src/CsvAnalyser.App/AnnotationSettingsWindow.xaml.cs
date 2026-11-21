@@ -25,6 +25,13 @@ public partial class AnnotationSettingsWindow : FluentWindow
         };
     }
 
+    protected override void OnClosing(System.ComponentModel.CancelEventArgs e)
+    {
+        // The text box updates the annotation 300 ms after typing: what was typed just before closing is kept.
+        TextField.GetBindingExpression(System.Windows.Controls.TextBox.TextProperty)?.UpdateSource();
+        base.OnClosing(e);
+    }
+
     private void OnHexKeyDown(object sender, KeyEventArgs e)
     {
         if (e.Key == Key.Enter && sender is System.Windows.Controls.TextBox box)

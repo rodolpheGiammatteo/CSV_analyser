@@ -241,7 +241,11 @@ public partial class AnnotationViewModel : ObservableObject
         var a = new AnnotationViewModel(host, kind, c.Row) { _quiet = true };
         a.Text = c.Text;
         if (kind == AnnotationKind.Zone)
+        {
             a.EndRow = Math.Clamp(c.EndRow ?? c.Row, 0, rowCount - 1);
+            if (a.EndRow < a.Row)
+                (a.Row, a.EndRow) = (a.EndRow, a.Row); // Row is always the first edge (dragging relies on it)
+        }
         if (kind == AnnotationKind.Note)
             a.Curve = c.Curve is { } column ? findCurve(column) : null;
         if (c.Graph is { } gi && gi >= 0 && gi < graphs.Count && kind != AnnotationKind.Note)

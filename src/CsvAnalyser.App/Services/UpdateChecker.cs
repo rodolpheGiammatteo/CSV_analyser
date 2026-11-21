@@ -57,7 +57,7 @@ public static class UpdateChecker
                 ? new UpdateCheckResult(UpdateStatus.Available, tag, page)
                 : new UpdateCheckResult(UpdateStatus.UpToDate, tag, page);
         }
-        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or JsonException)
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or JsonException or System.IO.IOException or InvalidOperationException)
         {
             return new UpdateCheckResult(UpdateStatus.Failed, Error: ex.Message);
         }

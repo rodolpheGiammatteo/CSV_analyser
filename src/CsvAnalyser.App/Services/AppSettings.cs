@@ -1,5 +1,7 @@
 using System.IO;
 using System.Text.Json;
+using System.Text.Json.Nodes;
+using System.Text.Json.Serialization;
 
 namespace CsvAnalyser.App.Services;
 
@@ -81,28 +83,76 @@ public sealed class AppSettings
     /// <summary>Look for a newer version on GitHub at startup (off by default: no network access unless asked).</summary>
     public bool CheckUpdatesAtStartup { get; set; }
 
+    private const int MaxRecentFiles = 12;
+
+    private static readonly JsonSerializerOptions Options = new() { WriteIndented = true };
+
+    /// <summary>Each setting as last read from or written to the file: what this window changed since is what differs.</summary>
+    private Dictionary<string, string> _baseline = [];
+
     public static AppSettings Load()
     {
+        AppSettings settings = new();
         try
         {
             if (File.Exists(FilePath))
-                return JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(FilePath)) ?? new AppSettings();
+                settings = JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(FilePath)) ?? new AppSettings();
         }
         catch (Exception ex) when (ex is IOException or JsonException or UnauthorizedAccessException)
         {
         }
-        return new AppSettings();
+        settings._baseline = settings.Snapshot();
+        return settings;
     }
 
+    /// <summary>
+    /// Writes only what this window changed into the file as it is now, so several windows of the program do not
+    /// overwrite each other's settings; the recent files of both are kept (this window's first).
+    /// </summary>
     public void Save()
     {
         try
         {
             Directory.CreateDirectory(Path.GetDirectoryName(FilePath)!);
-            File.WriteAllText(FilePath, JsonSerializer.Serialize(this, new JsonSerializerOptions { WriteIndented = true }));
+            JsonObject disk;
+            try
+            {
+                disk = File.Exists(FilePath) ? JsonNode.Parse(File.ReadAllText(FilePath)) as JsonObject ?? [] : [];
+            }
+            catch (JsonException)
+            {
+                disk = [];
+            }
+            var mine = JsonSerializer.SerializeToNode(this, Options)!.AsObject();
+            foreach (var (key, value) in mine.ToList())
+            {
+                string text = value?.ToJsonString() ?? "null";
+                bool changedHere = !_baseline.TryGetValue(key, out var before) || before != text;
+                if (!changedHere && disk.ContainsKey(key))
+                    continue; // another window may have changed it: keep the file's value
+                if (key == nameof(RecentFiles) && disk[key] is JsonArray others)
+                {
+                    var merged = RecentFiles.ToList();
+                    foreach (var path in others.Select(n => n?.GetValue<string>()).OfType<string>())
+                    {
+                        if (!merged.Contains(path, StringComparer.OrdinalIgnoreCase))
+                            merged.Add(path);
+                    }
+                    disk[key] = JsonSerializer.SerializeToNode(merged.Take(MaxRecentFiles).ToList());
+                }
+                else
+                {
+                    disk[key] = value?.DeepClone();
+                }
+            }
+            File.WriteAllText(FilePath, disk.ToJsonString(Options));
+            _baseline = Snapshot();
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException)
         {
         }
     }
+
+    private Dictionary<string, string> Snapshot() =>
+        JsonSerializer.SerializeToNode(this, Options)!.AsObject().ToDictionary(p => p.Key, p => p.Value?.ToJsonString() ?? "null");
 }
