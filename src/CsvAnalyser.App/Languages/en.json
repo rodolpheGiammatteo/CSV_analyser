@@ -477,6 +477,17 @@
     "Réponse de GitHub illisible.": "Unreadable answer from GitHub.",
     "CSV Analyser, développé par Rodolphe Giammatteo.": "CSV Analyser, developed by Rodolphe Giammatteo.",
     "({0} note(s) supprimée(s))": "({0} note(s) deleted)",
-    "Ctrl+clic : sélectionner plusieurs courbes. Maj+clic : sélectionner et cocher toutes les courbes entre deux clics. Glisser la sélection : la placer dans un graphe. Double-clic : réglages de la courbe.": "Ctrl+click: select several curves. Shift+click: select and tick every curve between two clicks. Drag the selection: put it in a graph. Double-click: curve settings."
+    "Ctrl+clic : sélectionner plusieurs courbes. Maj+clic : sélectionner et cocher toutes les courbes entre deux clics. Glisser la sélection : la placer dans un graphe. Double-clic : réglages de la courbe.": "Ctrl+click: select several curves. Shift+click: select and tick every curve between two clicks. Drag the selection: put it in a graph. Double-click: curve settings.",
+    "Cocher la sélection": "Tick the selection",
+    "Décocher la sélection": "Untick the selection",
+    "Cocher les {0} courbes sélectionnées": "Tick the {0} selected curves",
+    "Décocher les {0} courbes sélectionnées": "Untick the {0} selected curves",
+    "Dupliquer": "Duplicate",
+    "Dupliquer les {0} courbes": "Duplicate the {0} curves",
+    "« {0} » n'a pas pu être dupliquée : {1}": "“{0}” could not be duplicated: {1}",
+    "Courbe dupliquée : {0}": "Curve duplicated: {0}",
+    "{0} courbes dupliquées": "{0} curves duplicated",
+    "{0} (copie)": "{0} (copy)",
+    "{0} (copie {1})": "{0} (copy {1})"
   }
 }

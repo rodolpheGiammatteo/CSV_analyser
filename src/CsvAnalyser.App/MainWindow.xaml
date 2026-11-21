@@ -282,7 +282,16 @@
                             <!-- Tag carries the main view model to the context menu, which is outside the visual tree. -->
                             <Grid Background="Transparent" Tag="{Binding DataContext, RelativeSource={RelativeSource AncestorType=ListBox}}">
                                 <Grid.ContextMenu>
-                                    <ContextMenu>
+                                    <ContextMenu Opened="OnCurveMenuOpened">
+                                        <MenuItem Header="Cocher la sélection"
+                                                  Tag="tick"
+                                                  Icon="{ui:SymbolIcon CheckboxChecked20}"
+                                                  Click="OnTickSelection" />
+                                        <MenuItem Header="Décocher la sélection"
+                                                  Tag="untick"
+                                                  Icon="{ui:SymbolIcon CheckboxUnchecked20}"
+                                                  Click="OnTickSelection" />
+                                        <Separator Tag="selection" />
                                         <MenuItem Header="Réglages de la courbe…"
                                                   Icon="{ui:SymbolIcon Edit20}"
                                                   Command="{Binding PlacementTarget.Tag.EditChannelCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
@@ -291,6 +300,10 @@
                                                   Icon="{ui:SymbolIcon MathFormula24}"
                                                   Command="{Binding PlacementTarget.Tag.NewComputedCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
                                                   CommandParameter="{Binding}" />
+                                        <MenuItem Header="Dupliquer"
+                                                  Tag="duplicate"
+                                                  Icon="{ui:SymbolIcon Copy20}"
+                                                  Click="OnDuplicateCurves" />
                                         <MenuItem Header="Modifier le calcul…"
                                                   Icon="{ui:SymbolIcon Edit20}"
                                                   Visibility="{Binding IsComputed, Converter={StaticResource BoolToVisibility}}"

@@ -13,21 +13,34 @@ public static class SignalFilters
         var result = new double[n];
         double half = Math.Max(0, window) / 2;
         int lo = 0, hi = 0; // window = [lo, hi)
-        double sum = 0;
+        // The running sum is kept relative to the first value (a large constant part would eat the precision) and
+        // compensated (Neumaier): millions of additions and subtractions would otherwise drift along the file.
+        double offset = 0;
+        for (int k = 0; k < n; k++)
+        {
+            if (double.IsFinite(y[k])) { offset = y[k]; break; }
+        }
+        double sum = 0, compensation = 0;
+        void Add(double v)
+        {
+            double next = sum + v;
+            compensation += Math.Abs(sum) >= Math.Abs(v) ? (sum - next) + v : (v - next) + sum;
+            sum = next;
+        }
         int count = 0;
         for (int i = 0; i < n; i++)
         {
             while (hi < n && t[hi] <= t[i] + half)
             {
-                if (double.IsFinite(y[hi])) { sum += y[hi]; count++; }
+                if (double.IsFinite(y[hi])) { Add(y[hi] - offset); count++; }
                 hi++;
             }
             while (lo < hi && t[lo] < t[i] - half)
             {
-                if (double.IsFinite(y[lo])) { sum -= y[lo]; count--; }
+                if (double.IsFinite(y[lo])) { Add(-(y[lo] - offset)); count--; }
                 lo++;
             }
-            result[i] = double.IsFinite(y[i]) && count > 0 ? sum / count : double.NaN;
+            result[i] = double.IsFinite(y[i]) && count > 0 ? offset + (sum + compensation) / count : double.NaN;
         }
         return result;
     }

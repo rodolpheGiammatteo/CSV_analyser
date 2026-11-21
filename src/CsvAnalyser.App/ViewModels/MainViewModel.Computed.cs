@@ -65,6 +65,87 @@ public partial class MainViewModel
     }
 
     [RelayCommand]
+    private void DuplicateCurve(ChannelItemViewModel? item)
+    {
+        if (item is not null)
+            DuplicateCurves([item]);
+    }
+
+    /// <summary>
+    /// Copies of curves: a computed curve gets the same calculation, a file column becomes the formula
+    /// « [column] »; the copy is named « … (copie) », keeps the style and graph and comes right after the computed curves.
+    /// </summary>
+    public void DuplicateCurves(IReadOnlyList<ChannelItemViewModel> items)
+    {
+        if (Dataset is null || items.Count == 0)
+            return;
+        var copies = new List<string>();
+        foreach (var item in items)
+        {
+            var def = item.Definition?.Clone() ?? new ComputedCurveConfig
+            {
+                Kind = ComputedCurveConfig.Formula,
+                Expression = "[" + item.Channel.SourceName + "]",
+            };
+            def.Name = CopyName(item.Name);
+            def.Unit = item.Unit;
+            double[] values;
+            try
+            {
+                values = ComputeValues(def);
+            }
+            catch (Exception ex) when (ex is FormulaException or InvalidOperationException or ArgumentException)
+            {
+                StatusText = L.F("« {0} » n'a pas pu être dupliquée : {1}", item.Name, ex.Message);
+                return;
+            }
+            var copy = CreateComputedItem(def, values);
+            _suppressPlotEvents = true;
+            try
+            {
+                CopyStyle(item, copy);
+                Channels.Insert(ComputedChannels.Count(), copy);
+                if (item.IsPlotted)
+                    copy.IsPlotted = true;
+            }
+            finally
+            {
+                _suppressPlotEvents = false;
+            }
+            copies.Add(def.Name);
+        }
+        RaisePlotChanged(PlotChange.Curves);
+        StatusText = copies.Count == 1
+            ? L.F("Courbe dupliquée : {0}", copies[0])
+            : L.F("{0} courbes dupliquées", copies.Count);
+    }
+
+    /// <summary>« name (copie) », « name (copie 2) »… whichever is free.</summary>
+    private string CopyName(string name)
+    {
+        bool Taken(string candidate) => Channels.Any(c => c.Channel.SourceName == candidate || c.Name == candidate);
+        string result = L.F("{0} (copie)", name);
+        for (int k = 2; Taken(result); k++)
+            result = L.F("{0} (copie {1})", name, k);
+        return result;
+    }
+
+    private static void CopyStyle(ChannelItemViewModel from, ChannelItemViewModel to)
+    {
+        to.Graph = from.Graph;
+        to.AxisChoice = from.AxisChoice;
+        to.Line = from.Line;
+        to.LineWidth = from.LineWidth;
+        to.Marker = from.Marker;
+        to.MarkerSize = from.MarkerSize;
+        to.Opacity = from.Opacity;
+        if (from.IsColorCustom)
+            to.ColorHex = from.ColorHex;
+        else
+            to.Color = from.Color;
+    }
+
+    [RelayCommand]
     private void ShowSpectrum(GraphViewModel? graph)
     {
         if (Dataset is null)
@@ -191,17 +272,7 @@ public partial class MainViewModel
         _suppressPlotEvents = true;
         try
         {
-            replacement.Graph = old.Graph;
-            replacement.AxisChoice = old.AxisChoice;
-            replacement.Line = old.Line;
-            replacement.LineWidth = old.LineWidth;
-            replacement.Marker = old.Marker;
-            replacement.MarkerSize = old.MarkerSize;
-            replacement.Opacity = old.Opacity;
-            if (old.IsColorCustom)
-                replacement.ColorHex = old.ColorHex;
-            else
-                replacement.Color = old.Color;
+            CopyStyle(old, replacement);
 
             int index = Channels.IndexOf(old);
             Channels[index] = replacement;

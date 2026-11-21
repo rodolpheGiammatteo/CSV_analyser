@@ -44,6 +44,10 @@ public partial class SpectrumWindow : FluentWindow
     {
         InitializeComponent();
         _vm = vm;
+        // Its panels follow the interface size: the window starts larger too, so the plot keeps its room.
+        var area = SystemParameters.WorkArea;
+        Width = Math.Min(Width * Controls.UiScaling.Scale, area.Width - 20);
+        Height = Math.Min(Height * Controls.UiScaling.Scale, area.Height - 20);
 
         var ranges = new List<StyleChoice<SpectrumRange>>();
         if (vm.PlotView?.XRange is not null)

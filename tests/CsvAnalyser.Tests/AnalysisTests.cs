@@ -101,6 +101,23 @@ public class SignalFiltersTests
     }
 
     [Fact]
+    public void MovingAverage_NoDriftOnLongFileWithLargeOffset()
+    {
+        // 2 million samples around 1e6, values of very different sizes: the end must match a direct mean.
+        int n = 2_000_000;
+        double[] t = Range(n);
+        double[] y = new double[n];
+        for (int i = 0; i < n; i++)
+            y[i] = 1e6 + (i % 7) * 0.123456789 + (i % 1000 == 0 ? 5e4 : 0);
+        var r = SignalFilters.MovingAverage(t, y, window: 100);
+        int last = n - 60;
+        double direct = 0;
+        int count = 0;
+        for (int k = last - 50; k <= last + 50; k++) { direct += y[k] - 1e6; count++; }
+        Assert.Equal(1e6 + direct / count, r[last], 1e-9);
+    }
+
+    [Fact]
     public void LowPass_KeepsSlowSignal_RemovesFastOne()
     {
         const int n = 20000;

@@ -363,6 +363,55 @@ public partial class MainWindow : FluentWindow
             SelectCurves([item]);
     }
 
+    /// <summary>The curves a menu of the list acts on: the selection when the clicked curve is part of it, else that curve.</summary>
+    private IReadOnlyList<ChannelItemViewModel> CurvesFor(ChannelItemViewModel item) =>
+        CurveListBox.SelectedItems.Count > 1 && CurveListBox.SelectedItems.Contains(item)
+            ? _viewModel.ChannelsView.Cast<ChannelItemViewModel>().Where(CurveListBox.SelectedItems.Contains).ToList()
+            : [item];
+
+    /// <summary>Tick/untick the selection only with several curves selected; the entries say how many.</summary>
+    private void OnCurveMenuOpened(object sender, RoutedEventArgs e)
+    {
+        if (sender is not ContextMenu menu || menu.DataContext is not ChannelItemViewModel item)
+            return;
+        var curves = CurvesFor(item);
+        var several = curves.Count > 1 ? Visibility.Visible : Visibility.Collapsed;
+        foreach (var entry in menu.Items.OfType<FrameworkElement>())
+        {
+            switch (entry.Tag as string)
+            {
+                case "tick":
+                    entry.Visibility = several;
+                    ((System.Windows.Controls.MenuItem)entry).Header = L.F("Cocher les {0} courbes sélectionnées", curves.Count);
+                    break;
+                case "untick":
+                    entry.Visibility = several;
+                    ((System.Windows.Controls.MenuItem)entry).Header = L.F("Décocher les {0} courbes sélectionnées", curves.Count);
+                    break;
+                case "selection":
+                    entry.Visibility = several;
+                    break;
+                case "duplicate":
+                    ((System.Windows.Controls.MenuItem)entry).Header = curves.Count > 1
+                        ? L.F("Dupliquer les {0} courbes", curves.Count)
+                        : L.T("Dupliquer");
+                    break;
+            }
+        }
+    }
+
+    private void OnTickSelection(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement { DataContext: ChannelItemViewModel item, Tag: string tag })
+            _viewModel.SetPlotted(CurvesFor(item), tag == "tick");
+    }
+
+    private void OnDuplicateCurves(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement { DataContext: ChannelItemViewModel item })
+            _viewModel.DuplicateCurves(CurvesFor(item));
+    }
+
     private void SelectCurves(IReadOnlyList<ChannelItemViewModel> items)
     {
         CurveListBox.SelectedItems.Clear();
