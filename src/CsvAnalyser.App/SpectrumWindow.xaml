@@ -34,7 +34,7 @@
             <StackPanel Margin="0,2,20,2" Orientation="Horizontal">
                 <TextBlock Margin="0,0,8,0" VerticalAlignment="Center" Text="Fenêtre" />
                 <ComboBox x:Name="WindowCombo" MinWidth="230" DisplayMemberPath="Label" SelectedValuePath="Value"
-                          ToolTip="Hann : usage général. Flat top : amplitudes exactes, pics plus larges. Rectangulaire : aucune pondération (signal périodique sur la plage)."
+                          ToolTip="Hann : usage général.&#10;Flat top : amplitudes exactes, pics plus larges.&#10;Rectangulaire : signal périodique sur la plage."
                           SelectionChanged="OnOptionChanged" />
             </StackPanel>
             <CheckBox x:Name="DecibelBox" Margin="0,2,20,2" Content="Amplitude en dB"

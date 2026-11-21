@@ -94,7 +94,7 @@
                            ToolTip="Ouvrir un fichier récent"
                            Click="OnRecentMenu" />
                 <ui:Button Icon="{ui:SymbolIcon Save24}"
-                           ToolTip="Projet (fichier CSV + mise en page) : enregistrer, ouvrir ; appliquer une mise en page ; exporter en CSV"
+                           ToolTip="Projet : enregistrer, ouvrir, appliquer une mise en page, exporter en CSV"
                            Click="OnOpenButtonMenu">
                     <ui:Button.ContextMenu>
                         <ContextMenu>
@@ -139,21 +139,21 @@
                 <ui:Button Margin="12,2,0,2"
                            Content="Ajuster"
                            Icon="{ui:SymbolIcon ArrowMaximize24}"
-                           ToolTip="Tout ajuster : X sur l'ensemble des données, Y de tous les graphes, axes manuels compris (aussi : clic molette). Clic droit : tout remettre en automatique et ajuster"
+                           ToolTip="Tout ajuster : X et Y, axes manuels compris (aussi : clic molette).&#10;Clic droit : tout remettre en automatique."
                            Command="{Binding AutoScaleCommand}">
                     <ui:Button.InputBindings>
                         <MouseBinding MouseAction="RightClick" Command="{Binding AutoAllAxesCommand}" CommandParameter="xy" />
                     </ui:Button.InputBindings>
                 </ui:Button>
                 <ui:Button Icon="{ui:SymbolIcon ArrowAutofitWidth24}"
-                           ToolTip="Ajuster X seulement (le zoom vertical est gardé). Clic droit : tout remettre en automatique et ajuster"
+                           ToolTip="Ajuster X seulement, le zoom vertical est gardé.&#10;Clic droit : tout remettre en automatique."
                            Command="{Binding AutoScaleXCommand}">
                     <ui:Button.InputBindings>
                         <MouseBinding MouseAction="RightClick" Command="{Binding AutoAllAxesCommand}" CommandParameter="xy" />
                     </ui:Button.InputBindings>
                 </ui:Button>
                 <ui:Button Icon="{ui:SymbolIcon ArrowAutofitHeight24}"
-                           ToolTip="Ajuster Y de tous les graphes sur la plage X visible, axes manuels compris (pour un seul graphe : clic droit sur ce graphe). Clic droit : tous les axes Y en automatique"
+                           ToolTip="Ajuster Y de tous les graphes sur la zone visible, axes manuels compris.&#10;Clic droit : tous les axes Y en automatique."
                            Command="{Binding AutoScaleYCommand}">
                     <ui:Button.InputBindings>
                         <MouseBinding MouseAction="RightClick" Command="{Binding AutoAllAxesCommand}" CommandParameter="y" />
@@ -174,7 +174,7 @@
                 <ui:Button Margin="12,2,0,2"
                            Content="Graphes"
                            Icon="{ui:SymbolIcon DataLine24}"
-                           ToolTip="Titre et légende des graphes, axes Y automatiques ou manuels, alignement des zéros (aussi : clic droit sur un graphe)"
+                           ToolTip="Titres, légendes et axes Y des graphes (aussi : clic droit sur un graphe)"
                            Command="{Binding EditAxesCommand}" />
                 <ui:Button Margin="12,2,0,2"
                            Content="Calculs"
@@ -194,7 +194,7 @@
                 </ui:Button>
                 <ToggleButton Margin="8,2,0,2"
                               Padding="11,5"
-                              ToolTip="Deux curseurs X1 et X2 à faire glisser sur le graphe : valeurs, écart, min, max, moyenne et valeur efficace entre les deux (Ctrl+M)"
+                              ToolTip="Deux curseurs verticaux X1 et X2 : écart, min, max, moyenne et valeur efficace entre les deux (Ctrl+M)"
                               IsChecked="{Binding IsMeasuring}"
                               IsEnabled="{Binding HasData}">
                     <StackPanel Orientation="Horizontal">
@@ -204,7 +204,7 @@
                 </ToggleButton>
                 <ToggleButton Margin="4,2,0,2"
                               Padding="11,5"
-                              ToolTip="Deux curseurs horizontaux Y1 et Y2 à faire glisser sur un graphe : niveaux et écart sur l'axe Y choisi (Ctrl+Maj+M)"
+                              ToolTip="Deux curseurs horizontaux Y1 et Y2 : niveaux et écart sur un axe Y (Ctrl+Maj+M)"
                               IsChecked="{Binding IsMeasuringY}"
                               IsEnabled="{Binding HasData}">
                     <StackPanel Orientation="Horizontal">
@@ -218,7 +218,7 @@
                 </ToggleButton>
                 <ui:Button Margin="8,2,0,2"
                            Icon="{ui:SymbolIcon Eraser24}"
-                           ToolTip="Tout désélectionner (masquer toutes les courbes). Clic droit : réinitialiser la mise en page"
+                           ToolTip="Masquer toutes les courbes.&#10;Clic droit : réinitialiser la mise en page."
                            Command="{Binding ClearSelectionCommand}">
                     <ui:Button.ContextMenu>
                         <ContextMenu>
@@ -226,7 +226,7 @@
                                       Icon="{ui:SymbolIcon Eraser24}"
                                       Command="{Binding ClearSelectionCommand}" />
                             <MenuItem Header="Réinitialiser la mise en page"
-                                      ToolTip="Comme à la première ouverture du fichier : un graphe, aucune courbe, noms et styles d'origine, sans courbes calculées ni curseurs de mesure (Ctrl+Z pour annuler)"
+                                      ToolTip="Revenir à l'état du fichier à l'ouverture :&#10;un graphe vide, noms et styles d'origine, sans courbes calculées ni curseurs.&#10;Ctrl+Z pour annuler."
                                       Icon="{ui:SymbolIcon ArrowReset24}"
                                       Command="{Binding ResetLayoutCommand}" />
                         </ContextMenu>
@@ -443,7 +443,7 @@
                                         <!-- Tag carries the main view model to the context menu, which is outside the visual tree. -->
                                         <Grid Margin="0,2" Background="Transparent" Cursor="Hand"
                                               Tag="{Binding DataContext, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
-                                              ToolTip="Clic : afficher cette annotation. Double-clic : réglages. Clic droit : menu"
+                                              ToolTip="Clic : afficher. Double-clic : réglages. Clic droit : menu."
                                               ToolTipService.InitialShowDelay="1200">
                                             <Grid.InputBindings>
                                                 <MouseBinding MouseAction="LeftClick"
@@ -685,7 +685,7 @@
                                        Command="{Binding ToggleMeasureYCommand}" />
                             <TextBlock VerticalAlignment="Center" FontWeight="SemiBold" Text="Mesures entre Y1 et Y2" />
                             <ComboBox Margin="12,0,0,0" MinWidth="220" HorizontalAlignment="Left" VerticalAlignment="Center"
-                                      ToolTip="L'axe Y sur lequel Y1 et Y2 sont mesurés (aussi : clic droit sur un graphe, « Placer le curseur Y1 ici »)"
+                                      ToolTip="Axe Y mesuré par Y1 et Y2 (aussi : clic droit sur un graphe)"
                                       ItemsSource="{Binding MeasureYAxisChoices}"
                                       SelectedValuePath="Value"
                                       DisplayMemberPath="Label"

@@ -124,7 +124,7 @@
                                     <TextBlock DockPanel.Dock="Right" Margin="0,0,10,0" VerticalAlignment="Center" Text="Légende" />
                                     <CheckBox DockPanel.Dock="Left" VerticalAlignment="Center"
                                               Content="Aligner les axes Y"
-                                              ToolTip="Les valeurs de référence des axes (0 par défaut, réglables ci-dessous) sont à la même hauteur"
+                                              ToolTip="Aligner les valeurs de référence des axes (0 par défaut, réglables ci-dessous)"
                                               IsChecked="{Binding Graph.AlignZeros}"
                                               Visibility="{Binding CanAlignZeros, Converter={StaticResource BoolToVisibility}}" />
                                 </DockPanel>
@@ -236,7 +236,7 @@
                                                                Visibility="{Binding Settings.HasError, Converter={StaticResource BoolToVisibility}}" />
                                                 </StackPanel>
                                                 <StackPanel Grid.Column="5" Margin="10,0,0,0" Orientation="Horizontal" VerticalAlignment="Center"
-                                                            ToolTip="Valeur de cet axe placée à la même hauteur que celle des autres axes (ex. 1000 mbar absolu avec 0 mbar relatif)"
+                                                            ToolTip="Valeur alignée sur celle des autres axes (ex. 1000 mbar absolu face à 0 mbar relatif)"
                                                             Visibility="{Binding DataContext.ShowAlignValues, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource BoolToVisibility}}">
                                                     <TextBlock Margin="0,0,6,0" VerticalAlignment="Center" Text="aligné sur" />
                                                     <ui:TextBox Width="70" Text="{Binding Settings.AlignValueText}" KeyDown="OnBoundKeyDown" />
