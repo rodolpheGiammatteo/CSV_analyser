@@ -112,6 +112,7 @@ public partial class MainViewModel : ObservableObject, IChannelHost
         _checkUpdatesAtStartup = settings.CheckUpdatesAtStartup;
         ChannelsView = CollectionViewSource.GetDefaultView(Channels);
         ChannelsView.Filter = o => MatchesSearch((ChannelItemViewModel)o);
+        Channels.CollectionChanged += (_, _) => SyncComputedXAxisOptions();
         PlottedChannels.CollectionChanged += (_, _) =>
         {
             OnPropertyChanged(nameof(ShowPlotHint));
@@ -251,6 +252,7 @@ public partial class MainViewModel : ObservableObject, IChannelHost
     private void ApplyDataset(Dataset dataset)
     {
         _suppressPlotEvents = true;
+        _xAxisSyncSuspended = true;
         try
         {
             PlottedChannels.Clear();
@@ -286,6 +288,7 @@ public partial class MainViewModel : ObservableObject, IChannelHost
         finally
         {
             _suppressPlotEvents = false;
+            _xAxisSyncSuspended = false;
         }
         RaisePlotChanged(PlotChange.Dataset);
     }
@@ -479,6 +482,35 @@ public partial class MainViewModel : ObservableObject, IChannelHost
         || item.Channel.SourceName.Contains(SearchText.Trim(), StringComparison.CurrentCultureIgnoreCase);
 
     partial void OnSearchTextChanged(string value) => ChannelsView.Refresh();
+
+    /// <summary>While the whole list is rebuilt (file opened, configuration or undo): synced once at the end.</summary>
+    private bool _xAxisSyncSuspended;
+
+    /// <summary>
+    /// The computed curves are X axis choices too (after the file's columns). An edited curve is a new channel: the
+    /// X axis follows it; a deleted one gives the X axis back to the default (time, else row number).
+    /// </summary>
+    private void SyncComputedXAxisOptions()
+    {
+        if (Dataset is null || _xAxisSyncSuspended)
+            return;
+        var computed = Channels.Where(c => c.IsComputed).Select(c => c.Channel).ToList();
+        var selected = SelectedXAxis;
+        foreach (var stale in XAxisOptions.Where(o => o.IsComputed && !computed.Contains(o.Channel!)).ToList())
+            XAxisOptions.Remove(stale);
+        XAxisOption? successor = null;
+        foreach (var channel in computed)
+        {
+            if (XAxisOptions.Any(o => o.Channel == channel))
+                continue;
+            var option = new XAxisOption(channel, isComputed: true);
+            XAxisOptions.Add(option);
+            if (selected?.Channel is { } old && old.SourceName == channel.SourceName)
+                successor = option;
+        }
+        if (selected is not null && !XAxisOptions.Contains(selected))
+            SelectedXAxis = successor ?? XAxisOptions.FirstOrDefault();
+    }
 
     partial void OnSelectedXAxisChanged(XAxisOption? value)
     {

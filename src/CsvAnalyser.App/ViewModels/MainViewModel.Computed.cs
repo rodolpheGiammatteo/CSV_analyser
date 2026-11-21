@@ -354,6 +354,21 @@ public partial class MainViewModel
     /// <summary>Configurations: removes the computed curves, then creates those of the configuration. Returns the errors.</summary>
     private List<string> RebuildComputed(IReadOnlyList<ComputedCurveConfig> definitions)
     {
+        // Removed then put back: the X axis must not leave a computed curve in between.
+        _xAxisSyncSuspended = true;
+        try
+        {
+            return RebuildComputedCore(definitions);
+        }
+        finally
+        {
+            _xAxisSyncSuspended = false;
+            SyncComputedXAxisOptions();
+        }
+    }
+
+    private List<string> RebuildComputedCore(IReadOnlyList<ComputedCurveConfig> definitions)
+    {
         // A curve whose definition did not change is kept as is (undo/redo stays fast on big files).
         static string Key(ComputedCurveConfig d) => System.Text.Json.JsonSerializer.Serialize(d);
         var previous = new Dictionary<string, ChannelItemViewModel>();

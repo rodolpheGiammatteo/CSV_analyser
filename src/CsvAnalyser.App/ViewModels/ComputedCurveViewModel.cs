@@ -94,6 +94,11 @@ public sealed partial class ComputedCurveViewModel : ObservableObject
 
     private string TimeUnit => _main.HasTimeBase ? "s" : L.T("lignes");
 
+    /// <summary>What <c>t</c> is in a formula, with its unit: the time column, or the row number without one.</summary>
+    public string TimeHelp => _main.HasTimeBase && _main.Dataset?.Time?.Channel is { } time
+        ? (time.Unit.Length > 0 ? L.F(" = temps, en {0}", time.Unit) : L.T(" = temps"))
+        : L.T(" = n° de ligne (pas de colonne de temps)");
+
     public string ParameterLabel => Kind == ComputedCurveConfig.MovingAverage
         ? L.F("Largeur de la fenêtre ({0})", TimeUnit)
         : _main.HasTimeBase ? L.T("Fréquence de coupure (Hz)") : L.T("Fréquence de coupure (cycles par ligne)");

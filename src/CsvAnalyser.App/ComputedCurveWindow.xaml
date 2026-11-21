@@ -125,7 +125,7 @@
 
                         <TextBlock Grid.Row="5" Style="{StaticResource Term}" Text="Valeurs" />
                         <TextBlock Grid.Row="5" Grid.Column="1" Style="{StaticResource Code}">
-                            <Run Text="t" /><Run Style="{StaticResource Note}" Text=" = temps   " /><Run Text="pi  e" /><Run Style="{StaticResource Note}" Text="   décimales avec un point : " /><Run Text="1.5" />
+                            <Run Text="t" /><Run Style="{StaticResource Note}" Text="{Binding TimeHelp, Mode=OneWay}" /><Run Style="{StaticResource Note}" Text="   " /><Run Text="pi  e" /><Run Style="{StaticResource Note}" Text="   décimales avec un point : " /><Run Text="1.5" />
                         </TextBlock>
 
                         <TextBlock Grid.Row="6" Style="{StaticResource Term}" Text="Arguments" />

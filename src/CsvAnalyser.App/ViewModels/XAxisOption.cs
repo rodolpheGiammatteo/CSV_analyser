@@ -9,15 +9,20 @@ public sealed class XAxisOption : ObservableObject
     private readonly bool _isTime;
     private double[]? _rowIndex;
 
-    public XAxisOption(Channel? channel, bool isTime = false)
+    public XAxisOption(Channel? channel, bool isTime = false, bool isComputed = false)
     {
         Channel = channel;
         _isTime = isTime;
+        IsComputed = isComputed;
     }
+
+    /// <summary>A computed curve (e.g. t/60 to read the time in minutes): follows the list of computed curves.</summary>
+    public bool IsComputed { get; }
 
     /// <summary>Follows the channel's display name (call <see cref="RefreshLabel"/> after a rename).</summary>
     public string Label => Channel is null ? L.T("N° de ligne")
         : _isTime ? L.F("Temps — {0}", Channel.DisplayName)
+        : IsComputed ? "ƒ " + Channel.DisplayName
         : Channel.DisplayName;
 
     public Channel? Channel { get; }

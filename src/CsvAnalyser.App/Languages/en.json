@@ -13,7 +13,6 @@
     "   séparés par ; ou ,": "   separated by ; or ,",
     "   valeurs négatives mises à 0": "   negative values set to 0",
     "   —   {0:N0} points": "   —   {0:N0} points",
-    " = temps   ": " = time   ",
     " — début {0:dd/MM/yyyy HH:mm:ss}": " — start {0:dd/MM/yyyy HH:mm:ss}",
     " — mise en page précédente retrouvée": " — previous layout restored",
     " — {0} colonne(s) texte ignorée(s)": " — {0} text column(s) ignored",
@@ -503,6 +502,9 @@
     "Revenir à l'état du fichier à l'ouverture :\nun graphe vide, noms et styles d'origine, sans courbes calculées ni curseurs.\nCtrl+Z pour annuler.": "Back to the file as first opened:\none empty graph, original names and styles, no computed curves or cursors.\nCtrl+Z to undo.",
     "Tout ajuster : X et Y, axes manuels compris.\nClic droit : tout remettre en automatique.": "Fit everything: X and Y, manual axes included.\nRight-click: everything back to automatic.",
     "Titres, légendes et axes Y des graphes": "Titles, legends and Y axes of the graphs",
-    "Axe Y mesuré par Y1 et Y2": "Y axis measured by Y1 and Y2"
+    "Axe Y mesuré par Y1 et Y2": "Y axis measured by Y1 and Y2",
+    " = temps, en {0}": " = time, in {0}",
+    " = temps": " = time",
+    " = n° de ligne (pas de colonne de temps)": " = row number (no time column)"
   }
 }
