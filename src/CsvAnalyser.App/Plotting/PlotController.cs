@@ -42,7 +42,15 @@ public sealed partial class PlotController : IPlotView
     /// <param name="Curve">The SignalXY (sorted X) or Scatter (unsorted X) drawing the data.</param>
     /// <param name="Marker">The dot that follows the vertical cursor.</param>
     /// <param name="Label">The value written next to the marker (option "valeurs dans les graphes").</param>
-    private sealed record Series(ChannelItemViewModel Item, double[] Ys, IPlottable Curve, Marker Marker, Text Label, GraphRender Graph, IYAxis Axis);
+    private sealed record Series(ChannelItemViewModel Item, double[] Ys, IPlottable Curve, Marker Marker, Text Label, GraphRender Graph, IYAxis Axis)
+    {
+        /// <summary>Spaced markers (sorted X only): placed before each render by <see cref="PlaceSpacedMarkers"/>.</summary>
+        public Scatter? Spaced { get; init; }
+
+        public List<double> SpacedXs { get; init; } = [];
+
+        public List<double> SpacedYs { get; init; } = [];
+    }
 
     private sealed class AxisRender(string key, AxisSpec spec, IYAxis axis)
     {
@@ -426,7 +434,18 @@ public sealed partial class PlotController : IPlotView
                 label.LabelStyle.BorderRadius = 4 * _scale;
                 label.LabelStyle.Padding = 3 * _scale;
 
-                var series = pending with { Marker = marker, Label = label };
+                Scatter? spaced = null;
+                List<double> spacedXs = [], spacedYs = [];
+                if (pending.Curve is SignalXY)
+                {
+                    // The scatter reads these lists, filled before each render; drawn over the line.
+                    spaced = plot.Add.ScatterPoints(spacedXs, spacedYs, pending.Item.Color);
+                    spaced.Axes.YAxis = axis;
+                    spaced.LineWidth = 0;
+                    spaced.LegendText = "";
+                    spaced.IsVisible = false;
+                }
+                var series = pending with { Marker = marker, Label = label, Spaced = spaced, SpacedXs = spacedXs, SpacedYs = spacedYs };
                 _series.Add(series);
                 ApplyAppearance(series);
             }
@@ -640,8 +659,16 @@ public sealed partial class PlotController : IPlotView
                 signal.LegendText = item.LegendText;
                 signal.LineWidth = item.IsLineVisible ? (float)item.LineWidth * _scale : 0;
                 signal.LinePattern = ToPattern(item.Line);
+                bool spaced = item.HasMarkers && item.MarkerSpacing > 0 && s.Spaced is not null;
                 signal.MarkerShape = ToShape(item.Marker);
-                signal.MarkerSize = item.HasMarkers ? (float)item.MarkerSize * _scale : 0;
+                signal.MarkerSize = item.HasMarkers && !spaced ? (float)item.MarkerSize * _scale : 0;
+                if (s.Spaced is { } markers)
+                {
+                    markers.IsVisible = spaced;
+                    markers.Color = item.Color.WithAlpha(item.Opacity);
+                    markers.MarkerShape = ToShape(item.Marker);
+                    markers.MarkerSize = (float)item.MarkerSize * _scale;
+                }
                 break;
 
             case Scatter scatter:
@@ -853,6 +880,7 @@ public sealed partial class PlotController : IPlotView
             owner.KeepZerosAligned();
             owner.PlaceMeasureMarks();
             owner.PlaceAnnotationLabels();
+            owner.PlaceSpacedMarkers();
             owner.MatchPaddings();
         }
     }

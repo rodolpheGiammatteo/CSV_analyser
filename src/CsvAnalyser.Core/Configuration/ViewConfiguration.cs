@@ -260,6 +260,9 @@ public sealed class CurveConfig
 
     public double? MarkerSize { get; set; }
 
+    /// <summary>Markers about every this many pixels on screen; null or 0 = one per sample.</summary>
+    public int? MarkerSpacing { get; set; }
+
     /// <summary>0.1 to 1; null = opaque.</summary>
     public double? Opacity { get; set; }
 }

@@ -109,6 +109,7 @@ public partial class MainViewModel
             LineWidth = item.LineWidth != CurveStyleChoices.DefaultLineWidth ? item.LineWidth : null,
             Marker = item.Marker != CurveMarker.None ? item.Marker.ToString() : null,
             MarkerSize = item.MarkerSize != CurveStyleChoices.DefaultMarkerSize ? item.MarkerSize : null,
+            MarkerSpacing = item.MarkerSpacing > 0 ? item.MarkerSpacing : null,
             Opacity = item.Opacity != 1 ? item.Opacity : null,
         };
     }
@@ -199,6 +200,8 @@ public partial class MainViewModel
                     item.Marker = marker;
                 if (cc.MarkerSize is { } size && double.IsFinite(size))
                     item.MarkerSize = Math.Clamp(size, 2, 16);
+                if (cc.MarkerSpacing is { } spacing)
+                    item.MarkerSpacing = Math.Clamp(spacing, 0, 400);
                 if (cc.Opacity is { } opacity && double.IsFinite(opacity))
                     item.Opacity = Math.Clamp(opacity, 0.1, 1);
                 if (cc.Color is { } hex)

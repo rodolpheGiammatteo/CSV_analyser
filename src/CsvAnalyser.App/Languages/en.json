@@ -347,7 +347,6 @@
     "Toutes les données": "All data",
     "Trait": "Line",
     "Type de calcul inconnu : {0}.": "Unknown calculation type: {0}.",
-    "Un point par échantillon : utile pour voir les mesures réelles en zoomant.": "One point per sample: useful to see the real measurements when zooming in.",
     "Une courbe bruitée rendue transparente ne cache plus les autres": "A noisy curve made transparent no longer hides the others",
     "Une courbe ne peut pas se calculer à partir d'elle-même.": "A curve cannot be computed from itself.",
     "Une courbe s'appelle déjà « {0} ».": "A curve is already called \"{0}\".",
@@ -505,6 +504,12 @@
     "Axe Y mesuré par Y1 et Y2": "Y axis measured by Y1 and Y2",
     " = temps, en {0}": " = time, in {0}",
     " = temps": " = time",
-    " = n° de ligne (pas de colonne de temps)": " = row number (no time column)"
+    " = n° de ligne (pas de colonne de temps)": " = row number (no time column)",
+    "Un par point": "One per point",
+    "Espacés : serrés": "Spaced: close",
+    "Espacés : moyens": "Spaced: medium",
+    "Espacés : larges": "Spaced: wide",
+    "Espacement": "Spacing",
+    "Un par point : les mesures réelles, visibles en zoomant. Espacés : à intervalles réguliers à l'écran, lisibles même avec beaucoup de points.": "One per point: the real measurements, visible when zoomed in. Spaced: at regular intervals on screen, readable even with many points."
   }
 }

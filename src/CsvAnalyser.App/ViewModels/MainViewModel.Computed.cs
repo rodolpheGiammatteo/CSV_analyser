@@ -173,6 +173,7 @@ public partial class MainViewModel
         to.LineWidth = from.LineWidth;
         to.Marker = from.Marker;
         to.MarkerSize = from.MarkerSize;
+        to.MarkerSpacing = from.MarkerSpacing;
         to.Opacity = from.Opacity;
         if (from.IsColorCustom)
             to.ColorHex = from.ColorHex;

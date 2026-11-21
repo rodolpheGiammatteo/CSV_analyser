@@ -53,6 +53,10 @@ public partial class ChannelItemViewModel : ObservableObject
     [ObservableProperty]
     private double _markerSize = CurveStyleChoices.DefaultMarkerSize;
 
+    /// <summary>0 = a marker on every sample; else about one marker every this many pixels (readable on dense curves).</summary>
+    [ObservableProperty]
+    private int _markerSpacing;
+
     /// <summary>Opacity of the curve, 0.1 to 1 (a noisy curve made transparent no longer hides the others).</summary>
     [ObservableProperty]
     private double _opacity = 1;
@@ -128,7 +132,7 @@ public partial class ChannelItemViewModel : ObservableObject
     public bool IsDefaultAppearance =>
         Name == _originalName && Unit == _originalUnit && !IsColorCustom
         && Line == CurveLine.Solid && LineWidth == CurveStyleChoices.DefaultLineWidth
-        && Marker == CurveMarker.None && MarkerSize == CurveStyleChoices.DefaultMarkerSize && Opacity == 1
+        && Marker == CurveMarker.None && MarkerSize == CurveStyleChoices.DefaultMarkerSize && MarkerSpacing == 0 && Opacity == 1
         && AxisChoice == AutoAxis;
 
     public bool IsLineVisible => Line != CurveLine.None;
@@ -191,6 +195,7 @@ public partial class ChannelItemViewModel : ObservableObject
         LineWidth = CurveStyleChoices.DefaultLineWidth;
         Marker = CurveMarker.None;
         MarkerSize = CurveStyleChoices.DefaultMarkerSize;
+        MarkerSpacing = 0;
         Opacity = 1;
         AxisChoice = AutoAxis;
         UseAutoColor();
@@ -226,6 +231,8 @@ public partial class ChannelItemViewModel : ObservableObject
     partial void OnMarkerChanged(CurveMarker value) => _host.OnAppearanceChanged(this);
 
     partial void OnMarkerSizeChanged(double value) => _host.OnAppearanceChanged(this);
+
+    partial void OnMarkerSpacingChanged(int value) => _host.OnAppearanceChanged(this);
 
     partial void OnOpacityChanged(double value) => _host.OnAppearanceChanged(this);
 

@@ -33,6 +33,15 @@ public static class CurveStyleChoices
     public const double DefaultLineWidth = 1.5;
     public const double DefaultMarkerSize = 5;
 
+    /// <summary>Marker spacing in pixels (0 = one marker per sample).</summary>
+    public static IReadOnlyList<StyleChoice<int>> MarkerSpacings { get; } =
+    [
+        new(0, "Un par point"),
+        new(25, "Espacés : serrés"),
+        new(50, "Espacés : moyens"),
+        new(100, "Espacés : larges"),
+    ];
+
     public static IReadOnlyList<StyleChoice<CurveLine>> Lines { get; } =
     [
         new(CurveLine.Solid, "Continu", Freeze([])),

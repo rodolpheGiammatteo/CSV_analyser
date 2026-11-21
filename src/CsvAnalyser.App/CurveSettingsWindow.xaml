@@ -191,8 +191,15 @@
                     <Slider Minimum="2" Maximum="16" TickFrequency="1" IsSnapToTickEnabled="True" Value="{Binding MarkerSize}" />
                 </StackPanel>
             </Grid>
+            <DockPanel Margin="0,4,0,4" Visibility="{Binding HasMarkers, Converter={StaticResource BoolToVisibility}}">
+                <TextBlock DockPanel.Dock="Left" Width="90" VerticalAlignment="Center" Text="Espacement" />
+                <ComboBox ItemsSource="{x:Static vm:CurveStyleChoices.MarkerSpacings}"
+                          SelectedValuePath="Value"
+                          DisplayMemberPath="Label"
+                          SelectedValue="{Binding MarkerSpacing}" />
+            </DockPanel>
             <TextBlock Foreground="{DynamicResource AppSecondaryTextBrush}" TextWrapping="Wrap"
-                       Text="Un point par échantillon : utile pour voir les mesures réelles en zoomant." />
+                       Text="Un par point : les mesures réelles, visibles en zoomant. Espacés : à intervalles réguliers à l'écran, lisibles même avec beaucoup de points." />
 
             <!-- Opacité -->
             <DockPanel Margin="0,18,0,0">
