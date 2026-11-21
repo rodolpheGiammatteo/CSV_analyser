@@ -190,17 +190,38 @@ public partial class MainViewModel
             SpectrumRequested?.Invoke(this, graph);
     }
 
-    /// <summary>Time used by the filters: the time column when it is ascending, else the row number.</summary>
+    /// <summary>
+    /// Time used by the filters: the time column when it is ascending; when it goes back now and then (a clock
+    /// resynced during the recording), that time stitched so it never decreases (<see cref="AscendingRuns.Stitch"/>);
+    /// else the row number.
+    /// </summary>
     public double[] TimeBase()
     {
         var ds = Dataset!;
-        if (ds.Time?.Channel is { IsSortedAscending: true } time)
-            return time.Values;
-        return XAxisOptions.First(o => o.Channel is null).GetValues(ds);
+        if (ds.Time?.Channel is { } time)
+        {
+            if (time.IsSortedAscending)
+                return time.Values;
+            if (AscendingRuns.IsMostlyAscending(time.Values))
+                return AscendingRuns.Stitch(time.Values);
+        }
+        return RowNumbers(ds);
     }
 
+    /// <summary><c>t</c> in a formula: the time column as it is (so <c>t / 60</c> matches the time axis), else the row number.</summary>
+    private double[] FormulaTime()
+    {
+        var ds = Dataset!;
+        return ds.Time?.Channel is { } time && (time.IsSortedAscending || AscendingRuns.IsMostlyAscending(time.Values))
+            ? time.Values
+            : RowNumbers(ds);
+    }
+
+    private double[] RowNumbers(Dataset ds) => XAxisOptions.First(o => o.Channel is null).GetValues(ds);
+
     /// <summary>True when the filters work in seconds (else in rows).</summary>
-    public bool HasTimeBase => Dataset?.Time?.Channel is { IsSortedAscending: true };
+    public bool HasTimeBase => Dataset?.Time?.Channel is { } time
+        && (time.IsSortedAscending || AscendingRuns.IsMostlyAscending(time.Values));
 
     /// <summary>A curve by column name, then by displayed name, then by "name [unit]".</summary>
     public ChannelItemViewModel? FindCurve(string name) =>
@@ -235,7 +256,7 @@ public partial class MainViewModel
         if (def.Kind == ComputedCurveConfig.Formula)
         {
             var formula = Formula.Parse(def.Expression ?? "");
-            var t = TimeBase();
+            var t = FormulaTime();
             return formula.Evaluate(ds.RowCount, name =>
                 name is "t" or "T" && FindCurve(name) is null ? t : FindCurve(name)?.Channel.Values);
         }

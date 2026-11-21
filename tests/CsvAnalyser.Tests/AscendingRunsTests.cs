@@ -34,6 +34,34 @@ public class AscendingRunsTests
     }
 
     [Fact]
+    public void Stitch_ReplacesTheStepBackByTheUsualStep()
+    {
+        // 10 Hz, clock resynced 4.6 s back after 0.4 s.
+        double[] t = [0, 0.1, 0.2, 0.3, 0.4, -4.2, -4.1, -4.0];
+        var s = AscendingRuns.Stitch(t);
+        double[] expected = [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7];
+        for (int i = 0; i < t.Length; i++)
+            Assert.Equal(expected[i], s[i], 9);
+    }
+
+    [Fact]
+    public void Stitch_MissingValues_AdvanceOneStepEachWithoutCountingTwice()
+    {
+        double[] t = [double.NaN, 1, 2, double.NaN, double.NaN, 5, 6];
+        var s = AscendingRuns.Stitch(t);
+        double[] expected = [0, 1, 2, 3, 4, 5, 6];
+        for (int i = 0; i < t.Length; i++)
+            Assert.Equal(expected[i], s[i], 9);
+    }
+
+    [Fact]
+    public void Stitch_SortedTime_IsUnchanged()
+    {
+        double[] t = [3, 3.5, 4, 7, 7.25];
+        Assert.Equal(t, AscendingRuns.Stitch(t));
+    }
+
+    [Fact]
     public void MostlyAscending_AllowsAFewStepsBack()
     {
         var once = Enumerable.Range(0, 300).Select(i => i * 0.1 - (i >= 150 ? 4.6 : 0)).ToArray();

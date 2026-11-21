@@ -47,6 +47,67 @@ public static class AscendingRuns
     }
 
     /// <summary>
+    /// A strictly usable time base for the filters, from a time that goes back now and then: each step back (or
+    /// missing value) is replaced by the usual sampling step (median of the forward steps), every other step is kept.
+    /// The result never decreases and has no NaN; durations inside each ascending run are unchanged.
+    /// </summary>
+    public static double[] Stitch(double[] t)
+    {
+        var result = new double[t.Length];
+        if (t.Length == 0)
+            return result;
+
+        var forward = new List<double>();
+        double last = double.NaN;
+        foreach (double v in t)
+        {
+            if (!double.IsFinite(v))
+                continue;
+            if (double.IsFinite(last) && v > last)
+                forward.Add(v - last);
+            last = v;
+            if (forward.Count >= 10_000)
+                break;
+        }
+        forward.Sort();
+        double step = forward.Count > 0 ? forward[forward.Count / 2] : 1;
+
+        // anchor = stitched value of the last finite sample; missing samples in between advance by one step each.
+        double previousRaw = double.NaN, anchor = 0;
+        int missing = 0;
+        bool started = false;
+        for (int i = 0; i < t.Length; i++)
+        {
+            double v = t[i];
+            if (!double.IsFinite(v))
+            {
+                if (started)
+                    missing++;
+                result[i] = anchor + step * missing;
+                continue;
+            }
+            double value;
+            if (!started)
+                value = v;
+            else if (double.IsFinite(previousRaw) && v >= previousRaw)
+                value = Math.Max(anchor + (v - previousRaw), anchor + step * missing);
+            else
+                value = anchor + step * (missing + 1);
+            if (!started)
+            {
+                // Leading missing samples: placed before the first time, one step apart.
+                for (int k = 0; k < i; k++)
+                    result[k] = v - step * (i - k);
+                started = true;
+            }
+            result[i] = anchor = value;
+            previousRaw = v;
+            missing = 0;
+        }
+        return result;
+    }
+
+    /// <summary>
     /// A time column that goes back a few times (at most <paramref name="maxBackSteps"/>) but mostly increases:
     /// at least 99 % of its finite values are in order and it ends later than it starts.
     /// </summary>
