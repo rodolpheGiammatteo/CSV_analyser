@@ -132,10 +132,14 @@ public sealed class AppSettings
                     continue; // another window may have changed it: keep the file's value
                 if (key == nameof(RecentFiles) && disk[key] is JsonArray others)
                 {
+                    // The other window's files are kept, except those this window removed (cleared list, missing file).
+                    var removedHere = (before is null ? [] : JsonSerializer.Deserialize<List<string>>(before) ?? [])
+                        .Where(p => !RecentFiles.Contains(p, StringComparer.OrdinalIgnoreCase))
+                        .ToHashSet(StringComparer.OrdinalIgnoreCase);
                     var merged = RecentFiles.ToList();
                     foreach (var path in others.Select(n => n?.GetValue<string>()).OfType<string>())
                     {
-                        if (!merged.Contains(path, StringComparer.OrdinalIgnoreCase))
+                        if (!merged.Contains(path, StringComparer.OrdinalIgnoreCase) && !removedHere.Contains(path))
                             merged.Add(path);
                     }
                     disk[key] = JsonSerializer.SerializeToNode(merged.Take(MaxRecentFiles).ToList());
