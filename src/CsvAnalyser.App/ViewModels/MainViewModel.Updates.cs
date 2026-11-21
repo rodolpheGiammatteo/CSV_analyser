@@ -10,6 +10,32 @@ public partial class MainViewModel
 {
     public string AppVersionText => L.F("Version {0}", AppInfo.Version);
 
+    /// <summary>Tag of a newer version found on GitHub ("v5.4.30"): shows the toolbar button until the program closes.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasAvailableUpdate), nameof(AvailableUpdateText))]
+    private string? _availableUpdate;
+
+    private string? _availableUpdatePage;
+
+    public bool HasAvailableUpdate => AvailableUpdate is not null;
+
+    public string AvailableUpdateText => AvailableUpdate is null ? "" : L.F("Version {0} disponible", AvailableUpdate.TrimStart('v', 'V'));
+
+    /// <summary>The toolbar button: opens the download page of the newer version.</summary>
+    [RelayCommand]
+    private void OpenAvailableUpdate() => OpenReleasePage(_availableUpdatePage);
+
+    private void NoteUpdate(UpdateCheckResult result)
+    {
+        if (result.Status == UpdateStatus.Available)
+        {
+            _availableUpdatePage = result.PageUrl;
+            AvailableUpdate = result.LatestVersion;
+        }
+        else if (result.Status == UpdateStatus.UpToDate)
+            AvailableUpdate = null;
+    }
+
     /// <summary>Look for a newer version when the program starts (quietly: only a newer version is reported).</summary>
     [ObservableProperty]
     private bool _checkUpdatesAtStartup;
@@ -25,6 +51,7 @@ public partial class MainViewModel
     private async Task CheckForUpdates()
     {
         var result = await UpdateChecker.CheckAsync(AppInfo.Version);
+        NoteUpdate(result);
         string title = L.T("Mise à jour");
         switch (result.Status)
         {
@@ -46,7 +73,10 @@ public partial class MainViewModel
         }
     }
 
-    /// <summary>At startup, when the option is on: a newer version is announced in the status bar, nothing else is shown.</summary>
+    /// <summary>
+    /// At startup, when the option is on: a newer version shows a button in the toolbar (and a line in the status bar,
+    /// which the next message replaces); nothing is shown when up to date or offline.
+    /// </summary>
     public async Task CheckUpdatesQuietlyAsync()
     {
         if (!CheckUpdatesAtStartup)
@@ -60,6 +90,7 @@ public partial class MainViewModel
         {
             return; // quiet at startup: the button reports errors
         }
+        NoteUpdate(result);
         if (result.Status == UpdateStatus.Available)
             StatusText = L.F("Nouvelle version disponible : {0} (Paramètres → Rechercher une mise à jour)", result.LatestVersion);
     }

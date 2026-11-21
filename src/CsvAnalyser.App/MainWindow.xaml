@@ -73,6 +73,16 @@
                        Content="Paramètres"
                        Icon="{ui:SymbolIcon Settings24}"
                        Click="OnOpenSettings" />
+            <!-- Shown only when a newer version was found on GitHub -->
+            <ui:Button DockPanel.Dock="Right"
+                       VerticalAlignment="Top"
+                       Margin="8,0,0,0"
+                       Appearance="Success"
+                       Icon="{ui:SymbolIcon ArrowDownload24}"
+                       Content="{Binding AvailableUpdateText}"
+                       ToolTip="Une nouvelle version est disponible : ouvrir sa page de téléchargement"
+                       Visibility="{Binding HasAvailableUpdate, Converter={StaticResource BoolToVisibility}}"
+                       Command="{Binding OpenAvailableUpdateCommand}" />
             <WrapPanel>
                 <WrapPanel.Resources>
                     <Style TargetType="ui:Button" BasedOn="{StaticResource {x:Type ui:Button}}">
