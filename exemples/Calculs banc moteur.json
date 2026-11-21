@@ -1,0 +1,98 @@
+{
+  "format": "CsvAnalyser.Configuration",
+  "version": 1,
+  "sourceFile": "Banc moteur.csv",
+  "xAxis": "Date",
+  "graphColumns": 2,
+  "graphs": [
+    {
+      "title": "Puissances mécanique et électrique"
+    },
+    {
+      "title": "Vibration et niveau moyen (moyenne glissante 1 s)"
+    },
+    {
+      "title": "Rendement"
+    },
+    {
+      "title": "Énergie consommée"
+    }
+  ],
+  "computed": [
+    {
+      "name": "Puissance",
+      "unit": "kW",
+      "kind": "Formula",
+      "expression": "[Couple [N.m]] * [Vitesse [tr/min]] * 2 * pi / 60 / 1000"
+    },
+    {
+      "name": "Vibration redressée",
+      "unit": "mm/s",
+      "kind": "Formula",
+      "expression": "abs([Vibration [mm/s]])"
+    },
+    {
+      "name": "Niveau vibratoire",
+      "unit": "mm/s",
+      "kind": "MovingAverage",
+      "source": "Vibration redressée",
+      "parameter": 1
+    },
+    {
+      "name": "Puissance électrique",
+      "unit": "kW",
+      "kind": "Formula",
+      "expression": "[Tension bus [V]] * [Courant [A]] / 1000"
+    },
+    {
+      "name": "Rendement",
+      "unit": "%",
+      "kind": "Formula",
+      "expression": "if([Puissance électrique] > 0.3, 100 * [Puissance] / [Puissance électrique], 0 / 0)"
+    },
+    {
+      "name": "Énergie",
+      "unit": "kJ",
+      "kind": "Integral",
+      "source": "Puissance électrique"
+    }
+  ],
+  "curves": [
+    {
+      "column": "Puissance",
+      "plotted": true,
+      "graph": 0,
+      "lineWidth": 1.5
+    },
+    {
+      "column": "Puissance électrique",
+      "plotted": true,
+      "graph": 0,
+      "lineWidth": 1.5
+    },
+    {
+      "column": "Vibration [mm/s]",
+      "plotted": true,
+      "graph": 1,
+      "opacity": 0.4
+    },
+    {
+      "column": "Niveau vibratoire",
+      "plotted": true,
+      "graph": 1,
+      "lineWidth": 2.5
+    },
+    {
+      "column": "Rendement",
+      "plotted": true,
+      "graph": 2,
+      "lineWidth": 1.5
+    },
+    {
+      "column": "Énergie",
+      "plotted": true,
+      "graph": 3,
+      "lineWidth": 2
+    }
+  ]
+}

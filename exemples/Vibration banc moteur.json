@@ -1,0 +1,30 @@
+{
+  "format": "CsvAnalyser.Configuration",
+  "version": 1,
+  "sourceFile": "Banc moteur.csv",
+  "xAxis": "Date",
+  "graphs": [
+    {
+      "title": "Vibration au palier 1500 tr/min"
+    }
+  ],
+  "xRange": {
+    "min": 20.0,
+    "max": 20.4
+  },
+  "curves": [
+    {
+      "column": "Vibration [mm/s]",
+      "plotted": true,
+      "graph": 0,
+      "marker": "Circle",
+      "markerSize": 5,
+      "lineWidth": 1.5
+    }
+  ],
+  "measure": {
+    "enabled": true,
+    "a": 20.1,
+    "b": 20.14
+  }
+}

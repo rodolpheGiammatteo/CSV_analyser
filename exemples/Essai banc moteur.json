@@ -1,0 +1,86 @@
+{
+  "format": "CsvAnalyser.Configuration",
+  "version": 1,
+  "sourceFile": "Banc moteur.csv",
+  "xAxis": "Date",
+  "graphs": [
+    {
+      "title": "Vitesse"
+    },
+    {
+      "title": "Couple et pression d'huile"
+    },
+    {
+      "title": "Températures"
+    }
+  ],
+  "curves": [
+    {
+      "column": "Consigne vitesse [tr/min]",
+      "name": "Consigne",
+      "plotted": true,
+      "graph": 0,
+      "line": "Dashed",
+      "color": "#B0BEC5"
+    },
+    {
+      "column": "Vitesse [tr/min]",
+      "name": "Vitesse",
+      "plotted": true,
+      "graph": 0,
+      "lineWidth": 1.5
+    },
+    {
+      "column": "Couple [N.m]",
+      "name": "Couple",
+      "plotted": true,
+      "graph": 1
+    },
+    {
+      "column": "Pression huile [bar]",
+      "plotted": true,
+      "graph": 1
+    },
+    {
+      "column": "Température moteur [°C]",
+      "plotted": true,
+      "graph": 2,
+      "lineWidth": 2
+    },
+    {
+      "column": "Température ambiante [°C]",
+      "plotted": true,
+      "graph": 2,
+      "lineWidth": 2
+    }
+  ],
+  "measure": {
+    "enabled": true,
+    "a": 40.0,
+    "b": 46.0
+  },
+  "annotations": [
+    {
+      "kind": "Zone",
+      "text": "Palier 1500 tr/min",
+      "row": 2400,
+      "endRow": 7600,
+      "color": "#81C784"
+    },
+    {
+      "kind": "Marker",
+      "text": "Échelon 3000 tr/min",
+      "row": 8000,
+      "color": "#FFB74D"
+    },
+    {
+      "kind": "Note",
+      "text": "Dépassement",
+      "row": 8190,
+      "curve": "Vitesse [tr/min]",
+      "graph": 0,
+      "labelOffsetX": 160,
+      "labelOffsetY": 70
+    }
+  ]
+}
