@@ -557,6 +557,7 @@ public sealed partial class PlotController
             _vm.EditAnnotationCommand.Execute(a);
         };
         popup.Closed += (_, _) => Apply(); // a click elsewhere keeps what was typed
+        Controls.UiScaling.Apply(popup);
         popup.IsOpen = true;
         _view.Dispatcher.BeginInvoke(() =>
         {

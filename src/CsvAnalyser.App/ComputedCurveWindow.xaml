@@ -15,6 +15,7 @@
                  ShowInTaskbar="False"
                  WindowStartupLocation="CenterOwner"
                  ExtendsContentIntoTitleBar="True"
+                 controls:UiScaling.ScaleWindow="True"
                  WindowBackdropType="None"
                  Background="{DynamicResource ApplicationBackgroundBrush}"
                  WindowCornerPreference="Round">

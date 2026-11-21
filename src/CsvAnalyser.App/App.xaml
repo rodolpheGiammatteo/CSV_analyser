@@ -1,7 +1,8 @@
 ﻿<Application x:Class="CsvAnalyser.App.App"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml">
+             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+             xmlns:controls="clr-namespace:CsvAnalyser.App.Controls">
     <Application.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
@@ -17,6 +18,8 @@
                 <Setter Property="OverridesDefaultStyle" Value="True" />
                 <Setter Property="SnapsToDevicePixels" Value="True" />
                 <Setter Property="HasDropShadow" Value="False" />
+                <!-- Taille de l'interface (Paramètres), avant le placement du menu ; une liaison, sinon le style figerait la transformation -->
+                <Setter Property="LayoutTransform" Value="{Binding Source={x:Static controls:UiScaling.Transform}}" />
                 <Setter Property="Background" Value="{DynamicResource AppMenuBackground}" />
                 <Setter Property="BorderBrush" Value="{DynamicResource AppMenuBorder}" />
                 <Setter Property="Foreground" Value="{DynamicResource AppMenuForeground}" />

@@ -203,6 +203,7 @@ public partial class AxesWindow : FluentWindow
         border.SetResourceReference(System.Windows.Controls.Border.BackgroundProperty, "AppMenuBackground");
         border.SetResourceReference(System.Windows.Controls.Border.BorderBrushProperty, "AppMenuBorder");
         popup.Child = border;
+        Controls.UiScaling.Apply(popup);
         popup.IsOpen = true;
     }
 

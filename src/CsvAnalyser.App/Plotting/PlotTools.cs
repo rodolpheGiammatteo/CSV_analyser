@@ -205,6 +205,7 @@ public static class PlotTools
                 popup.IsOpen = false;
             }
         };
+        Controls.UiScaling.Apply(popup);
         popup.IsOpen = true;
         target.Dispatcher.BeginInvoke(() =>
         {

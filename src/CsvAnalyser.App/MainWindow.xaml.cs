@@ -32,6 +32,8 @@ public partial class MainWindow : FluentWindow
         {
             if (e.PropertyName == nameof(MainViewModel.CursorPanelPlacement))
                 PlaceCursorCard();
+            else if (e.PropertyName == nameof(MainViewModel.UiScale))
+                Controls.UiScaling.SetScale(viewModel.UiScale);
         };
         viewModel.EditAxesRequested += (_, graph) =>
             new AxesWindow(viewModel, graph) { Owner = this }.ShowDialog();

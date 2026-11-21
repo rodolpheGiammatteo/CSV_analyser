@@ -144,6 +144,7 @@ public partial class SearchPicker : UserControl
     private void OnPopupOpened(object? sender, EventArgs e)
     {
         _view?.Refresh();
+        UiScaling.Apply(DropDown);
         if (KeepSelection && SelectedItem is not null)
         {
             List.SelectedItem = SelectedItem;

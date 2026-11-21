@@ -17,6 +17,7 @@ public partial class App : Application
         // Before any window or list is created: their texts are translated as they are built.
         Localization.Languages.Apply(settings.Language);
         var viewModel = new MainViewModel(settings);
+        Controls.UiScaling.Register(viewModel.UiScale);
         var window = new MainWindow(viewModel);
         window.Show();
 
