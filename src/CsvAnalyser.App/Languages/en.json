@@ -510,6 +510,7 @@
     "Espacés : moyens": "Spaced: medium",
     "Espacés : larges": "Spaced: wide",
     "Espacement": "Spacing",
-    "Un par point : les mesures réelles, visibles en zoomant. Espacés : à intervalles réguliers à l'écran, lisibles même avec beaucoup de points.": "One per point: the real measurements, visible when zoomed in. Spaced: at regular intervals on screen, readable even with many points."
+    "Un par point : les mesures réelles, visibles en zoomant. Espacés : à intervalles réguliers à l'écran, lisibles même avec beaucoup de points.": "One per point: the real measurements, visible when zoomed in. Spaced: at regular intervals on screen, readable even with many points.",
+    "Afficher seulement les courbes cochées": "Show only the ticked curves"
   }
 }

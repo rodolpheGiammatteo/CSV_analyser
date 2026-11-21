@@ -115,6 +115,7 @@ public partial class MainViewModel : ObservableObject, IChannelHost
         Channels.CollectionChanged += (_, _) => SyncComputedXAxisOptions();
         PlottedChannels.CollectionChanged += (_, _) =>
         {
+            RefreshPlottedFilter();
             OnPropertyChanged(nameof(ShowPlotHint));
             OnPropertyChanged(nameof(PlotHint));
         };
@@ -477,11 +478,33 @@ public partial class MainViewModel : ObservableObject, IChannelHost
     }
 
     private bool MatchesSearch(ChannelItemViewModel item) =>
-        string.IsNullOrWhiteSpace(SearchText)
-        || item.Name.Contains(SearchText.Trim(), StringComparison.CurrentCultureIgnoreCase)
-        || item.Channel.SourceName.Contains(SearchText.Trim(), StringComparison.CurrentCultureIgnoreCase);
+        (!ShowPlottedOnly || item.IsPlotted)
+        && (string.IsNullOrWhiteSpace(SearchText)
+            || item.Name.Contains(SearchText.Trim(), StringComparison.CurrentCultureIgnoreCase)
+            || item.Channel.SourceName.Contains(SearchText.Trim(), StringComparison.CurrentCultureIgnoreCase));
 
     partial void OnSearchTextChanged(string value) => ChannelsView.Refresh();
+
+    /// <summary>The curve list shows only the ticked curves (filter button beside the search box).</summary>
+    [ObservableProperty]
+    private bool _showPlottedOnly;
+
+    partial void OnShowPlottedOnlyChanged(bool value) => ChannelsView.Refresh();
+
+    private bool _plottedFilterRefreshPending;
+
+    /// <summary>With the filter on, an unticked curve leaves the list (once per burst of changes, after the click).</summary>
+    private void RefreshPlottedFilter()
+    {
+        if (!ShowPlottedOnly || _plottedFilterRefreshPending)
+            return;
+        _plottedFilterRefreshPending = true;
+        System.Windows.Application.Current?.Dispatcher.BeginInvoke(() =>
+        {
+            _plottedFilterRefreshPending = false;
+            ChannelsView.Refresh();
+        }, System.Windows.Threading.DispatcherPriority.Background);
+    }
 
     /// <summary>While the whole list is rebuilt (file opened, configuration or undo): synced once at the end.</summary>
     private bool _xAxisSyncSuspended;

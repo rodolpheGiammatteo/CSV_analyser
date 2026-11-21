@@ -254,11 +254,20 @@
                     <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
 
-                <ui:TextBox Grid.Row="0"
-                            PlaceholderText="Rechercher une courbe…"
-                            Icon="{ui:SymbolIcon Search24}"
-                            ClearButtonEnabled="True"
-                            Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" />
+                <DockPanel Grid.Row="0">
+                    <ToggleButton DockPanel.Dock="Right"
+                                  Margin="6,0,0,0"
+                                  Padding="8,0"
+                                  VerticalAlignment="Stretch"
+                                  ToolTip="Afficher seulement les courbes cochées"
+                                  IsChecked="{Binding ShowPlottedOnly}">
+                        <ui:SymbolIcon Symbol="Filter24" />
+                    </ToggleButton>
+                    <ui:TextBox PlaceholderText="Rechercher une courbe…"
+                                Icon="{ui:SymbolIcon Search24}"
+                                ClearButtonEnabled="True"
+                                Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" />
+                </DockPanel>
 
                 <ListBox x:Name="CurveListBox"
                          Grid.Row="1"
