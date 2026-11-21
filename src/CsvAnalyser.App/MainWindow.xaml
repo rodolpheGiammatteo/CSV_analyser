@@ -279,7 +279,7 @@
                                     <ColumnDefinition Width="Auto" />
                                 </Grid.ColumnDefinitions>
                                 <Grid.RowDefinitions>
-                                    <RowDefinition /><RowDefinition /><RowDefinition /><RowDefinition /><RowDefinition /><RowDefinition />
+                                    <RowDefinition /><RowDefinition /><RowDefinition /><RowDefinition /><RowDefinition />
                                 </Grid.RowDefinitions>
                                 <Grid.Resources>
                                     <Style TargetType="TextBlock">
@@ -293,12 +293,10 @@
                                 <TextBlock Grid.Row="1" Grid.Column="1" Text="sélectionner et cocher les courbes entre deux clics" />
                                 <TextBlock Grid.Row="2" FontWeight="SemiBold" Text="Glisser" />
                                 <TextBlock Grid.Row="2" Grid.Column="1" Text="placer la sélection dans un graphe" />
-                                <TextBlock Grid.Row="3" FontWeight="SemiBold" Text="Double-clic" />
-                                <TextBlock Grid.Row="3" Grid.Column="1" Text="réglages de la courbe" />
-                                <TextBlock Grid.Row="4" FontWeight="SemiBold" Text="Clic droit" />
-                                <TextBlock Grid.Row="4" Grid.Column="1" Text="cocher, décocher, dupliquer ou supprimer la sélection" />
-                                <TextBlock Grid.Row="5" FontWeight="SemiBold" Text="Suppr" />
-                                <TextBlock Grid.Row="5" Grid.Column="1" Text="supprimer les courbes calculées sélectionnées" />
+                                <TextBlock Grid.Row="3" FontWeight="SemiBold" Text="Clic droit" />
+                                <TextBlock Grid.Row="3" Grid.Column="1" Text="cocher, décocher, dupliquer ou supprimer la sélection" />
+                                <TextBlock Grid.Row="4" FontWeight="SemiBold" Text="Suppr" />
+                                <TextBlock Grid.Row="4" Grid.Column="1" Text="supprimer les courbes calculées sélectionnées" />
                             </Grid>
                         </ToolTip>
                     </ListBox.ToolTip>

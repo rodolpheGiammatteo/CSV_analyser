@@ -353,15 +353,6 @@ public partial class MainWindow : FluentWindow
             CurveListBox.Focus(); // the click is swallowed: Suppr must still reach the list
             return;
         }
-        if (e.ClickCount == 2)
-        {
-            // Double-click: the curve settings. The first click of it ticked or unticked the curve: put it back.
-            e.Handled = true;
-            item.IsPlotted = !item.IsPlotted;
-            _dragStart = null;
-            _viewModel.EditChannelCommand.Execute(item);
-            return;
-        }
         // A plain click on a curve outside the selection selects that curve only (a click inside keeps it, to drag it).
         if (!Keyboard.Modifiers.HasFlag(ModifierKeys.Shift) && !CurveListBox.SelectedItems.Contains(item))
             SelectCurves([item]);
