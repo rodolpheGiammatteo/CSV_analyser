@@ -163,12 +163,18 @@
                            Command="{Binding CheckForUpdatesCommand}" />
                 <TextBlock VerticalAlignment="Center" FontFamily="Consolas" Text="{Binding AppVersionText}" />
             </DockPanel>
-            <TextBlock Margin="0,6,0,0" Foreground="{DynamicResource AppSecondaryTextBrush}" TextWrapping="Wrap"
-                       Text="CSV Analyser, développé par Rodolphe Giammatteo." />
             <CheckBox Margin="0,8,0,8"
                       Content="Rechercher les mises à jour au démarrage"
                       ToolTip="Une nouvelle version est signalée dans la barre d'état (pas encore prise en charge)"
                       IsChecked="{Binding CheckUpdatesAtStartup}" />
+
+            <!-- Auteur : tout en bas, discret (un filet fin au-dessus, texte centré) -->
+            <Border Margin="0,20,0,4" Padding="0,8,0,0" BorderThickness="0,1,0,0"
+                    BorderBrush="{DynamicResource AppDisabledTextBrush}">
+                <TextBlock HorizontalAlignment="Center" FontSize="11" TextWrapping="Wrap" TextAlignment="Center"
+                           Foreground="{DynamicResource AppSecondaryTextBrush}"
+                           Text="CSV Analyser, développé par Rodolphe Giammatteo." />
+            </Border>
         </StackPanel>
         </ScrollViewer>
 
