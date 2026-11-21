@@ -101,4 +101,32 @@ public class ViewConfigurationTests
         var marker = back.Annotations[2];
         Assert.Equal((0, "Dotted", 2.0, true), (marker.Graph!.Value, marker.Line, marker.LineWidth!.Value, marker.Hidden));
     }
+
+    [Fact]
+    public void NonFiniteValues_DoNotBreakTheSave()
+    {
+        var config = new ViewConfiguration { Measure = new MeasureConfig { Enabled = true, A = double.NaN, B = double.PositiveInfinity } };
+        var back = ViewConfiguration.FromJson(config.ToJson());
+        Assert.True(double.IsNaN(back.Measure!.A!.Value));
+        Assert.True(double.IsPositiveInfinity(back.Measure.B!.Value));
+    }
+
+    [Fact]
+    public void Save_ReplacesTheFile_AndLeavesNoTemporaryFile()
+    {
+        string folder = Path.Combine(Path.GetTempPath(), "csvanalyser-test-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(folder);
+        try
+        {
+            string path = Path.Combine(folder, "projet.json");
+            File.WriteAllText(path, "ancien contenu");
+            new ViewConfiguration { Measure = new MeasureConfig { A = 2 } }.Save(path);
+            Assert.Equal(2, ViewConfiguration.Load(path).Measure!.A);
+            Assert.Single(Directory.GetFiles(folder));
+        }
+        finally
+        {
+            Directory.Delete(folder, true);
+        }
+    }
 }

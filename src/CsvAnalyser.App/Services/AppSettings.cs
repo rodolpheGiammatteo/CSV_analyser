@@ -149,7 +149,7 @@ public sealed class AppSettings
                     disk[key] = value?.DeepClone();
                 }
             }
-            File.WriteAllText(FilePath, disk.ToJsonString(Options));
+            CsvAnalyser.Core.Configuration.ViewConfiguration.WriteAtomically(FilePath, disk.ToJsonString(Options));
             _baseline = Snapshot();
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException)

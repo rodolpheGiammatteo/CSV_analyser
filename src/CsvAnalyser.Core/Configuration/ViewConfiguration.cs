@@ -68,6 +68,8 @@ public sealed class ViewConfiguration
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
         Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping, // accents readable in the file
+        // A NaN or infinite value (an empty range, a bound typed as text) must not make the save fail.
+        NumberHandling = JsonNumberHandling.AllowNamedFloatingPointLiterals,
     };
 
     public string ToJson() => JsonSerializer.Serialize(this, JsonOptions);
@@ -91,7 +93,27 @@ public sealed class ViewConfiguration
         return config;
     }
 
-    public void Save(string path) => File.WriteAllText(path, ToJson());
+    /// <summary>Written to a temporary file first, then swapped in: a crash during the save never leaves a truncated file.</summary>
+    public void Save(string path)
+    {
+        WriteAtomically(path, ToJson());
+    }
+
+    /// <summary>Writes <paramref name="text"/> beside <paramref name="path"/> (unique name: two windows may save at once), then replaces it.</summary>
+    public static void WriteAtomically(string path, string text)
+    {
+        string temp = $"{path}.{Guid.NewGuid():N}.tmp";
+        try
+        {
+            File.WriteAllText(temp, text);
+            File.Move(temp, path, overwrite: true);
+        }
+        finally
+        {
+            if (File.Exists(temp))
+                File.Delete(temp);
+        }
+    }
 
     public static ViewConfiguration Load(string path) => FromJson(File.ReadAllText(path));
 }

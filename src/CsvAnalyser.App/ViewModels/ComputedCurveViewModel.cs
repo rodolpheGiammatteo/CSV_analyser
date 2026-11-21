@@ -148,7 +148,8 @@ public sealed partial class ComputedCurveViewModel : ObservableObject
     private string DefaultParameter(string kind) => kind switch
     {
         ComputedCurveConfig.MovingAverage => _main.HasTimeBase ? "1" : "10",
-        ComputedCurveConfig.LowPass or ComputedCurveConfig.HighPass => _main.HasTimeBase ? "1" : "0,05",
+        // In the user's number format: "0,05" could not be read back on an English Windows.
+        ComputedCurveConfig.LowPass or ComputedCurveConfig.HighPass => _main.HasTimeBase ? "1" : 0.05.ToString(CultureInfo.CurrentCulture),
         _ => "",
     };
 
