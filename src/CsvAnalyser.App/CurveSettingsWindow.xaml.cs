@@ -10,11 +10,21 @@ public partial class CurveSettingsWindow : FluentWindow
 {
     private readonly ChannelItemViewModel _item;
 
-    public CurveSettingsWindow(ChannelItemViewModel item, IReadOnlyList<StyleChoice<string>> axisChoices)
+    /// <param name="pointCloud">The X axis is unordered: the curve is drawn as points only, so the line settings are hidden.</param>
+    public CurveSettingsWindow(ChannelItemViewModel item, IReadOnlyList<StyleChoice<string>> axisChoices, bool pointCloud)
     {
         InitializeComponent();
         AxisCombo.ItemsSource = axisChoices;
         DataContext = _item = item;
+        if (pointCloud)
+        {
+            PointCloudNote.Visibility = Visibility.Visible;
+            LineSection.Visibility = Visibility.Collapsed;
+            SpacingRow.Visibility = Visibility.Collapsed;
+            SpacingHelp.Visibility = Visibility.Collapsed;
+            LinePreview.Visibility = Visibility.Collapsed;
+            DotPreview.Visibility = Visibility.Visible;
+        }
         Loaded += (_, _) =>
         {
             NameBox.Focus();

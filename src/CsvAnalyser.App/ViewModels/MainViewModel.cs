@@ -535,6 +535,13 @@ public partial class MainViewModel : ObservableObject, IChannelHost
             SelectedXAxis = successor ?? XAxisOptions.FirstOrDefault();
     }
 
+    /// <summary>
+    /// The X axis is unordered (not a time that only goes back now and then): the curves are drawn as point clouds,
+    /// without lines (same test as the plot, <see cref="CsvAnalyser.Core.Analysis.AscendingRuns.Find"/>).
+    /// </summary>
+    public bool IsXPointCloud => Dataset is { } ds && SelectedXAxis is { IsSorted: false } option
+        && CsvAnalyser.Core.Analysis.AscendingRuns.Find(option.GetValues(ds)) is null;
+
     partial void OnSelectedXAxisChanged(XAxisOption? value)
     {
         ForgetMeasureCursors();

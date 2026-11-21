@@ -26,7 +26,7 @@ public partial class MainWindow : FluentWindow
         viewModel.EditAnnotationRequested += (_, annotation) =>
             new AnnotationSettingsWindow(annotation, viewModel) { Owner = this }.ShowDialog();
         viewModel.EditChannelRequested += (_, item) =>
-            new CurveSettingsWindow(item, GraphLayout.AxisChoices(item, viewModel.BuildLayout())) { Owner = this }.ShowDialog();
+            new CurveSettingsWindow(item, GraphLayout.AxisChoices(item, viewModel.BuildLayout()), viewModel.IsXPointCloud) { Owner = this }.ShowDialog();
         PlaceCursorCard();
         viewModel.PropertyChanged += (_, e) =>
         {

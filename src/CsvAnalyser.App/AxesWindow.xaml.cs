@@ -154,7 +154,7 @@ public partial class AxesWindow : FluentWindow
     private void OnCurveSettings(object sender, RoutedEventArgs e)
     {
         if (CurveOf(sender) is { } item)
-            new CurveSettingsWindow(item, GraphLayout.AxisChoices(item, _vm.BuildLayout())) { Owner = this }.ShowDialog();
+            new CurveSettingsWindow(item, GraphLayout.AxisChoices(item, _vm.BuildLayout()), _vm.IsXPointCloud) { Owner = this }.ShowDialog();
     }
 
     /// <summary>A small palette under the color square: one click picks a color, "Automatique" follows the theme.</summary>

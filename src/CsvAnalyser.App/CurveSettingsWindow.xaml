@@ -66,11 +66,11 @@
                 <Border DockPanel.Dock="Left" Width="44" Height="28" Margin="0,0,12,0" VerticalAlignment="Center"
                         CornerRadius="4" BorderThickness="1" BorderBrush="{DynamicResource AppDisabledTextBrush}">
                     <Grid>
-                        <Line X1="4" Y1="13" X2="38" Y2="13" Stroke="{Binding Brush}"
+                        <Line x:Name="LinePreview" X1="4" Y1="13" X2="38" Y2="13" Stroke="{Binding Brush}"
                               StrokeThickness="{Binding LineWidth}"
                               StrokeDashArray="{Binding SelectedItem.Dash, ElementName=LineCombo}"
                               Visibility="{Binding IsLineVisible, Converter={StaticResource BoolToVisibility}}" />
-                        <Ellipse Width="7" Height="7" Fill="{Binding Brush}"
+                        <Ellipse x:Name="DotPreview" Width="7" Height="7" Fill="{Binding Brush}"
                                  Visibility="{Binding HasMarkers, Converter={StaticResource BoolToVisibility}}" />
                     </Grid>
                 </Border>
@@ -133,7 +133,13 @@
                             Text="{Binding ColorHex}" KeyDown="OnHexKeyDown" />
             </DockPanel>
 
+            <!-- Unordered X: drawn as a point cloud, the line settings would not apply -->
+            <TextBlock x:Name="PointCloudNote" Margin="0,0,0,18" Visibility="Collapsed" TextWrapping="Wrap"
+                       Foreground="{DynamicResource AppSecondaryTextBrush}"
+                       Text="L'axe X choisi n'est pas dans l'ordre : la courbe est tracée en nuage de points, sans trait. Sans forme choisie, les points sont de petits ronds." />
+
             <!-- Trait -->
+            <StackPanel x:Name="LineSection">
             <TextBlock Style="{StaticResource SectionTitle}" Text="Trait" />
             <Grid Margin="0,0,0,18">
                 <Grid.ColumnDefinitions>
@@ -169,6 +175,7 @@
                     <Slider Minimum="0.5" Maximum="6" TickFrequency="0.5" IsSnapToTickEnabled="True" Value="{Binding LineWidth}" />
                 </StackPanel>
             </Grid>
+            </StackPanel>
 
             <!-- Points -->
             <TextBlock Style="{StaticResource SectionTitle}" Text="Points" />
@@ -191,14 +198,14 @@
                     <Slider Minimum="2" Maximum="16" TickFrequency="1" IsSnapToTickEnabled="True" Value="{Binding MarkerSize}" />
                 </StackPanel>
             </Grid>
-            <DockPanel Margin="0,4,0,4" Visibility="{Binding HasMarkers, Converter={StaticResource BoolToVisibility}}">
+            <DockPanel x:Name="SpacingRow" Margin="0,4,0,4" Visibility="{Binding HasMarkers, Converter={StaticResource BoolToVisibility}}">
                 <TextBlock DockPanel.Dock="Left" Width="90" VerticalAlignment="Center" Text="Espacement" />
                 <ComboBox ItemsSource="{x:Static vm:CurveStyleChoices.MarkerSpacings}"
                           SelectedValuePath="Value"
                           DisplayMemberPath="Label"
                           SelectedValue="{Binding MarkerSpacing}" />
             </DockPanel>
-            <TextBlock Foreground="{DynamicResource AppSecondaryTextBrush}" TextWrapping="Wrap"
+            <TextBlock x:Name="SpacingHelp" Foreground="{DynamicResource AppSecondaryTextBrush}" TextWrapping="Wrap"
                        Text="Un par point : les mesures réelles, visibles en zoomant. Espacés : à intervalles réguliers à l'écran, lisibles même avec beaucoup de points." />
 
             <!-- Opacité -->
