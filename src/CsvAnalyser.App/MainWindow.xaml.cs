@@ -88,7 +88,12 @@ public partial class MainWindow : FluentWindow
             var visible = _viewModel.ChannelsView.Cast<ChannelItemViewModel>().ToList();
             int a = visible.IndexOf(anchor), b = visible.IndexOf(item);
             if (a >= 0 && b >= 0)
-                _viewModel.SetPlotted(visible.GetRange(Math.Min(a, b), Math.Abs(a - b) + 1), item.IsPlotted);
+            {
+                var range = visible.GetRange(Math.Min(a, b), Math.Abs(a - b) + 1);
+                _viewModel.SetPlotted(range, item.IsPlotted);
+                SelectCurves(range); // the range is also selected, ready to be dragged onto a graph
+                return; // the anchor stays for the next Shift+click
+            }
         }
         _lastCheckClick = item;
     }
@@ -320,11 +325,59 @@ public partial class MainWindow : FluentWindow
     private Point? _dragStart;
     private ChannelItemViewModel? _dragItem;
 
+    /// <summary>The curves being dragged (the selection of the list when the dragged curve is part of it).</summary>
+    private IReadOnlyList<ChannelItemViewModel> _draggedCurves = [];
+
     private void OnCurvePreviewMouseDown(object sender, MouseButtonEventArgs e)
     {
         _dragStart = e.GetPosition(this);
         _dragItem = (e.OriginalSource as FrameworkElement ?? (e.OriginalSource as FrameworkContentElement)?.Parent as FrameworkElement)
             ?.DataContext as ChannelItemViewModel;
+        if (sender != CurveListBox || _dragItem is not { } item || IsInsideButton(e.OriginalSource as DependencyObject))
+            return;
+
+        if (Keyboard.Modifiers.HasFlag(ModifierKeys.Control))
+        {
+            // Ctrl+click: add to or remove from the selection, without ticking.
+            e.Handled = true;
+            if (CurveListBox.SelectedItems.Contains(item))
+                CurveListBox.SelectedItems.Remove(item);
+            else
+                CurveListBox.SelectedItems.Add(item);
+            _lastCheckClick = item;
+            return;
+        }
+        if (e.ClickCount == 2)
+        {
+            // Double-click: the curve settings. The first click of it ticked or unticked the curve: put it back.
+            e.Handled = true;
+            item.IsPlotted = !item.IsPlotted;
+            _dragStart = null;
+            _viewModel.EditChannelCommand.Execute(item);
+            return;
+        }
+        // A plain click on a curve outside the selection selects that curve only (a click inside keeps it, to drag it).
+        if (!Keyboard.Modifiers.HasFlag(ModifierKeys.Shift) && !CurveListBox.SelectedItems.Contains(item))
+            SelectCurves([item]);
+    }
+
+    private void SelectCurves(IReadOnlyList<ChannelItemViewModel> items)
+    {
+        CurveListBox.SelectedItems.Clear();
+        foreach (var item in items)
+            CurveListBox.SelectedItems.Add(item);
+    }
+
+    private static bool IsInsideButton(DependencyObject? element)
+    {
+        for (var e = element; e is not null; e = e is Visual or System.Windows.Media.Media3D.Visual3D ? VisualTreeHelper.GetParent(e) : LogicalTreeHelper.GetParent(e))
+        {
+            if (e is System.Windows.Controls.Primitives.ButtonBase and not System.Windows.Controls.Primitives.ToggleButton)
+                return true;
+            if (e is ListBoxItem)
+                return false;
+        }
+        return false;
     }
 
     private void OnCurvePreviewMouseMove(object sender, MouseEventArgs e)
@@ -338,7 +391,12 @@ public partial class MainWindow : FluentWindow
 
         _dragStart = null;
         _dragItem = null;
+        // From the list, a curve of a multiple selection takes the whole selection along (in list order).
+        _draggedCurves = sender == CurveListBox && CurveListBox.SelectedItems.Count > 1 && CurveListBox.SelectedItems.Contains(item)
+            ? _viewModel.ChannelsView.Cast<ChannelItemViewModel>().Where(CurveListBox.SelectedItems.Contains).ToList()
+            : [item];
         DragDrop.DoDragDrop((DependencyObject)sender, new DataObject(typeof(ChannelItemViewModel), item), DragDropEffects.Move);
+        _draggedCurves = [];
         HideDropTargets();
     }
 
@@ -385,7 +443,7 @@ public partial class MainWindow : FluentWindow
             ? null
             : _viewModel.GraphAt(_plotController.GraphIndexAt(position) ?? 0);
         HideDropTargets();
-        _viewModel.MoveChannelToGraph(item, target);
+        _viewModel.MoveChannelsToGraph(_draggedCurves.Contains(item) ? _draggedCurves : [item], target);
     }
 
     private bool IsOverNewGraphZone(Point position) =>

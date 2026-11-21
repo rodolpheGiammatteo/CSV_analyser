@@ -228,7 +228,6 @@
     "Lignes": "Rows",
     "Légende": "Legend",
     "Légende (on peut aussi la faire glisser sur le graphe)": "Legend (it can also be dragged on the graph)",
-    "Maj+clic : cocher ou décocher toutes les courbes entre deux clics (dans la liste filtrée). Glisser une courbe : la placer dans un graphe.": "Shift+click: tick or untick every curve between two clicks (in the filtered list). Drag a curve: put it in a graph.",
     "Manuel": "Manual",
     "Masquer la courbe": "Hide the curve",
     "Masquer les curseurs X1 et X2 (Ctrl+M)": "Hide cursors X1 and X2 (Ctrl+M)",
@@ -477,6 +476,7 @@
     "Nouvelle version disponible : {0} (Paramètres → Rechercher une mise à jour)": "New version available: {0} (Settings → Check for updates)",
     "Réponse de GitHub illisible.": "Unreadable answer from GitHub.",
     "CSV Analyser, développé par Rodolphe Giammatteo.": "CSV Analyser, developed by Rodolphe Giammatteo.",
-    "({0} note(s) supprimée(s))": "({0} note(s) deleted)"
+    "({0} note(s) supprimée(s))": "({0} note(s) deleted)",
+    "Ctrl+clic : sélectionner plusieurs courbes. Maj+clic : sélectionner et cocher toutes les courbes entre deux clics. Glisser la sélection : la placer dans un graphe. Double-clic : réglages de la courbe.": "Ctrl+click: select several curves. Shift+click: select and tick every curve between two clicks. Drag the selection: put it in a graph. Double-click: curve settings."
   }
 }

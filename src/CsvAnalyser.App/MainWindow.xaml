@@ -260,9 +260,11 @@
                             ClearButtonEnabled="True"
                             Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" />
 
-                <ListBox Grid.Row="1"
+                <ListBox x:Name="CurveListBox"
+                         Grid.Row="1"
                          Margin="0,8,0,0"
-                         ToolTip="Maj+clic : cocher ou décocher toutes les courbes entre deux clics (dans la liste filtrée). Glisser une courbe : la placer dans un graphe."
+                         SelectionMode="Extended"
+                         ToolTip="Ctrl+clic : sélectionner plusieurs courbes. Maj+clic : sélectionner et cocher toutes les courbes entre deux clics. Glisser la sélection : la placer dans un graphe. Double-clic : réglages de la courbe."
                          ToolTipService.InitialShowDelay="1500"
                          PreviewMouseLeftButtonDown="OnCurvePreviewMouseDown"
                          PreviewMouseMove="OnCurvePreviewMouseMove"

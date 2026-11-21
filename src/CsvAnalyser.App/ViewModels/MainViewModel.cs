@@ -383,6 +383,38 @@ public partial class MainViewModel : ObservableObject, IChannelHost
         }
     }
 
+    /// <summary>Puts several curves in one graph (null = one new graph for all of them) and plots them; one plot update.</summary>
+    public void MoveChannelsToGraph(IReadOnlyList<ChannelItemViewModel> items, GraphViewModel? target)
+    {
+        if (items.Count <= 1)
+        {
+            if (items.Count == 1)
+                MoveChannelToGraph(items[0], target);
+            return;
+        }
+        _suppressPlotEvents = true;
+        try
+        {
+            if (target is null)
+            {
+                target = NewGraph();
+                Graphs.Add(target);
+            }
+            foreach (var item in items)
+            {
+                item.Graph = target;
+                if (!item.IsPlotted)
+                    item.IsPlotted = true;
+            }
+            RemoveEmptyGraphs();
+        }
+        finally
+        {
+            _suppressPlotEvents = false;
+        }
+        RaisePlotChanged(PlotChange.Curves);
+    }
+
     /// <summary>Graph number <paramref name="index"/> (0-based), or null.</summary>
     public GraphViewModel? GraphAt(int index) => index >= 0 && index < Graphs.Count ? Graphs[index] : null;
 
