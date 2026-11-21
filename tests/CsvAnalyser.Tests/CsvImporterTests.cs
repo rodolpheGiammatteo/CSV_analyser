@@ -114,6 +114,26 @@ public sealed class CsvImporterTests : IDisposable
     }
 
     [Fact]
+    public void EpochSeconds_ClockGoingBackOnce_IsStillTheTime()
+    {
+        // A recorder whose clock was resynced 4.6 s back in the middle of the recording (real case, 10 Hz).
+        var sb = new StringBuilder("time epoch;v\n");
+        for (int i = 0; i < 300; i++)
+        {
+            double t = 1779789117.2 + i * 0.1 - (i >= 150 ? 4.6 : 0);
+            sb.Append(t.ToString("0.000", System.Globalization.CultureInfo.InvariantCulture).Replace('.', ',')).Append(';').Append(i).Append('\n');
+        }
+        var ds = Load(sb.ToString());
+
+        Assert.NotNull(ds.Time);
+        Assert.Equal(TimeKind.EpochSeconds, ds.Time.Kind);
+        Assert.False(ds.Time.Channel.IsSortedAscending);
+        Assert.Equal(0, ds.Time.Channel.Values[0], 6);
+        Assert.Equal(14.9, ds.Time.Channel.Values[149], 6);
+        Assert.Equal(15.0 - 4.6, ds.Time.Channel.Values[150], 6);
+    }
+
+    [Fact]
     public void EpochMilliseconds_ConvertedToRelativeSeconds()
     {
         var ds = Load("timestamp;v\n1700000000000;1\n1700000000250;2\n");

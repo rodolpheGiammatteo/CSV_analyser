@@ -1,3 +1,4 @@
+using CsvAnalyser.Core.Analysis;
 using CsvAnalyser.Core.Data;
 
 namespace CsvAnalyser.Core.Import;
@@ -9,15 +10,17 @@ internal static class TimeDetector
     /// <summary>
     /// Picks the default X axis. Date and epoch columns are converted in place to seconds relative to their first sample.
     /// Preference: date column, then a column named like a time, then the first increasing numeric column.
+    /// A date or time column may go back a few times (a clock resynced during the recording, see
+    /// <see cref="AscendingRuns.IsMostlyAscending"/>): it is still the time, drawn as one line per ascending run.
     /// </summary>
     public static TimeInfo? Detect(IReadOnlyList<Channel> channels, ColumnKind[] kinds)
     {
         for (int i = 0; i < channels.Count; i++)
         {
             var ch = channels[i];
-            if (kinds[i] == ColumnKind.Date && ch.IsSortedAscending)
+            if (kinds[i] == ColumnKind.Date && IsTimeLike(ch))
             {
-                double first = ch.Values[0];
+                double first = FirstFinite(ch.Values);
                 MakeRelative(ch, first, 1);
                 return new TimeInfo(ch, TimeKind.DateTime, DateParser.Reference.AddSeconds(first));
             }
@@ -26,10 +29,10 @@ internal static class TimeDetector
         for (int i = 0; i < channels.Count; i++)
         {
             var ch = channels[i];
-            if (kinds[i] != ColumnKind.Numeric || !IsTimeName(ch) || !ch.IsSortedAscending)
+            if (kinds[i] != ColumnKind.Numeric || !IsTimeName(ch) || !IsTimeLike(ch))
                 continue;
 
-            double first = ch.Values[0];
+            double first = FirstFinite(ch.Values);
             bool namedEpoch = ch.DisplayName.Contains("epoch", StringComparison.OrdinalIgnoreCase)
                 || ch.DisplayName.Contains("unix", StringComparison.OrdinalIgnoreCase);
 
@@ -50,6 +53,16 @@ internal static class TimeDetector
             return new TimeInfo(channels[0], TimeKind.Numeric, null);
 
         return null;
+    }
+
+    private static bool IsTimeLike(Channel ch) => ch.IsSortedAscending || AscendingRuns.IsMostlyAscending(ch.Values);
+
+    private static double FirstFinite(double[] values)
+    {
+        foreach (double v in values)
+            if (double.IsFinite(v))
+                return v;
+        return 0;
     }
 
     private static bool IsTimeName(Channel ch)

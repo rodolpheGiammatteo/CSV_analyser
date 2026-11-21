@@ -27,6 +27,9 @@ public sealed partial class PlotController : IPlotView
     private readonly List<Series> _series = [];
     private double[]? _xs;
     private bool _xSorted;
+
+    /// <summary>Unsorted X split into a few ascending runs (each drawn as a line); null when sorted or unordered.</summary>
+    private IReadOnlyList<(int Start, int End)>? _xRuns;
     private string _layoutSignature = "";
     private Dictionary<string, string> _axisMembers = [];
 
@@ -39,11 +42,17 @@ public sealed partial class PlotController : IPlotView
 
     private readonly PaddingMatcher _paddingMatcher;
 
-    /// <param name="Curve">The SignalXY (sorted X) or Scatter (unsorted X) drawing the data.</param>
+    /// <param name="Curve">
+    /// The SignalXY (sorted X, or the first ascending run of an X that goes back a few times) or Scatter (unordered X)
+    /// drawing the data.
+    /// </param>
     /// <param name="Marker">The dot that follows the vertical cursor.</param>
     /// <param name="Label">The value written next to the marker (option "valeurs dans les graphes").</param>
     private sealed record Series(ChannelItemViewModel Item, double[] Ys, IPlottable Curve, Marker Marker, Text Label, GraphRender Graph, IYAxis Axis)
     {
+        /// <summary>The other ascending runs of an X that goes back a few times: same style, no legend entry.</summary>
+        public IReadOnlyList<SignalXY> Pieces { get; init; } = [];
+
         /// <summary>Spaced markers (sorted X only): placed before each render by <see cref="PlaceSpacedMarkers"/>.</summary>
         public Scatter? Spaced { get; init; }
 
@@ -313,6 +322,7 @@ public sealed partial class PlotController : IPlotView
         _interactionAxis = null;
         _xs =_vm.Dataset is { } ds && _vm.SelectedXAxis is { } option ? option.GetValues(ds) : null;
         _xSorted = _vm.SelectedXAxis?.IsSorted ?? true;
+        _xRuns = _xSorted || _xs is null ? null : AscendingRuns.Find(_xs);
 
         for (int gi = 0; gi < specs.Count; gi++)
         {
@@ -409,11 +419,28 @@ public sealed partial class PlotController : IPlotView
             foreach (var item in spec.Curves.OrderBy(c => _vm.PlottedChannels.IndexOf(c)))
             {
                 var axis = axisOf[item];
-                IPlottable curve = _xSorted
-                    ? plot.Add.SignalXY(_xs, item.Channel.Values, item.Color)
-                    : plot.Add.ScatterPoints(_xs, item.Channel.Values, item.Color);
+                IPlottable curve;
+                var pieces = new List<SignalXY>();
+                if (_xSorted)
+                    curve = plot.Add.SignalXY(_xs, item.Channel.Values, item.Color);
+                else if (_xRuns is { } runs)
+                {
+                    // X goes back a few times (clock resync): one line per ascending run, over the same arrays.
+                    foreach (var (start, end) in runs)
+                    {
+                        var piece = plot.Add.SignalXY(_xs, item.Channel.Values, item.Color);
+                        piece.Data.MinimumIndex = start;
+                        piece.Data.MaximumIndex = end - 1;
+                        piece.Axes.YAxis = axis;
+                        pieces.Add(piece);
+                    }
+                    curve = pieces[0];
+                    pieces.RemoveAt(0);
+                }
+                else
+                    curve = plot.Add.ScatterPoints(_xs, item.Channel.Values, item.Color);
                 curve.Axes.YAxis = axis;
-                created.Add((new Series(item, item.Channel.Values, curve, null!, null!, render, axis), axis));
+                created.Add((new Series(item, item.Channel.Values, curve, null!, null!, render, axis) { Pieces = pieces }, axis));
             }
 
             // Markers, value labels and cursor are added last so they are drawn on top of the curves.
@@ -436,7 +463,7 @@ public sealed partial class PlotController : IPlotView
 
                 Scatter? spaced = null;
                 List<double> spacedXs = [], spacedYs = [];
-                if (pending.Curve is SignalXY)
+                if (pending.Curve is SignalXY && _xSorted)
                 {
                     // The scatter reads these lists, filled before each render; drawn over the line.
                     spaced = plot.Add.ScatterPoints(spacedXs, spacedYs, pending.Item.Color);
@@ -655,13 +682,16 @@ public sealed partial class PlotController : IPlotView
         switch (s.Curve)
         {
             case SignalXY signal:
-                signal.Color = item.Color.WithAlpha(item.Opacity);
-                signal.LegendText = item.LegendText;
-                signal.LineWidth = item.IsLineVisible ? (float)item.LineWidth * _scale : 0;
-                signal.LinePattern = ToPattern(item.Line);
                 bool spaced = item.HasMarkers && item.MarkerSpacing > 0 && s.Spaced is not null;
-                signal.MarkerShape = ToShape(item.Marker);
-                signal.MarkerSize = item.HasMarkers && !spaced ? (float)item.MarkerSize * _scale : 0;
+                foreach (var piece in s.Pieces.Prepend(signal))
+                {
+                    piece.Color = item.Color.WithAlpha(item.Opacity);
+                    piece.LegendText = piece == signal ? item.LegendText : "";
+                    piece.LineWidth = item.IsLineVisible ? (float)item.LineWidth * _scale : 0;
+                    piece.LinePattern = ToPattern(item.Line);
+                    piece.MarkerShape = ToShape(item.Marker);
+                    piece.MarkerSize = item.HasMarkers && !spaced ? (float)item.MarkerSize * _scale : 0;
+                }
                 if (s.Spaced is { } markers)
                 {
                     markers.IsVisible = spaced;
@@ -672,7 +702,7 @@ public sealed partial class PlotController : IPlotView
                 break;
 
             case Scatter scatter:
-                // Unsorted X: points only, a line would zigzag across the plot.
+                // Unordered X (not a time): points only, a line would zigzag across the plot.
                 scatter.Color = item.Color.WithAlpha(item.Opacity);
                 scatter.LegendText = item.LegendText;
                 scatter.LineWidth = 0;
