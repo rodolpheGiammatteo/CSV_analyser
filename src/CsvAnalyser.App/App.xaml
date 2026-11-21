@@ -10,6 +10,10 @@
                 <ui:ControlsDictionary />
             </ResourceDictionary.MergedDictionaries>
             <BooleanToVisibilityConverter x:Key="BoolToVisibility" />
+            <!-- WPF-UI justifies tooltip text (uneven gaps between words): left-aligned instead -->
+            <Style TargetType="ToolTip" BasedOn="{StaticResource {x:Type ToolTip}}">
+                <Setter Property="TextBlock.TextAlignment" Value="Left" />
+            </Style>
             <!--
                 Opaque menus with our own template: the Fluent menu is semi-transparent (invisible here), and basing a
                 style on it fell back to the classic template (white icon gutter on the left in the dark theme).

@@ -38,23 +38,58 @@ public partial class MainViewModel
     [RelayCommand]
     private void DeleteComputed(ChannelItemViewModel? item)
     {
-        if (item?.Definition is null)
-            return;
-        var users = ComputedChannels.Where(c => c != item && UsesCurve(c.Definition!, item)).Select(c => c.Name).ToList();
-        if (users.Count > 0)
+        if (item is not null)
+            DeleteComputedCurves([item]);
+    }
+
+    /// <summary>
+    /// Deletes the computed curves among <paramref name="items"/> (file columns are skipped) after one confirmation;
+    /// refused while a computed curve outside them uses one of them.
+    /// </summary>
+    public void DeleteComputedCurves(IReadOnlyList<ChannelItemViewModel> items)
+    {
+        var doomed = items.Where(i => i.Definition is not null).Distinct().ToList();
+        if (doomed.Count == 0)
         {
-            MessageBox.Show(L.F("« {0} » est utilisée par : {1}.\nSupprimez ou modifiez d'abord ces courbes.", item.Name, string.Join(", ", users)),
-                L.T("Suppression impossible"), MessageBoxButton.OK, MessageBoxImage.Information);
+            if (items.Count > 0)
+                StatusText = L.T("Seules les courbes calculées peuvent être supprimées (les colonnes du fichier se décochent).");
             return;
         }
-        if (MessageBox.Show(L.F("Supprimer la courbe calculée « {0} » ?", item.Name), L.T("Supprimer"), MessageBoxButton.OKCancel,
-                MessageBoxImage.Question) != MessageBoxResult.OK)
+        var users = ComputedChannels.Where(c => !doomed.Contains(c) && doomed.Any(d => UsesCurve(c.Definition!, d)))
+            .Select(c => c.Name).ToList();
+        if (users.Count > 0)
+        {
+            string used = doomed.Count == 1
+                ? L.F("« {0} » est utilisée par : {1}.\nSupprimez ou modifiez d'abord ces courbes.", doomed[0].Name, string.Join(", ", users))
+                : L.F("Ces courbes sont utilisées par : {0}.\nSupprimez ou modifiez d'abord ces courbes.", string.Join(", ", users));
+            MessageBox.Show(used, L.T("Suppression impossible"), MessageBoxButton.OK, MessageBoxImage.Information);
             return;
-        item.IsPlotted = false;
-        Channels.Remove(item);
-        StatusText = L.F("Courbe calculée supprimée : {0}", item.Name);
-        // Its notes have nothing to point at any more (Ctrl+Z brings both back).
-        var notes = Annotations.Where(a => a.Curve == item).ToList();
+        }
+        string question = doomed.Count == 1
+            ? L.F("Supprimer la courbe calculée « {0} » ?", doomed[0].Name)
+            : L.F("Supprimer les {0} courbes calculées sélectionnées ?\n\n{1}", doomed.Count, string.Join("\n", doomed.Select(d => d.Name)));
+        if (MessageBox.Show(question, L.T("Supprimer"), MessageBoxButton.OKCancel, MessageBoxImage.Question) != MessageBoxResult.OK)
+            return;
+        _suppressPlotEvents = true;
+        try
+        {
+            foreach (var item in doomed)
+            {
+                item.IsPlotted = false;
+                Channels.Remove(item);
+            }
+            RemoveEmptyGraphs();
+        }
+        finally
+        {
+            _suppressPlotEvents = false;
+        }
+        RaisePlotChanged(PlotChange.Curves);
+        StatusText = doomed.Count == 1
+            ? L.F("Courbe calculée supprimée : {0}", doomed[0].Name)
+            : L.F("{0} courbes calculées supprimées", doomed.Count);
+        // Their notes have nothing to point at any more (Ctrl+Z brings both back).
+        var notes = Annotations.Where(a => a.Curve is { } c && doomed.Contains(c)).ToList();
         foreach (var note in notes)
             Annotations.Remove(note);
         if (notes.Count > 0)

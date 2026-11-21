@@ -264,13 +264,43 @@
                          Grid.Row="1"
                          Margin="0,8,0,0"
                          SelectionMode="Extended"
-                         ToolTip="Ctrl+clic : sélectionner plusieurs courbes. Maj+clic : sélectionner et cocher toutes les courbes entre deux clics. Glisser la sélection : la placer dans un graphe. Double-clic : réglages de la courbe."
                          ToolTipService.InitialShowDelay="1500"
+                         PreviewKeyDown="OnCurveListKeyDown"
                          PreviewMouseLeftButtonDown="OnCurvePreviewMouseDown"
                          PreviewMouseMove="OnCurvePreviewMouseMove"
                          ItemsSource="{Binding ChannelsView}"
                          VirtualizingPanel.IsVirtualizing="True"
                          VirtualizingPanel.VirtualizationMode="Recycling">
+                    <ListBox.ToolTip>
+                        <ToolTip>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition /><RowDefinition /><RowDefinition /><RowDefinition /><RowDefinition /><RowDefinition />
+                                </Grid.RowDefinitions>
+                                <Grid.Resources>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Margin" Value="0,1,14,1" />
+                                    </Style>
+                                </Grid.Resources>
+                                <TextBlock Grid.Row="0" FontWeight="SemiBold" Text="Ctrl+clic" />
+                                <TextBlock Grid.Row="0" Grid.Column="1" Text="sélectionner plusieurs courbes" />
+                                <TextBlock Grid.Row="1" FontWeight="SemiBold" Text="Maj+clic" />
+                                <TextBlock Grid.Row="1" Grid.Column="1" Text="sélectionner et cocher les courbes entre deux clics" />
+                                <TextBlock Grid.Row="2" FontWeight="SemiBold" Text="Glisser" />
+                                <TextBlock Grid.Row="2" Grid.Column="1" Text="placer la sélection dans un graphe" />
+                                <TextBlock Grid.Row="3" FontWeight="SemiBold" Text="Double-clic" />
+                                <TextBlock Grid.Row="3" Grid.Column="1" Text="réglages de la courbe" />
+                                <TextBlock Grid.Row="4" FontWeight="SemiBold" Text="Clic droit" />
+                                <TextBlock Grid.Row="4" Grid.Column="1" Text="cocher, décocher, dupliquer ou supprimer la sélection" />
+                                <TextBlock Grid.Row="5" FontWeight="SemiBold" Text="Suppr" />
+                                <TextBlock Grid.Row="5" Grid.Column="1" Text="supprimer les courbes calculées sélectionnées" />
+                            </Grid>
+                        </ToolTip>
+                    </ListBox.ToolTip>
                     <ListBox.ItemContainerStyle>
                         <Style TargetType="ListBoxItem" BasedOn="{StaticResource {x:Type ListBoxItem}}">
                             <Setter Property="Padding" Value="6,2" />
@@ -310,14 +340,14 @@
                                                   Command="{Binding PlacementTarget.Tag.EditComputedCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
                                                   CommandParameter="{Binding}" />
                                         <MenuItem Header="Supprimer la courbe calculée"
+                                                  Tag="delete"
                                                   Icon="{ui:SymbolIcon Delete20}"
-                                                  Visibility="{Binding IsComputed, Converter={StaticResource BoolToVisibility}}"
-                                                  Command="{Binding PlacementTarget.Tag.DeleteComputedCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
-                                                  CommandParameter="{Binding}" />
+                                                  Click="OnDeleteCurves" />
                                     </ContextMenu>
                                 </Grid.ContextMenu>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
                                     <ColumnDefinition Width="Auto" />
                                 </Grid.ColumnDefinitions>
                                 <CheckBox IsChecked="{Binding IsPlotted}" MinHeight="0" Padding="6,0,0,0" ToolTip="{Binding Channel.SourceName}" Click="OnCurveCheckClick">
@@ -334,8 +364,20 @@
                                         <TextBlock Margin="6,0,0,0" VerticalAlignment="Center" Foreground="{DynamicResource AppSecondaryTextBrush}" Text="{Binding UnitLabel}" />
                                     </StackPanel>
                                 </CheckBox>
-                                <ui:Button x:Name="EditButton"
+                                <ui:Button x:Name="FormulaButton"
                                            Grid.Column="1"
+                                           Padding="6,2"
+                                           MinHeight="0"
+                                           Appearance="Transparent"
+                                           BorderThickness="0"
+                                           ToolTip="Régler le calcul de la courbe (formule ou filtre)"
+                                           Visibility="Collapsed"
+                                           Command="{Binding DataContext.EditComputedCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
+                                           CommandParameter="{Binding}">
+                                    <TextBlock FontStyle="Italic" FontWeight="SemiBold" FontSize="13" Text="fx" />
+                                </ui:Button>
+                                <ui:Button x:Name="EditButton"
+                                           Grid.Column="2"
                                            Padding="6,2"
                                            MinHeight="0"
                                            Appearance="Transparent"
@@ -350,6 +392,17 @@
                                 <DataTrigger Binding="{Binding IsMouseOver, RelativeSource={RelativeSource AncestorType=ListBoxItem}}" Value="True">
                                     <Setter TargetName="EditButton" Property="Visibility" Value="Visible" />
                                 </DataTrigger>
+                                <!-- fx: computed curves only; its room is kept (Hidden) so the names do not jump on hover -->
+                                <DataTrigger Binding="{Binding IsComputed}" Value="True">
+                                    <Setter TargetName="FormulaButton" Property="Visibility" Value="Hidden" />
+                                </DataTrigger>
+                                <MultiDataTrigger>
+                                    <MultiDataTrigger.Conditions>
+                                        <Condition Binding="{Binding IsComputed}" Value="True" />
+                                        <Condition Binding="{Binding IsMouseOver, RelativeSource={RelativeSource AncestorType=ListBoxItem}}" Value="True" />
+                                    </MultiDataTrigger.Conditions>
+                                    <Setter TargetName="FormulaButton" Property="Visibility" Value="Visible" />
+                                </MultiDataTrigger>
                             </DataTemplate.Triggers>
                         </DataTemplate>
                     </ListBox.ItemTemplate>

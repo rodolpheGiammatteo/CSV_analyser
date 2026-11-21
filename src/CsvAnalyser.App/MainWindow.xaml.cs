@@ -347,6 +347,7 @@ public partial class MainWindow : FluentWindow
             else
                 CurveListBox.SelectedItems.Add(item);
             _lastCheckClick = item;
+            CurveListBox.Focus(); // the click is swallowed: Suppr must still reach the list
             return;
         }
         if (e.ClickCount == 2)
@@ -391,6 +392,13 @@ public partial class MainWindow : FluentWindow
                 case "selection":
                     entry.Visibility = several;
                     break;
+                case "delete":
+                    int computed = curves.Count(c => c.IsComputed);
+                    entry.Visibility = computed > 0 ? Visibility.Visible : Visibility.Collapsed;
+                    ((System.Windows.Controls.MenuItem)entry).Header = computed > 1
+                        ? L.F("Supprimer les {0} courbes calculées", computed)
+                        : L.T("Supprimer la courbe calculée");
+                    break;
                 case "duplicate":
                     ((System.Windows.Controls.MenuItem)entry).Header = curves.Count > 1
                         ? L.F("Dupliquer les {0} courbes", curves.Count)
@@ -404,6 +412,22 @@ public partial class MainWindow : FluentWindow
     {
         if (sender is FrameworkElement { DataContext: ChannelItemViewModel item, Tag: string tag })
             _viewModel.SetPlotted(CurvesFor(item), tag == "tick");
+    }
+
+    private void OnDeleteCurves(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement { DataContext: ChannelItemViewModel item })
+            _viewModel.DeleteComputedCurves(CurvesFor(item));
+    }
+
+    /// <summary>Suppr in the list: deletes the selected computed curves.</summary>
+    private void OnCurveListKeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key != Key.Delete || Keyboard.Modifiers != ModifierKeys.None || CurveListBox.SelectedItems.Count == 0)
+            return;
+        e.Handled = true;
+        _viewModel.DeleteComputedCurves(_viewModel.ChannelsView.Cast<ChannelItemViewModel>()
+            .Where(CurveListBox.SelectedItems.Contains).ToList());
     }
 
     private void OnDuplicateCurves(object sender, RoutedEventArgs e)
