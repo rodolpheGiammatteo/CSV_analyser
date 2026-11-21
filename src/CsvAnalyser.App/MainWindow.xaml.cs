@@ -265,6 +265,9 @@ public partial class MainWindow : FluentWindow
         SetBrush("AppMenuBackground", dark ? 0x2B : 0xFB);
         SetBrush("AppMenuBorder", dark ? 0x4A : 0xB8);
         SetBrush("AppMenuForeground", dark ? 0xF0 : 0x1A);
+        // Tooltips: a little darker (lighter in dark theme) than the windows, and a clear border, so they stand out.
+        SetBrush("AppToolTipBackground", dark ? 0x3A : 0xEE);
+        SetBrush("AppToolTipBorder", dark ? 0x70 : 0x8A);
     }
 
     /// <summary>Moves the cursor card to the host chosen in the settings (left panel, right of the plot, under the plot).</summary>

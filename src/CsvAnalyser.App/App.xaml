@@ -10,9 +10,43 @@
                 <ui:ControlsDictionary />
             </ResourceDictionary.MergedDictionaries>
             <BooleanToVisibilityConverter x:Key="BoolToVisibility" />
-            <!-- WPF-UI justifies tooltip text (uneven gaps between words): left-aligned instead -->
-            <Style TargetType="ToolTip" BasedOn="{StaticResource {x:Type ToolTip}}">
+            <!--
+                Tooltips with our own template, like the menus: the WPF-UI one is semi-transparent with pale, justified
+                text. Opaque colors (AppToolTipBackground/Border, set with the theme), text aligned left and wrapped, the interface size (Paramètres).
+            -->
+            <Style TargetType="ToolTip">
+                <Setter Property="OverridesDefaultStyle" Value="True" />
+                <Setter Property="SnapsToDevicePixels" Value="True" />
+                <Setter Property="HasDropShadow" Value="False" />
+                <Setter Property="LayoutTransform" Value="{Binding Source={x:Static controls:UiScaling.Transform}}" />
+                <Setter Property="Background" Value="{DynamicResource AppToolTipBackground}" />
+                <Setter Property="BorderBrush" Value="{DynamicResource AppToolTipBorder}" />
+                <Setter Property="Foreground" Value="{DynamicResource AppMenuForeground}" />
+                <Setter Property="FontSize" Value="13" />
+                <Setter Property="MaxWidth" Value="460" />
                 <Setter Property="TextBlock.TextAlignment" Value="Left" />
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="ToolTip">
+                            <Border Background="{TemplateBinding Background}"
+                                    BorderBrush="{TemplateBinding BorderBrush}"
+                                    BorderThickness="1"
+                                    CornerRadius="6"
+                                    Padding="10,7">
+                                <ContentPresenter>
+                                    <ContentPresenter.Resources>
+                                        <!-- the text of a plain string tooltip: wrapped, opaque color (not WPF-UI's own TextBlock style) -->
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="TextWrapping" Value="Wrap" />
+                                            <Setter Property="LineHeight" Value="18" />
+                                            <Setter Property="Foreground" Value="{DynamicResource AppMenuForeground}" />
+                                        </Style>
+                                    </ContentPresenter.Resources>
+                                </ContentPresenter>
+                            </Border>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
             </Style>
             <!--
                 Opaque menus with our own template: the Fluent menu is semi-transparent (invisible here), and basing a

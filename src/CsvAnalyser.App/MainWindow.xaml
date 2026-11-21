@@ -284,6 +284,7 @@
                                 <Grid.Resources>
                                     <Style TargetType="TextBlock">
                                         <Setter Property="Margin" Value="0,1,14,1" />
+                                        <Setter Property="Foreground" Value="{DynamicResource AppMenuForeground}" />
                                     </Style>
                                 </Grid.Resources>
                                 <TextBlock Grid.Row="0" FontWeight="SemiBold" Text="Ctrl+clic" />
