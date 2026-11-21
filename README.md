@@ -69,7 +69,7 @@ Je suis assez content de cette première version. J'espère qu'elle pourra aider
 
 ## Installation
 
-1. Télécharger `CSV Analyser.exe` dans la page [Releases](https://github.com/rodolpheGiammatteo/CSV_analyser/releases).
+1. Télécharger `CSV-Analyser.exe` dans la page [Releases](https://github.com/rodolpheGiammatteo/CSV_analyser/releases).
 2. Le lancer. C'est tout : aucun installateur, rien d'autre à installer (le fichier contient tout ce dont il a besoin, d'où sa taille d'environ 75 Mo).
 
 Windows 10 ou 11, 64 bits. Au premier lancement, Windows SmartScreen peut afficher « Éditeur inconnu » : *Informations complémentaires* puis *Exécuter quand même*.
