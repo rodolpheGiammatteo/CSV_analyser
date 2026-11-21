@@ -19,7 +19,7 @@ public sealed record UpdateCheckResult(UpdateStatus Status, string? LatestVersio
 
 /// <summary>
 /// Looks for a newer version among the releases published on GitHub (latest release of <see cref="Repository"/>,
-/// its tag compared with <see cref="AppInfo.Version"/>). Not switched on yet: until releases are published,
+/// its tag compared with <see cref="AppInfo.Version"/>). With <see cref="IsEnabled"/> false,
 /// <see cref="CheckAsync"/> answers <see cref="UpdateStatus.NotSupported"/> without any network access.
 /// </summary>
 public static class UpdateChecker
@@ -31,8 +31,8 @@ public static class UpdateChecker
 
     private static string LatestReleaseApi => $"https://api.github.com/repos/{Repository}/releases/latest";
 
-    /// <summary>Switch to true once releases are published on GitHub (the repository must be public).</summary>
-    public static bool IsEnabled => false;
+    /// <summary>Releases are published on GitHub (the repository must stay public for the anonymous API call).</summary>
+    public static bool IsEnabled => true;
 
     public static Task<UpdateCheckResult> CheckAsync(string currentVersion, CancellationToken ct = default) =>
         IsEnabled ? QueryGitHubAsync(currentVersion, ct) : Task.FromResult(new UpdateCheckResult(UpdateStatus.NotSupported));
