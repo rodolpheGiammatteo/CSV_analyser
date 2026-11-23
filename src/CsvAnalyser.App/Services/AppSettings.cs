@@ -24,6 +24,9 @@ public sealed class AppSettings
 
     public CsvAnalyser.App.ViewModels.CursorPanelPlacement CursorPanel { get; set; }
 
+    /// <summary>X axis under the bottom graph only, or under every graph (with or without its title).</summary>
+    public CsvAnalyser.App.ViewModels.XAxisPlacement XAxisPlacement { get; set; }
+
     public bool ShowCursorLabels { get; set; }
 
     /// <summary>Reopening a file restores the layout it had when it was left.</summary>

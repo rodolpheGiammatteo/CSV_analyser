@@ -514,6 +514,12 @@
     "Afficher seulement les courbes cochées": "Show only the ticked curves",
     "L'axe X choisi n'est pas dans l'ordre : la courbe est tracée en nuage de points, sans trait. Sans forme choisie, les points sont de petits ronds.": "The chosen X axis is not in order: the curve is drawn as a point cloud, without a line. With no shape chosen, the points are small dots.",
     "Version {0} disponible": "Version {0} available",
-    "Une nouvelle version est disponible : ouvrir sa page de téléchargement": "A new version is available: open its download page"
+    "Une nouvelle version est disponible : ouvrir sa page de téléchargement": "A new version is available: open its download page",
+    "Axe X des graphes empilés": "X axis of stacked graphs",
+    "Sous le dernier graphe seulement": "Under the last graph only",
+    "Sous chaque graphe, titre sous le dernier seulement": "Under every graph, title under the last one only",
+    "Sous chaque graphe, avec son titre": "Under every graph, with its title",
+    "Retirer « {0} » du graphe": "Remove \"{0}\" from the graph",
+    "Retirer du graphe": "Remove from the graph"
   }
 }

@@ -109,6 +109,7 @@ public partial class MainViewModel : ObservableObject, IChannelHost
         _showCursorLabels = settings.ShowCursorLabels;
         _restoreLayout = settings.RestoreLayout;
         _leftDragZooms = settings.LeftDragZooms;
+        _xAxisPlacement = Enum.IsDefined(settings.XAxisPlacement) ? settings.XAxisPlacement : XAxisPlacement.Bottom;
         _checkUpdatesAtStartup = settings.CheckUpdatesAtStartup;
         ChannelsView = CollectionViewSource.GetDefaultView(Channels);
         ChannelsView.Filter = o => MatchesSearch((ChannelItemViewModel)o);
@@ -723,4 +724,25 @@ public partial class MainViewModel : ObservableObject, IChannelHost
         _settings.ShowCursorLabels = value;
         _settings.Save();
     }
+
+    /// <summary>X axis under the bottom graph only, or under every graph (Paramètres).</summary>
+    [ObservableProperty]
+    private XAxisPlacement _xAxisPlacement;
+
+    public static IReadOnlyList<StyleChoice<XAxisPlacement>> XAxisPlacementChoices { get; } =
+    [
+        new(XAxisPlacement.Bottom, "Sous le dernier graphe seulement"),
+        new(XAxisPlacement.AllGraphs, "Sous chaque graphe, titre sous le dernier seulement"),
+        new(XAxisPlacement.AllGraphsWithTitle, "Sous chaque graphe, avec son titre"),
+    ];
+
+    partial void OnXAxisPlacementChanged(XAxisPlacement value)
+    {
+        _settings.XAxisPlacement = value;
+        _settings.Save();
+        RaisePlotChanged(PlotChange.PlotFont); // rebuilt with the same view, no undo step
+    }
+
+    /// <summary>The curve leaves its graph (unticked): plot menu or cursor panel. Ctrl+Z brings it back.</summary>
+    public void RemoveFromGraph(ChannelItemViewModel item) => item.IsPlotted = false;
 }

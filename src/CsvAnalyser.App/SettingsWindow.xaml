@@ -131,6 +131,12 @@
                       SelectedValuePath="Value"
                       DisplayMemberPath="Label"
                       SelectedValue="{Binding CursorPanelPlacement}" />
+            <TextBlock Margin="0,12,0,0" FontWeight="SemiBold" Text="Axe X des graphes empilés" />
+            <ComboBox Margin="0,6,0,8"
+                      ItemsSource="{x:Static vm:MainViewModel.XAxisPlacementChoices}"
+                      SelectedValuePath="Value"
+                      DisplayMemberPath="Label"
+                      SelectedValue="{Binding XAxisPlacement}" />
             <CheckBox Margin="0,4,0,8"
                       Content="Afficher les valeurs du curseur dans les graphiques"
                       ToolTip="Chaque valeur est écrite à côté de son point d'intersection avec le curseur"

@@ -71,6 +71,9 @@ public sealed partial class PlotController : IPlotView
     private sealed class GraphRender(GraphViewModel graph, Plot plot)
     {
         public GraphViewModel Graph { get; } = graph;
+
+        /// <summary>Last graph of its column: always shows the X axis.</summary>
+        public bool IsBottom { get; set; }
         public Plot Plot { get; } = plot;
         public List<AxisRender> Axes { get; } = [];
         public VerticalLine? Cursor { get; set; }
@@ -147,6 +150,13 @@ public sealed partial class PlotController : IPlotView
         menu.AddSeparator();
         if (axisGraph is null) // "here" means a point of the graph, not of an axis
         {
+            // The curve nearest to the mouse (vertically, at that X) leaves the graph: unticked, Ctrl+Z brings it back.
+            if (NearestSeries(_lastMenuPixel) is { } nearest)
+            {
+                var item = nearest.Item;
+                menu.Add(L.F("Retirer « {0} » du graphe", MenuText(item.Name)), _ => _vm.RemoveFromGraph(item));
+                menu.AddSeparator();
+            }
             AddAnnotationMenuItems(menu);
             menu.Add(L.T("Placer le curseur X1 ici"), plot => PlaceMeasureCursorAtMenu(plot, 'A'));
             menu.Add(L.T("Placer le curseur X2 ici"), plot => PlaceMeasureCursorAtMenu(plot, 'B'));
@@ -487,10 +497,22 @@ public sealed partial class PlotController : IPlotView
             render.LineB = AddMeasureLine(plot, "X2", MeasureColorB, labelled: isTop);
         }
 
-        // Only the bottom graph shows the X axis; the others share it.
-        plot.Axes.Bottom.Label.Text = isBottom ? _vm.XAxisLabel : "";
-        plot.Axes.Bottom.TickLabelStyle.IsVisible = isBottom;
+        render.IsBottom = isBottom;
+        ApplyXAxis(render);
         ApplyGraphAppearance(render);
+    }
+
+    /// <summary>
+    /// The graphs share X: by default only the bottom graph of each column shows its ticks and title; Paramètres can
+    /// show the ticks under every graph, with or without the title (<see cref="XAxisPlacement"/>).
+    /// </summary>
+    private void ApplyXAxis(GraphRender g)
+    {
+        var placement = _vm.XAxisPlacement;
+        bool ticks = g.IsBottom || placement != XAxisPlacement.Bottom;
+        bool title = g.IsBottom || placement == XAxisPlacement.AllGraphsWithTitle;
+        g.Plot.Axes.Bottom.Label.Text = title ? _vm.XAxisLabel : "";
+        g.Plot.Axes.Bottom.TickLabelStyle.IsVisible = ticks;
     }
 
     /// <summary>Title and legend placement of a graph.</summary>
@@ -626,8 +648,7 @@ public sealed partial class PlotController : IPlotView
                     a.Spec = spec;
                 ApplyAxisLabel(g.Plot, a);
             }
-            if (gi == _graphs.Count - 1)
-                g.Plot.Axes.Bottom.Label.Text = _vm.XAxisLabel;
+            ApplyXAxis(g);
         }
         _view.Refresh();
     }

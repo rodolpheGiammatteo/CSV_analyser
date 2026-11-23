@@ -424,6 +424,19 @@ public partial class MainWindow : FluentWindow
             .Where(CurveListBox.SelectedItems.Contains).ToList());
     }
 
+    /// <summary>Cursor panel, right-click on a curve: it leaves its graph (unticked).</summary>
+    private void OnRemoveFromGraph(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement { DataContext: ChannelItemViewModel item })
+            _viewModel.RemoveFromGraph(item);
+    }
+
+    private void OnCursorCurveSettings(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement { DataContext: ChannelItemViewModel item })
+            _viewModel.EditChannelCommand.Execute(item);
+    }
+
     private void OnDuplicateCurves(object sender, RoutedEventArgs e)
     {
         if (sender is FrameworkElement { DataContext: ChannelItemViewModel item })
