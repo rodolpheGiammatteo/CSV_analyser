@@ -1146,8 +1146,20 @@ public sealed partial class PlotController : IPlotView
         _gestureStart ??= Capture();
     }
 
+    /// <summary>Cursor positions when the last cursor drag started (a double-click puts them back).</summary>
+    private (double? A, double? B, double? Y1, double? Y2)? _measureDragStart;
+
+    /// <summary>A measurement cursor double-clicked: its editor opens when the button is released.</summary>
+    private (char Which, System.Windows.Point Position)? _pendingMeasureEdit;
+
     private void OnMouseUpAfterPlot(object sender, MouseButtonEventArgs e)
     {
+        if (_pendingMeasureEdit is { } edit)
+        {
+            _pendingMeasureEdit = null;
+            _view.Dispatcher.BeginInvoke(() => OpenMeasureEditor(edit.Which, edit.Position), DispatcherPriority.Input);
+            return;
+        }
         if (_legendDrag is not null)
         {
             EndLegendDrag();
@@ -1324,10 +1336,66 @@ public sealed partial class PlotController : IPlotView
     {
         if (e.ChangedButton != MouseButton.Left || MeasureLineAt(ToPixel(e)) is not { } which)
             return false;
+        if (e.ClickCount == 2)
+        {
+            // Double-click: type the position, as for the bounds of an axis (opened at the release, see OnMouseUpAfterPlot).
+            // The first click may have moved the line by a pixel or two: it goes back where it was.
+            EndMeasureDrag();
+            if (_measureDragStart is { } start)
+            {
+                if (start.A is { } a0 && start.B is { } b0)
+                    _vm.SetMeasureCursors(a0, b0);
+                if (_yCursors is { } yc && start.Y1 is { } y10 && start.Y2 is { } y20)
+                    _vm.SetMeasureY(yc.Graph.Graph, yc.Axis.Key, y10, y20);
+                UpdateMeasureLines();
+                _view.Refresh();
+            }
+            _pendingMeasureEdit = (which, e.GetPosition(_view));
+            e.Handled = true;
+            return true;
+        }
         _measureDrag = which;
+        _measureDragStart = (_vm.MeasureA, _vm.MeasureB, _vm.MeasureY1, _vm.MeasureY2);
         _view.CaptureMouse();
         e.Handled = true; // no pan while moving a cursor
         return true;
+    }
+
+    /// <summary>
+    /// Small editor to type the position of a measurement cursor (double-click on its line): X1/X2 are snapped to the
+    /// nearest sample, Y1/Y2 take the value as typed (in the unit of their axis).
+    /// </summary>
+    private void OpenMeasureEditor(char which, System.Windows.Point position)
+    {
+        if (which is '1' or '2')
+        {
+            if (_yCursors is not { } y || _vm.MeasureY1 is not { } y1 || _vm.MeasureY2 is not { } y2)
+                return;
+            string axis = string.IsNullOrEmpty(y.Axis.Spec.Label) ? L.T("Axe Y") : y.Axis.Spec.Label;
+            string title = $"{L.T("Curseur")} Y{which} — {axis}";
+            PlotTools.ShowBoundEditor(_view, position, title, which == '1' ? y1 : y2, value =>
+            {
+                _vm.SetMeasureY(y.Graph.Graph, y.Axis.Key, which == '1' ? value : y1, which == '2' ? value : y2);
+                _view.Refresh();
+                return null;
+            });
+            return;
+        }
+
+        if (_vm.MeasureA is not { } a || _vm.MeasureB is not { } b)
+            return;
+        string name = which == 'A' ? "X1" : "X2";
+        PlotTools.ShowBoundEditor(_view, position, $"{L.T("Curseur")} {name} — {_vm.XAxisLabel}", which == 'A' ? a : b, value =>
+        {
+            double x = Snap(value);
+            if (which == 'A')
+                _vm.SetMeasureCursors(x, b);
+            else
+                _vm.SetMeasureCursors(a, x);
+            UpdateMeasureLines();
+            _view.Refresh();
+            return null;
+        });
     }
 
     private void DragMeasure(MouseEventArgs e)
