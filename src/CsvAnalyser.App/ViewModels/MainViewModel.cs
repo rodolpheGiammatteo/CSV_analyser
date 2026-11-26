@@ -483,13 +483,49 @@ public partial class MainViewModel : ObservableObject, IChannelHost
         return ScottPlot.Color.FromHex(palette[PlottedChannels.Count % palette.Length]);
     }
 
+    private string _searchFilter = "";
+
     private bool MatchesSearch(ChannelItemViewModel item) =>
         (!ShowPlottedOnly || item.IsPlotted)
-        && (string.IsNullOrWhiteSpace(SearchText)
-            || item.Name.Contains(SearchText.Trim(), StringComparison.CurrentCultureIgnoreCase)
-            || item.Channel.SourceName.Contains(SearchText.Trim(), StringComparison.CurrentCultureIgnoreCase));
+        && (_searchFilter.Length == 0
+            || item.Name.Contains(_searchFilter, StringComparison.CurrentCultureIgnoreCase)
+            || item.Channel.SourceName.Contains(_searchFilter, StringComparison.CurrentCultureIgnoreCase));
 
-    partial void OnSearchTextChanged(string value) => ChannelsView.Refresh();
+    /// <summary>
+    /// The list is filtered once the typing pauses (150 ms), not at each key: refreshing the view rebuilds its
+    /// rows, and with several files its groups too, which made the typing lag. Clearing the box applies at once.
+    /// </summary>
+    private System.Windows.Threading.DispatcherTimer? _searchTimer;
+
+    partial void OnSearchTextChanged(string value)
+    {
+        _searchTimer ??= CreateSearchTimer();
+        _searchTimer.Stop();
+        if (string.IsNullOrWhiteSpace(value))
+            ApplySearch();
+        else
+            _searchTimer.Start();
+    }
+
+    private System.Windows.Threading.DispatcherTimer CreateSearchTimer()
+    {
+        var timer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(150) };
+        timer.Tick += (_, _) =>
+        {
+            timer.Stop();
+            ApplySearch();
+        };
+        return timer;
+    }
+
+    private void ApplySearch()
+    {
+        string filter = (SearchText ?? "").Trim();
+        if (filter == _searchFilter)
+            return;
+        _searchFilter = filter;
+        ChannelsView.Refresh();
+    }
 
     /// <summary>The curve list shows only the ticked curves (filter button beside the search box).</summary>
     [ObservableProperty]
