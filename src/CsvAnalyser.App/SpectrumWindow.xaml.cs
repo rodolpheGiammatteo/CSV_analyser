@@ -124,19 +124,21 @@ public partial class SpectrumWindow : FluentWindow
         var option = _vm.SelectedXAxis;
         if (ds is null || option is null)
             return;
-        if (!option.IsSorted)
+        var range = (SpectrumRange)(RangeCombo.SelectedValue ?? SpectrumRange.All);
+        // Each curve on its own file's X and rows (a compared file has its own samples).
+        (double[] Xs, ExportRows Rows)? SamplesOf(ChannelItemViewModel item)
         {
-            ShowMessage(L.T("L'axe X doit être croissant pour calculer un spectre (choisissez le temps ou le n° de ligne)."));
-            return;
+            var source = item.Source ?? _vm.PrimarySource!;
+            if (!source.IsXSorted(option))
+                return null;
+            ExportRows rows = range switch
+            {
+                SpectrumRange.Visible when _vm.PlotView?.XRange is { } x => _vm.RowsInXRange(x.Min, x.Max, source),
+                SpectrumRange.BetweenCursors when _vm.MeasureA is { } a && _vm.MeasureB is { } b => _vm.RowsInXRange(Math.Min(a, b), Math.Max(a, b), source),
+                _ => ExportRows.All(source.Dataset.RowCount),
+            };
+            return (source.XValues(option), rows);
         }
-
-        var xs = option.GetValues(ds);
-        ExportRows rows = (SpectrumRange)(RangeCombo.SelectedValue ?? SpectrumRange.All) switch
-        {
-            SpectrumRange.Visible when _vm.PlotView?.XRange is { } x => _vm.RowsInXRange(x.Min, x.Max),
-            SpectrumRange.BetweenCursors when _vm.RowsBetweenCursors is { } r => r,
-            _ => ExportRows.All(ds.RowCount),
-        };
         var window = (FftWindow)(WindowCombo.SelectedValue ?? FftWindow.Hann);
         bool removeMean = RemoveMeanBox.IsChecked == true;
         bool decibel = DecibelBox.IsChecked == true;
@@ -155,7 +157,9 @@ public partial class SpectrumWindow : FluentWindow
             {
                 try
                 {
-                    return (item, (SpectrumResult?)Spectrum.Compute(xs, item.Channel.Values, rows.Start, rows.End, window, removeMean), (string?)null);
+                    if (SamplesOf(item) is not { } samples)
+                        return (item, null, L.T("L'axe X doit être croissant pour calculer un spectre (choisissez le temps ou le n° de ligne)."));
+                    return (item, (SpectrumResult?)Spectrum.Compute(samples.Xs, item.Channel.Values, samples.Rows.Start, samples.Rows.End, window, removeMean), (string?)null);
                 }
                 catch (InvalidOperationException ex)
                 {

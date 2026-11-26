@@ -22,6 +22,11 @@ public partial class MainViewModel
     [RelayCommand]
     private void NewComputed(ChannelItemViewModel? source)
     {
+        if (source is { IsCompared: true })
+        {
+            StatusText = L.T("Les courbes calculées utilisent les colonnes du fichier ouvert, pas celles des fichiers ajoutés pour comparer.");
+            return;
+        }
         if (Dataset is null)
             ShowNeedsFile();
         else
@@ -112,6 +117,9 @@ public partial class MainViewModel
     /// </summary>
     public void DuplicateCurves(IReadOnlyList<ChannelItemViewModel> items)
     {
+        items = items.Where(c => !c.IsCompared).ToList(); // a copy is a computed curve, on the rows of the opened file
+        if (items.Count == 0)
+            return;
         if (Dataset is null || items.Count == 0)
             return;
         var copies = new List<string>();
@@ -225,9 +233,10 @@ public partial class MainViewModel
 
     /// <summary>A curve by column name, then by displayed name, then by "name [unit]".</summary>
     public ChannelItemViewModel? FindCurve(string name) =>
-        Channels.FirstOrDefault(c => c.Channel.SourceName == name)
-        ?? Channels.FirstOrDefault(c => c.Name == name)
-        ?? Channels.FirstOrDefault(c => c.LegendText == name);
+        // Computed curves work on the rows of the opened file: the columns of compared files are not candidates.
+        Channels.FirstOrDefault(c => !c.IsCompared && c.Channel.SourceName == name)
+        ?? Channels.FirstOrDefault(c => !c.IsCompared && c.Name == name)
+        ?? Channels.FirstOrDefault(c => !c.IsCompared && c.LegendText == name);
 
     private bool UsesCurve(ComputedCurveConfig def, ChannelItemViewModel item)
     {
@@ -321,7 +330,7 @@ public partial class MainViewModel
     }
 
     private ChannelItemViewModel CreateComputedItem(ComputedCurveConfig def, double[] values) =>
-        new(new Channel(def.Name, values) { Unit = def.Unit.Trim() }, this) { Definition = def.Clone() };
+        new(new Channel(def.Name, values) { Unit = def.Unit.Trim() }, this) { Definition = def.Clone(), Source = PrimarySource };
 
     /// <summary>Puts <paramref name="replacement"/> in place of <paramref name="old"/>: same list position, graph, style, plotted state.</summary>
     private void ReplaceItem(ChannelItemViewModel old, ChannelItemViewModel replacement)

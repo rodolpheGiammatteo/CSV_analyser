@@ -572,6 +572,23 @@
     "Appuyez sur les touches…": "Press the keys…",
     "Ajoutez Ctrl ou Alt : seules les touches F1 à F12 peuvent servir seules.": "Add Ctrl or Alt: only F1 to F12 can be used alone.",
     "{0} est déjà le raccourci de « {1} ».\n\nLe donner à « {2} » à la place ?": "{0} is already the shortcut of \"{1}\".\n\nGive it to \"{2}\" instead?",
-    "Raccourci déjà utilisé": "Shortcut already used"
+    "Raccourci déjà utilisé": "Shortcut already used",
+    "Ajouter un fichier pour comparer": "Add a file to compare",
+    "Ajouter un fichier pour comparer…": "Add a file to compare…",
+    "{0} est déjà ouvert.": "{0} is already open.",
+    "{0} ajouté pour comparer ({1:N0} lignes).": "{0} added to compare ({1:N0} rows).",
+    "Même couleur pour une même colonne": "Same color for the same column",
+    "Une colonne tracée pour plusieurs fichiers garde la couleur du premier fichier ; chaque fichier a son type de trait": "A column plotted for several files keeps the color of the first file; each file has its own line pattern",
+    "Retirer ce fichier": "Remove this file",
+    "Retirer ce fichier de la comparaison": "Remove this file from the comparison",
+    "Décalage X": "X offset",
+    "Ajouté à l'axe X de ce fichier, dans l'unité de l'axe X, pour l'aligner sur les autres (Entrée pour appliquer)": "Added to the X axis of this file, in the unit of the X axis, to line it up with the others (Enter to apply)",
+    "Tracer cette colonne pour tous les fichiers": "Plot this column for every file",
+    "Ajouter « {0} » pour le comparer au fichier ouvert ?\n\nOui : l'ajouter pour comparer.\nNon : l'ouvrir à la place du fichier actuel.": "Add \"{0}\" to compare with the open file?\n\nYes: add it to compare.\nNo: open it instead of the current file.",
+    "Ajouter ces {0} fichiers pour les comparer au fichier ouvert ?\n\nOui : les ajouter pour comparer.\nNon : ouvrir le premier à la place du fichier actuel.": "Add these {0} files to compare with the open file?\n\nYes: add them to compare.\nNo: open the first one instead of the current file.",
+    "Fichier déposé": "File dropped",
+    "Les courbes calculées utilisent les colonnes du fichier ouvert, pas celles des fichiers ajoutés pour comparer.": "Computed curves use the columns of the open file, not those of the files added to compare.",
+    "Fichiers à comparer introuvables (déplacés ou renommés ?) :\n{0}": "Files to compare not found (moved or renamed?):\n{0}",
+    "Comparaison": "Comparison"
   }
 }

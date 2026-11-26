@@ -77,6 +77,10 @@ public partial class MainViewModel
             config.Curves.Add(ToConfig(item));
         config.Computed.AddRange(ComputedChannels.Select(c => c.Definition!.Clone()));
         config.Annotations = CaptureAnnotations();
+        if (PrimarySource is { Offset: not 0 } primary)
+            config.XOffset = primary.Offset;
+        if (Sources.Count > 1)
+            config.Files = Sources.Skip(1).Select(s => new ComparedFileConfig { Path = s.FilePath, Offset = s.Offset != 0 ? s.Offset : null }).ToList();
         if (IsMeasuring || MeasureA is not null || IsMeasuringY)
         {
             int yGraph = MeasureYGraph is { } mg ? Graphs.IndexOf(mg) : -1;
@@ -98,6 +102,7 @@ public partial class MainViewModel
         int graphIndex = item.Graph is { } graph ? Graphs.IndexOf(graph) : -1;
         return new CurveConfig
         {
+            File = item.IsCompared ? item.Source!.Index : null,
             Column = item.Channel.SourceName,
             Name = item.Name != item.OriginalName ? item.Name : null,
             Unit = item.Unit != item.OriginalUnit ? item.Unit : null,
@@ -140,10 +145,19 @@ public partial class MainViewModel
                 item.Graph = null;
             }
 
+            // X offsets of the files (same files: session, project, undo).
+            if (PrimarySource is { } primary)
+                primary.SetOffsetSilently(config.XOffset is { } xo && double.IsFinite(xo) ? xo : 0);
+            for (int i = 1; i < Sources.Count; i++)
+            {
+                var fc = config.Files is { } files && i - 1 < files.Count ? files[i - 1] : null;
+                Sources[i].SetOffsetSilently(fc?.Offset is { } fo && double.IsFinite(fo) ? fo : 0);
+            }
+
             // Names and units first: a formula may use a renamed curve.
             foreach (var cc in config.Curves)
             {
-                if (Channels.FirstOrDefault(c => !c.IsComputed && c.Channel.SourceName == cc.Column) is { } item)
+                if (FindConfigCurve(cc) is { IsComputed: false } item)
                 {
                     if (cc.Name is { Length: > 0 } name)
                         item.Name = name;
@@ -153,9 +167,6 @@ public partial class MainViewModel
             }
             missing.AddRange(RebuildComputed(config.Computed));
 
-            var bySource = new Dictionary<string, ChannelItemViewModel>(StringComparer.Ordinal);
-            foreach (var item in Channels)
-                bySource.TryAdd(item.Channel.SourceName, item);
 
             // The annotations kept (layout applied to the same file) find their graph again by its position.
             var annotationGraphs = Annotations.Select(a => a.Graph is { } g ? Graphs.IndexOf(g) : -1).ToList();
@@ -185,7 +196,7 @@ public partial class MainViewModel
 
             foreach (var cc in config.Curves)
             {
-                if (!bySource.TryGetValue(cc.Column, out var item))
+                if (FindConfigCurve(cc) is not { } item)
                     continue;
                 if (cc.Name is { Length: > 0 } name)
                     item.Name = name;
@@ -277,6 +288,35 @@ public partial class MainViewModel
         return missing;
     }
 
+    /// <summary>The curve of a configuration entry: its column in its file (the opened one, or a compared file by number).</summary>
+    private ChannelItemViewModel? FindConfigCurve(CurveConfig cc)
+    {
+        int file = cc.File ?? 0;
+        if (file == 0)
+            return Channels.FirstOrDefault(c => !c.IsCompared && c.Channel.SourceName == cc.Column);
+        return file < Sources.Count ? Channels.FirstOrDefault(c => c.Source == Sources[file] && c.Channel.SourceName == cc.Column) : null;
+    }
+
+    /// <summary>Loads the compared files of a configuration that are not loaded yet (session, project).</summary>
+    private async Task LoadConfigFilesAsync(ViewConfiguration config)
+    {
+        if (config.Files is not { Count: > 0 } files)
+            return;
+        var notFound = new List<string>();
+        foreach (var file in files)
+        {
+            if (!File.Exists(file.Path))
+            {
+                notFound.Add(Path.GetFileName(file.Path));
+                continue;
+            }
+            await AddCompareFileAsync(file.Path, file.Offset ?? 0, resetHistory: false);
+        }
+        if (notFound.Count > 0)
+            MessageBox.Show(L.F("Fichiers à comparer introuvables (déplacés ou renommés ?) :\n{0}", string.Join("\n", notFound)),
+                L.T("Comparaison"), MessageBoxButton.OK, MessageBoxImage.Warning);
+    }
+
     /// <summary>
     /// Back to the state of a first opening: one graph, no curve, original names and styles, no computed curve,
     /// default X axis, no measurement cursor (right-click on the eraser). Undoable with Ctrl+Z.
@@ -330,12 +370,20 @@ public partial class MainViewModel
             SessionStore.Save(ds.FilePath, CaptureConfiguration());
     }
 
-    private void RestoreSession(string path)
+    private async Task RestoreSessionAsync(string path)
     {
         if (!RestoreLayout || SessionStore.TryLoad(path) is not { } session)
             return;
+        string status = L.T(" — mise en page précédente retrouvée");
+        string loaded = StatusText;
+        if (session.Files is { Count: > 0 })
+        {
+            // The compared files first, so their curves find their place.
+            await LoadConfigFilesAsync(session);
+            loaded = StatusText;
+        }
         ApplyConfiguration(session, restoreView: true);
-        StatusText += L.T(" — mise en page précédente retrouvée");
+        StatusText = loaded + status;
     }
 
     // ---------------------------------------------------------------- projects
@@ -502,7 +550,7 @@ public partial class MainViewModel
                 return;
             if (same)
             {
-                ApplyLoadedProject(config, path);
+                await ApplyLoadedProjectAsync(config, path);
                 return;
             }
         }
@@ -511,11 +559,12 @@ public partial class MainViewModel
         if (csv is null)
             return;
         if (await LoadCsvAsync(csv, restoreSession: false))
-            ApplyLoadedProject(config, path);
+            await ApplyLoadedProjectAsync(config, path);
     }
 
-    private void ApplyLoadedProject(ViewConfiguration config, string path)
+    private async Task ApplyLoadedProjectAsync(ViewConfiguration config, string path)
     {
+        await LoadConfigFilesAsync(config);
         var missing = ApplyConfiguration(config, restoreView: true);
         ProjectPath = path;
         _settings.LastConfigDirectory = Path.GetDirectoryName(path);
@@ -647,12 +696,13 @@ public partial class MainViewModel
     }
 
     /// <summary>The rows whose X value is inside [min, max] on the current X axis.</summary>
-    public ExportRows RowsInXRange(double min, double max)
+    /// <summary>The rows of a file (the opened one by default) whose X, offset included, is in [min, max].</summary>
+    public ExportRows RowsInXRange(double min, double max, DataSource? source = null)
     {
-        var ds = Dataset!;
+        source ??= PrimarySource!;
         var option = SelectedXAxis!;
-        var xs = option.GetValues(ds);
-        if (option.IsSorted)
+        var xs = source.XValues(option);
+        if (source.IsXSorted(option))
             return new ExportRows(Core.Analysis.SortedSearch.LowerBound(xs, min), Core.Analysis.SortedSearch.UpperBound(xs, max));
         return new ExportRows(0, xs.Length, row => xs[row] >= min && xs[row] <= max);
     }
@@ -680,7 +730,8 @@ public partial class MainViewModel
             new(option.Channel is { } ch ? Header(ch) : L.T("N° de ligne"), option.GetValues(ds)),
         };
         var curves = plottedOnly ? PlottedChannels.AsEnumerable() : Channels;
-        foreach (var item in curves.Where(c => c.Channel != option.Channel))
+        // The export writes the rows of the opened file: the columns of compared files (other rows) are left out.
+        foreach (var item in curves.Where(c => c.Channel != option.Channel && !c.IsCompared))
             columns.Add(new ExportColumn(Header(item.Channel), item.Channel.Values));
         return columns;
 

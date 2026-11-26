@@ -126,7 +126,7 @@ public sealed partial class PlotController
     {
         if (_series.FirstOrDefault(s => s.Item == a.Curve) is not { } series || a.Row >= series.Ys.Length)
             return; // its curve is not plotted
-        double x = _xs![a.Row], y = series.Ys[a.Row];
+        double x = series.Xs[a.Row], y = series.Ys[a.Row]; // a note sits on its curve's own X (a compared file has its own)
         if (!double.IsFinite(y))
             return;
         var plot = series.Graph.Plot;
@@ -387,6 +387,8 @@ public sealed partial class PlotController
             return;
         if (drag.Part == AnnotationPart.NotePoint)
         {
+            if (_series.FirstOrDefault(s => s.Item == a.Curve) is { IsCompared: true } own)
+                row = NearestIndex(own, x); // a row of its own file
             a.Row = row; // redrawn: the point moves along its curve
             if (_notes.FirstOrDefault(n => n.Annotation == a) is { } moved)
             {
@@ -449,8 +451,12 @@ public sealed partial class PlotController
         int row = _xSorted ? NearestSorted(_xs, x) : NearestUnsorted(_xs, x);
         if (row < 0)
             return null;
-        return _series.Where(s => s.Graph == g && row < s.Ys.Length && double.IsFinite(s.Ys[row]))
-            .OrderBy(s => Math.Abs(g.Plot.GetPixel(new Coordinates(_xs[row], s.Ys[row]), g.Plot.Axes.Bottom, s.Axis).Y - pixel.Y))
+        // Each curve at its own sample nearest to that X (a compared file has its own X).
+        return _series.Where(s => s.Graph == g)
+            .Select(s => (S: s, P: SampleAt(s, _xs[row], row)))
+            .Where(c => double.IsFinite(c.P.Y))
+            .OrderBy(c => Math.Abs(g.Plot.GetPixel(new Coordinates(c.P.X, c.P.Y), g.Plot.Axes.Bottom, c.S.Axis).Y - pixel.Y))
+            .Select(c => c.S)
             .FirstOrDefault();
     }
 
@@ -475,7 +481,9 @@ public sealed partial class PlotController
                 a = _vm.AddZone(start, end);
                 break;
             case AnnotationKind.Note when curve is not null:
-                a = _vm.AddNote(curve, row);
+                // On a compared file, the row of its own sample nearest to the click.
+                int noteRow = _series.FirstOrDefault(s => s.Item == curve) is { IsCompared: true } own ? NearestIndex(own, x) : row;
+                a = _vm.AddNote(curve, noteRow);
                 break;
             default:
                 a = _vm.AddMarker(row);

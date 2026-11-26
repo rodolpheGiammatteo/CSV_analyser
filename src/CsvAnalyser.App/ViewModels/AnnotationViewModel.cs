@@ -220,6 +220,7 @@ public partial class AnnotationViewModel : ObservableObject
             Row = Row,
             EndRow = Kind == AnnotationKind.Zone ? EndRow : null,
             Curve = Kind == AnnotationKind.Note ? Curve?.Channel.SourceName : null,
+            CurveFile = Kind == AnnotationKind.Note && Curve is { IsCompared: true } compared ? compared.Source!.Index : null,
             Graph = graphIndex >= 0 && Kind != AnnotationKind.Note ? graphIndex : null,
             Color = Color,
             FontSize = FontSize != DefaultFontSize ? FontSize : null,
@@ -234,8 +235,12 @@ public partial class AnnotationViewModel : ObservableObject
 
     /// <summary>An annotation from a configuration; null when it does not fit this file (row out of range, unknown kind).</summary>
     public static AnnotationViewModel? FromConfig(IAnnotationHost host, AnnotationConfig c, int rowCount,
-        IList<GraphViewModel> graphs, Func<string, ChannelItemViewModel?> findCurve)
+        IList<GraphViewModel> graphs, Func<string, int, ChannelItemViewModel?> findCurve)
     {
+        // A note on a compared file counts the rows of that file.
+        var noteCurve = c.Kind == nameof(AnnotationKind.Note) && c.Curve is { } column ? findCurve(column, c.CurveFile ?? 0) : null;
+        if (noteCurve is not null)
+            rowCount = noteCurve.Channel.Values.Length;
         if (!Enum.TryParse<AnnotationKind>(c.Kind, out var kind) || c.Row < 0 || c.Row >= rowCount)
             return null;
         var a = new AnnotationViewModel(host, kind, c.Row) { _quiet = true };
@@ -247,7 +252,7 @@ public partial class AnnotationViewModel : ObservableObject
                 (a.Row, a.EndRow) = (a.EndRow, a.Row); // Row is always the first edge (dragging relies on it)
         }
         if (kind == AnnotationKind.Note)
-            a.Curve = c.Curve is { } column ? findCurve(column) : null;
+            a.Curve = noteCurve;
         if (c.Graph is { } gi && gi >= 0 && gi < graphs.Count && kind != AnnotationKind.Note)
             a.Graph = graphs[gi];
         if (c.Color is { } hex && hex.TrimStart('#').Length == 6)

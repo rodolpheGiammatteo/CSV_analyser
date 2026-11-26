@@ -10,6 +10,7 @@
                 <ui:ControlsDictionary />
             </ResourceDictionary.MergedDictionaries>
             <BooleanToVisibilityConverter x:Key="BoolToVisibility" />
+            <controls:InverseBoolToVisibilityConverter x:Key="InverseBoolToVisibility" />
             <!--
                 Tooltips with our own template, like the menus: the WPF-UI one is semi-transparent with pale, justified
                 text. Opaque colors (AppToolTipBackground/Border, set with the theme), text aligned left and wrapped, the interface size (Paramètres).

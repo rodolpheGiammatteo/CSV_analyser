@@ -53,6 +53,22 @@ public sealed partial class PlotController : IPlotView
         /// <summary>The other ascending runs of an X that goes back a few times: same style, no legend entry.</summary>
         public IReadOnlyList<SignalXY> Pieces { get; init; } = [];
 
+        /// <summary>X of this curve: its file's X for the chosen axis, offset included (the opened file's is <c>_xs</c>).</summary>
+        public double[] Xs { get; init; } = [];
+
+        public bool XSorted { get; init; } = true;
+
+        /// <summary>Ascending runs of an unsorted X (null when sorted or unordered).</summary>
+        public IReadOnlyList<(int Start, int End)>? XRuns { get; init; }
+
+        /// <summary>Under the hover cursor: the sample shown (X, Y), NaN when the cursor is outside this curve's X range.</summary>
+        public double CursorX { get; set; } = double.NaN;
+
+        public double CursorY { get; set; } = double.NaN;
+
+        /// <summary>A curve of a file added to compare (its X is not <c>_xs</c>).</summary>
+        public bool IsCompared => Item.IsCompared;
+
         /// <summary>Spaced markers (sorted X only): placed before each render by <see cref="PlaceSpacedMarkers"/>.</summary>
         public Scatter? Spaced { get; init; }
 
@@ -296,6 +312,7 @@ public sealed partial class PlotController : IPlotView
                 ApplyMouseButtons();
                 break;
             case PlotChange.Layout:
+            case PlotChange.Sources:
                 Rebuild(resetView: false);
                 break;
             case PlotChange.Measure:
@@ -330,7 +347,9 @@ public sealed partial class PlotController : IPlotView
         _series.Clear();
         _lastYRanges.Clear();
         _interactionAxis = null;
-        _xs =_vm.Dataset is { } ds && _vm.SelectedXAxis is { } option ? option.GetValues(ds) : null;
+        // The X of the opened file (offset included): reference of the hover cursor, X1/X2 and annotations.
+        _xs = _vm.PrimarySource is { } primary && _vm.SelectedXAxis is { } option ? primary.XValues(option) : null;
+        _runsByX.Clear();
         _xSorted = _vm.SelectedXAxis?.IsSorted ?? true;
         _xRuns = _xSorted || _xs is null ? null : AscendingRuns.Find(_xs);
 
@@ -431,14 +450,17 @@ public sealed partial class PlotController : IPlotView
                 var axis = axisOf[item];
                 IPlottable curve;
                 var pieces = new List<SignalXY>();
-                if (_xSorted)
-                    curve = plot.Add.SignalXY(_xs, item.Channel.Values, item.Color);
-                else if (_xRuns is { } runs)
+                var xs = _vm.XValuesFor(item);
+                bool sorted = _vm.IsXSortedFor(item);
+                var xRuns = sorted ? null : RunsOf(xs);
+                if (sorted)
+                    curve = plot.Add.SignalXY(xs, item.Channel.Values, item.Color);
+                else if (xRuns is { } runs)
                 {
                     // X goes back a few times (clock resync): one line per ascending run, over the same arrays.
                     foreach (var (start, end) in runs)
                     {
-                        var piece = plot.Add.SignalXY(_xs, item.Channel.Values, item.Color);
+                        var piece = plot.Add.SignalXY(xs, item.Channel.Values, item.Color);
                         piece.Data.MinimumIndex = start;
                         piece.Data.MaximumIndex = end - 1;
                         piece.Axes.YAxis = axis;
@@ -448,9 +470,15 @@ public sealed partial class PlotController : IPlotView
                     pieces.RemoveAt(0);
                 }
                 else
-                    curve = plot.Add.ScatterPoints(_xs, item.Channel.Values, item.Color);
+                    curve = plot.Add.ScatterPoints(xs, item.Channel.Values, item.Color);
                 curve.Axes.YAxis = axis;
-                created.Add((new Series(item, item.Channel.Values, curve, null!, null!, render, axis) { Pieces = pieces }, axis));
+                created.Add((new Series(item, item.Channel.Values, curve, null!, null!, render, axis)
+                {
+                    Pieces = pieces,
+                    Xs = xs,
+                    XSorted = sorted,
+                    XRuns = xRuns,
+                }, axis));
             }
 
             // Markers, value labels and cursor are added last so they are drawn on top of the curves.
@@ -473,7 +501,7 @@ public sealed partial class PlotController : IPlotView
 
                 Scatter? spaced = null;
                 List<double> spacedXs = [], spacedYs = [];
-                if (pending.Curve is SignalXY && _xSorted)
+                if (pending.Curve is SignalXY && pending.XSorted)
                 {
                     // The scatter reads these lists, filled before each render; drawn over the line.
                     spaced = plot.Add.ScatterPoints(spacedXs, spacedYs, pending.Item.Color);
@@ -718,7 +746,7 @@ public sealed partial class PlotController : IPlotView
                     piece.Color = item.Color.WithAlpha(item.Opacity);
                     piece.LegendText = piece == signal ? item.LegendText : "";
                     piece.LineWidth = item.IsLineVisible ? (float)item.LineWidth * _scale : 0;
-                    piece.LinePattern = ToPattern(item.Line);
+                    piece.LinePattern = ToPattern(_vm.CompareLine(item) ?? item.Line);
                     piece.MarkerShape = ToShape(item.Marker);
                     piece.MarkerSize = item.HasMarkers && !spaced ? (float)item.MarkerSize * _scale : 0;
                 }
@@ -789,7 +817,14 @@ public sealed partial class PlotController : IPlotView
             SetX(0, 1);
             return;
         }
-        var (xMin, xMax) = _xSorted ? FirstLastFinite(_xs) : MinMax(_xs, 0, _xs.Length);
+        // The opened file, and every compared file with a plotted curve.
+        double xMin = double.PositiveInfinity, xMax = double.NegativeInfinity;
+        foreach (var (xs, sorted) in _series.Select(s => (s.Xs, s.XSorted)).Prepend((_xs, _xSorted)).DistinctBy(x => x.Item1, ReferenceEqualityComparer.Instance))
+        {
+            var (min, max) = sorted ? FirstLastFinite(xs) : MinMax(xs, 0, xs.Length);
+            xMin = Math.Min(xMin, min);
+            xMax = Math.Max(xMax, max);
+        }
         SetX(xMin, xMax);
     }
 
@@ -855,16 +890,17 @@ public sealed partial class PlotController : IPlotView
             foreach (var item in a.Spec.Curves)
             {
                 var ys = item.Channel.Values;
+                var xs = _vm.XValuesFor(item);
                 double min, max;
-                if (_xSorted)
+                if (_vm.IsXSortedFor(item))
                 {
-                    int i0 = LowerBound(_xs, left);
-                    int i1 = LowerBound(_xs, right) + 1;
+                    int i0 = LowerBound(xs, left);
+                    int i1 = LowerBound(xs, right) + 1;
                     (min, max) = MinMax(ys, i0, Math.Min(i1, ys.Length));
                 }
                 else
                 {
-                    (min, max) = MinMaxInXRange(_xs, ys, left, right);
+                    (min, max) = MinMaxInXRange(xs, ys, left, right);
                 }
                 yMin = Math.Min(yMin, min);
                 yMax = Math.Max(yMax, max);
@@ -1778,8 +1814,9 @@ public sealed partial class PlotController : IPlotView
 
         foreach (var s in _series)
         {
-            double y = s.Ys[index];
-            s.Marker.Location = new Coordinates(snappedX, y);
+            (s.CursorX, s.CursorY) = SampleAt(s, snappedX, index);
+            double y = s.CursorY;
+            s.Marker.Location = new Coordinates(s.CursorX, y);
             s.Marker.IsVisible = !double.IsNaN(y);
             s.Item.CursorText = MainViewModel.FormatValue(y, s.Item.Unit);
         }
@@ -1813,16 +1850,16 @@ public sealed partial class PlotController : IPlotView
             var visible = new List<(Series S, float Pixel)>();
             foreach (var s in inGraph)
             {
-                double y = s.Ys[index];
+                double y = s.CursorY;
                 bool show = !double.IsNaN(y);
                 s.Label.IsVisible = show;
                 if (!show)
                     continue;
-                s.Label.Location = new Coordinates(x, y);
+                s.Label.Location = new Coordinates(s.CursorX, y);
                 s.Label.LabelText = s.Item.CursorText;
                 s.Label.Alignment = toLeft ? Alignment.MiddleRight : Alignment.MiddleLeft;
                 s.Label.OffsetX = toLeft ? -gap : gap;
-                visible.Add((s, g.Plot.GetPixel(new Coordinates(x, y), g.Plot.Axes.Bottom, s.Axis).Y));
+                visible.Add((s, g.Plot.GetPixel(new Coordinates(s.CursorX, y), g.Plot.Axes.Bottom, s.Axis).Y));
             }
             if (visible.Count == 0)
                 continue;
@@ -1880,6 +1917,68 @@ public sealed partial class PlotController : IPlotView
                 hi = mid;
         }
         return lo;
+    }
+
+    private readonly Dictionary<double[], IReadOnlyList<(int Start, int End)>?> _runsByX = new(ReferenceEqualityComparer.Instance);
+
+    /// <summary>Ascending runs of an unsorted X, computed once per array and rebuild.</summary>
+    private IReadOnlyList<(int Start, int End)>? RunsOf(double[] xs)
+    {
+        if (!_runsByX.TryGetValue(xs, out var runs))
+            _runsByX[xs] = runs = AscendingRuns.Find(xs);
+        return runs;
+    }
+
+    /// <summary>
+    /// The sample of a curve under the hover cursor: on the opened file's X, the cursor row itself; on a compared
+    /// file, its nearest sample (NaN outside its X range, so a shorter file shows nothing past its end).
+    /// </summary>
+    private (double X, double Y) SampleAt(Series s, double x, int primaryIndex)
+    {
+        if (ReferenceEquals(s.Xs, _xs))
+            return primaryIndex < s.Ys.Length ? (x, s.Ys[primaryIndex]) : (x, double.NaN);
+        int i = NearestIndex(s, x);
+        if (i < 0 || i >= s.Ys.Length)
+            return (x, double.NaN);
+        var (min, max) = s.XSorted ? FirstLastFinite(s.Xs) : (double.NegativeInfinity, double.PositiveInfinity);
+        if (x < min || x > max)
+            return (x, double.NaN);
+        return (s.Xs[i], s.Ys[i]);
+    }
+
+    /// <summary>Nearest sample of a curve to an X: binary search per ascending run, else a full scan.</summary>
+    private static int NearestIndex(Series s, double x)
+    {
+        if (s.XSorted)
+            return NearestSorted(s.Xs, x);
+        if (s.XRuns is not { } runs)
+            return NearestUnsorted(s.Xs, x);
+        int best = -1;
+        double bestDistance = double.PositiveInfinity;
+        foreach (var (start, end) in runs)
+        {
+            int lo = start, hi = end;
+            while (lo < hi)
+            {
+                int mid = lo + ((hi - lo) >> 1);
+                if (s.Xs[mid] < x)
+                    lo = mid + 1;
+                else
+                    hi = mid;
+            }
+            foreach (int i in new[] { lo - 1, lo })
+            {
+                if (i < start || i >= end)
+                    continue;
+                double d = Math.Abs(s.Xs[i] - x);
+                if (d < bestDistance)
+                {
+                    bestDistance = d;
+                    best = i;
+                }
+            }
+        }
+        return best;
     }
 
     private static int NearestSorted(double[] sorted, double value)

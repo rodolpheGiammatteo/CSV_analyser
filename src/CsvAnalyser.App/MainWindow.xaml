@@ -295,6 +295,7 @@
                          PreviewMouseMove="OnCurvePreviewMouseMove"
                          ItemsSource="{Binding ChannelsView}"
                          VirtualizingPanel.IsVirtualizing="True"
+                         VirtualizingPanel.IsVirtualizingWhenGrouping="True"
                          VirtualizingPanel.VirtualizationMode="Recycling">
                     <ListBox.ToolTip>
                         <ToolTip>
@@ -325,6 +326,53 @@
                             </Grid>
                         </ToolTip>
                     </ListBox.ToolTip>
+                    <!-- Only with several files (MainViewModel.UpdateSourceDisplay groups the list by file): name, X offset, remove. -->
+                    <ListBox.GroupStyle>
+                        <GroupStyle>
+                            <GroupStyle.HeaderTemplate>
+                                <DataTemplate>
+                                    <Border Margin="0,10,4,4" Padding="10,6,6,8" CornerRadius="5"
+                                            Background="{DynamicResource AppMenuBackground}"
+                                            BorderBrush="{DynamicResource AppMenuBorder}" BorderThickness="1"
+                                            Tag="{Binding DataContext, RelativeSource={RelativeSource AncestorType=ListBox}}">
+                                        <Border.ContextMenu>
+                                            <ContextMenu>
+                                                <MenuItem Header="Même couleur pour une même colonne"
+                                                          IsCheckable="True"
+                                                          ToolTip="Une colonne tracée pour plusieurs fichiers garde la couleur du premier fichier ; chaque fichier a son type de trait"
+                                                          IsChecked="{Binding PlacementTarget.Tag.CompareSameColor, RelativeSource={RelativeSource AncestorType=ContextMenu}}" />
+                                                <MenuItem Header="Retirer ce fichier"
+                                                          Icon="{ui:SymbolIcon Dismiss20}"
+                                                          Command="{Binding PlacementTarget.Tag.RemoveSourceCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                                          CommandParameter="{Binding Name}"
+                                                          Visibility="{Binding Name.IsPrimary, Converter={StaticResource InverseBoolToVisibility}}" />
+                                            </ContextMenu>
+                                        </Border.ContextMenu>
+                                        <DockPanel>
+                                            <ui:Button DockPanel.Dock="Right" VerticalAlignment="Top" Padding="4"
+                                                       Icon="{ui:SymbolIcon Dismiss16}"
+                                                       ToolTip="Retirer ce fichier de la comparaison"
+                                                       Command="{Binding DataContext.RemoveSourceCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
+                                                       CommandParameter="{Binding Name}"
+                                                       Visibility="{Binding Name.IsPrimary, Converter={StaticResource InverseBoolToVisibility}}" />
+                                            <StackPanel>
+                                                <TextBlock FontWeight="SemiBold" TextTrimming="CharacterEllipsis"
+                                                           Text="{Binding Name.Name}" ToolTip="{Binding Name.FilePath}" />
+                                                <StackPanel Margin="0,4,0,0" Orientation="Horizontal">
+                                                    <TextBlock VerticalAlignment="Center" Margin="0,0,8,0"
+                                                               Foreground="{DynamicResource AppSecondaryTextBrush}" Text="Décalage X" />
+                                                    <TextBox MinWidth="90"
+                                                             Text="{Binding Name.OffsetText, UpdateSourceTrigger=LostFocus}"
+                                                             ToolTip="Ajouté à l'axe X de ce fichier, dans l'unité de l'axe X, pour l'aligner sur les autres (Entrée pour appliquer)"
+                                                             KeyDown="OnOffsetKeyDown" />
+                                                </StackPanel>
+                                            </StackPanel>
+                                        </DockPanel>
+                                    </Border>
+                                </DataTemplate>
+                            </GroupStyle.HeaderTemplate>
+                        </GroupStyle>
+                    </ListBox.GroupStyle>
                     <ListBox.ItemContainerStyle>
                         <Style TargetType="ListBoxItem" BasedOn="{StaticResource {x:Type ListBoxItem}}">
                             <Setter Property="Padding" Value="6,2" />
@@ -350,7 +398,12 @@
                                                   Icon="{ui:SymbolIcon Edit20}"
                                                   Command="{Binding PlacementTarget.Tag.EditChannelCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
                                                   CommandParameter="{Binding}" />
+                                        <MenuItem Header="Tracer cette colonne pour tous les fichiers"
+                                                  Tag="allFiles"
+                                                  Icon="{ui:SymbolIcon DocumentMultiple20}"
+                                                  Click="OnPlotForAllFiles" />
                                         <MenuItem Header="Nouvelle courbe calculée à partir de celle-ci…"
+                                                  Tag="computedFrom"
                                                   Icon="{ui:SymbolIcon MathFormula24}"
                                                   Command="{Binding PlacementTarget.Tag.NewComputedCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
                                                   CommandParameter="{Binding}" />
@@ -577,7 +630,7 @@
                                                                 <ColumnDefinition Width="Auto" />
                                                             </Grid.ColumnDefinitions>
                                                             <Rectangle Width="10" Height="10" Margin="0,0,8,0" RadiusX="2" RadiusY="2" Fill="{Binding Brush}" />
-                                                            <TextBlock Grid.Column="1" TextTrimming="CharacterEllipsis" Text="{Binding Name}" ToolTip="{Binding Name}" />
+                                                            <TextBlock Grid.Column="1" TextTrimming="CharacterEllipsis" Text="{Binding ShortName}" ToolTip="{Binding ShortName}" />
                                                             <!-- Fixed minimum width, right-aligned: the card does not jump when the digits change. -->
                                                             <TextBlock Grid.Column="2" Margin="10,0,0,0" MinWidth="120" TextAlignment="Right"
                                                                        FontFamily="Consolas" Text="{Binding CursorText}" />

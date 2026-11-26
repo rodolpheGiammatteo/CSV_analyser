@@ -43,7 +43,7 @@ public partial class MainViewModel : IAnnotationHost
     {
         if (Dataset is not { } ds || SelectedXAxis is not { } option)
             return "";
-        var xs = option.GetValues(ds);
+        var xs = PrimarySource!.XValues(option); // offset of the opened file included
         if (row < 0 || row >= xs.Length)
             return "?";
         string value = xs[row].ToString("0.###", CultureInfo.CurrentCulture);
@@ -57,7 +57,7 @@ public partial class MainViewModel : IAnnotationHost
     {
         if (Dataset is not { } ds || SelectedXAxis is not { } option)
             return double.NaN;
-        var xs = option.GetValues(ds);
+        var xs = PrimarySource!.XValues(option); // offset of the opened file included
         return row >= 0 && row < xs.Length ? xs[row] : double.NaN;
     }
 
@@ -191,7 +191,7 @@ public partial class MainViewModel : IAnnotationHost
             foreach (var c in configs)
             {
                 if (AnnotationViewModel.FromConfig(this, c, ds.RowCount, Graphs,
-                        column => Channels.FirstOrDefault(ch => ch.Channel.SourceName == column)) is { } a)
+                        (column, file) => FindConfigCurve(new CurveConfig { Column = column, File = file })) is { } a)
                     Annotations.Add(a);
             }
         }
@@ -203,7 +203,7 @@ public partial class MainViewModel : IAnnotationHost
     private void RetargetNoteCurves()
     {
         foreach (var note in Annotations.Where(a => a.Curve is not null && !Channels.Contains(a.Curve)))
-            note.Curve = Channels.FirstOrDefault(c => c.Channel.SourceName == note.Curve!.Channel.SourceName) ?? note.Curve;
+            note.Curve = Channels.FirstOrDefault(c => c.Source == note.Curve!.Source && c.Channel.SourceName == note.Curve.Channel.SourceName) ?? note.Curve;
     }
 
     /// <summary>The X axis changed: positions are shown in the new unit.</summary>

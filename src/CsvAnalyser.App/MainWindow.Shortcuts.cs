@@ -112,6 +112,7 @@ public partial class MainWindow
         [
             new("file.open", file, "Ouvrir un fichier CSV ou un projet…", "Ctrl+O", Cmd(vm.OpenCommand)),
             new("file.recent", file, "Fichiers récents…", "", () => OnRecentMenu(RecentButton, new RoutedEventArgs())),
+            new("file.compare", file, "Ajouter un fichier pour comparer…", "", Cmd(vm.AddCompareFileCommand)),
             new("file.save", file, "Enregistrer le projet", "Ctrl+S", Cmd(vm.SaveProjectCommand)),
             new("file.saveAs", file, "Enregistrer le projet sous…", "Ctrl+Shift+S", Cmd(vm.SaveProjectAsCommand)),
             new("file.openProject", file, "Ouvrir un projet…", "", Cmd(vm.OpenProjectCommand)),

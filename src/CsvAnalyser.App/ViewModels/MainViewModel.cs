@@ -42,6 +42,8 @@ public enum PlotChange
     Grid,
     /// <summary>Annotations added, moved, edited, shown or hidden (redrawn in place).</summary>
     Annotations,
+    /// <summary>The X offset of a compared file changed: redrawn with the same view.</summary>
+    Sources,
 }
 
 public partial class MainViewModel : ObservableObject, IChannelHost
@@ -111,6 +113,7 @@ public partial class MainViewModel : ObservableObject, IChannelHost
         _leftDragZooms = settings.LeftDragZooms;
         _xAxisPlacement = Enum.IsDefined(settings.XAxisPlacement) ? settings.XAxisPlacement : XAxisPlacement.Bottom;
         _checkUpdatesAtStartup = settings.CheckUpdatesAtStartup;
+        _compareSameColor = settings.CompareSameColor;
         ChannelsView = CollectionViewSource.GetDefaultView(Channels);
         ChannelsView.Filter = o => MatchesSearch((ChannelItemViewModel)o);
         Channels.CollectionChanged += (_, _) => SyncComputedXAxisOptions();
@@ -233,8 +236,9 @@ public partial class MainViewModel : ObservableObject, IChannelHost
         {
             var dataset = await Task.Run(() => CsvImporter.Load(path, progress));
             ApplyDataset(dataset);
+            IsLoading = false; // the compared files of the session load next
             if (restoreSession)
-                RestoreSession(path);
+                await RestoreSessionAsync(path);
             _settings.LastDirectory = Path.GetDirectoryName(path);
             _settings.Save();
             return true;
@@ -263,8 +267,9 @@ public partial class MainViewModel : ObservableObject, IChannelHost
             Graphs.Clear();
             Graphs.Add(NewGraph());
 
+            var primary = ResetSources(dataset);
             foreach (var channel in dataset.Channels)
-                Channels.Add(new ChannelItemViewModel(channel, this));
+                Channels.Add(new ChannelItemViewModel(channel, this) { Source = primary });
 
             XAxisOption? timeOption = null;
             if (dataset.Time is { } time)
@@ -316,7 +321,7 @@ public partial class MainViewModel : ObservableObject, IChannelHost
             if (item.Graph is null || !Graphs.Contains(item.Graph))
                 item.Graph = Graphs[0];
             if (!item.IsColorCustom)
-                item.Color = NextColor(except: item);
+                item.Color = CompareColor(item) ?? NextColor(except: item);
             PlottedChannels.Add(item);
         }
         else
@@ -661,7 +666,7 @@ public partial class MainViewModel : ObservableObject, IChannelHost
         {
             PlotChanged?.Invoke(this, change);
             if (change is PlotChange.Curves or PlotChange.Appearance or PlotChange.AxisSettings or PlotChange.GraphAppearance
-                or PlotChange.Layout or PlotChange.XAxis or PlotChange.Measure or PlotChange.Annotations)
+                or PlotChange.Layout or PlotChange.XAxis or PlotChange.Measure or PlotChange.Annotations or PlotChange.Sources)
                 ScheduleCommit();
         }
     }

@@ -94,9 +94,6 @@ public partial class MainViewModel
             return;
         }
 
-        var xs = option.GetValues(ds);
-        int ia = NearestIndex(xs, option.IsSorted, a);
-        int ib = NearestIndex(xs, option.IsSorted, b);
         int count = CountRows(rows);
 
         string xUnit = option.Channel?.Unit ?? "";
@@ -107,17 +104,36 @@ public partial class MainViewModel
             summary += $"   (1/Δ = {Number(1 / Math.Abs(delta))} Hz)";
         MeasureSummary = summary + L.F("   —   {0:N0} points", count);
 
+        // Each file on its own samples: rows between the cursors and samples nearest to X1 and X2 (NaN outside its X range).
+        var perFile = new Dictionary<DataSource, (ExportRows Rows, int A, int B)>();
         foreach (var item in PlottedChannels)
         {
+            var source = item.Source ?? PrimarySource!;
+            if (!perFile.TryGetValue(source, out var at))
+            {
+                var xs = source.XValues(option);
+                bool sorted = source.IsXSorted(option);
+                at = perFile[source] = (source.IsPrimary ? rows : RowsInXRange(Math.Min(a, b), Math.Max(a, b), source),
+                    NearestInRange(xs, sorted, a), NearestInRange(xs, sorted, b));
+            }
             var values = item.Channel.Values;
-            var stats = RangeStatistics.Compute(values, rows.Start, rows.End, rows.Filter);
-            double va = ia >= 0 ? values[ia] : double.NaN;
-            double vb = ib >= 0 ? values[ib] : double.NaN;
+            var stats = RangeStatistics.Compute(values, at.Rows.Start, at.Rows.End, at.Rows.Filter);
+            double va = at.A >= 0 ? values[at.A] : double.NaN;
+            double vb = at.B >= 0 ? values[at.B] : double.NaN;
             MeasureRows.Add(new MeasureRow(
                 item.LegendText, item.Brush,
                 Number(va), Number(vb), Number(vb - va),
                 Number(stats.Min), Number(stats.Max), Number(stats.Mean), Number(stats.Rms), Number(stats.PeakToPeak)));
         }
+    }
+
+    /// <summary>The sample nearest to x, or -1 when x is outside the X range of that file.</summary>
+    private static int NearestInRange(double[] xs, bool sorted, double x)
+    {
+        int i = NearestIndex(xs, sorted, x);
+        if (i < 0 || !sorted || xs.Length == 0)
+            return i;
+        return x < xs[0] - 1e-12 || x > xs[^1] + 1e-12 ? -1 : i;
     }
 
     private static int NearestIndex(double[] xs, bool sorted, double x)

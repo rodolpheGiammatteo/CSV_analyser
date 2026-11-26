@@ -19,6 +19,9 @@ public sealed class XAxisOption : ObservableObject
     /// <summary>A computed curve (e.g. t/60 to read the time in minutes): follows the list of computed curves.</summary>
     public bool IsComputed { get; }
 
+    /// <summary>The time column of the file (each compared file then uses its own).</summary>
+    public bool IsTime => _isTime;
+
     /// <summary>Follows the channel's display name (call <see cref="RefreshLabel"/> after a rename).</summary>
     public string Label => Channel is null ? L.T("N° de ligne")
         : _isTime ? L.F("Temps — {0}", Channel.DisplayName)

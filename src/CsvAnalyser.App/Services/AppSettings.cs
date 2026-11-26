@@ -89,6 +89,9 @@ public sealed class AppSettings
     /// <summary>Look for a newer version on GitHub at startup (off by default: no network access unless asked).</summary>
     public bool CheckUpdatesAtStartup { get; set; }
 
+    /// <summary>Compared files: same color for the same column, a line pattern per file.</summary>
+    public bool CompareSameColor { get; set; } = true;
+
     private const int MaxRecentFiles = 12;
 
     private static readonly JsonSerializerOptions Options = new() { WriteIndented = true };

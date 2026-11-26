@@ -25,7 +25,7 @@ public static class GraphLayout
     public static string AxisKey(ChannelItemViewModel item) => item.AxisChoice switch
     {
         ChannelItemViewModel.AutoAxis => UnitKey(item),
-        ChannelItemViewModel.OwnAxisChoice => $"curve:{item.Channel.SourceName}",
+        ChannelItemViewModel.OwnAxisChoice => OwnKey(item),
         var key => key,
     };
 
@@ -41,7 +41,7 @@ public static class GraphLayout
             new(ChannelItemViewModel.OwnAxisChoice, "Axe séparé"),
         };
         var graph = layout.FirstOrDefault(g => g.Graph == item.Graph);
-        string ownKey = $"curve:{item.Channel.SourceName}";
+        string ownKey = OwnKey(item);
         foreach (var axis in graph?.Axes ?? [])
         {
             if (axis.Key == UnitKey(item) || axis.Key == ownKey)
@@ -99,4 +99,8 @@ public static class GraphLayout
             return curves[0].LegendText;
         return string.Join(" · ", curves.Select(c => c.Unit).Where(u => !string.IsNullOrEmpty(u)).Distinct());
     }
+
+    /// <summary>Key of a curve's own axis; a compared file's column gets its file number (the same column of two files differs).</summary>
+    private static string OwnKey(ChannelItemViewModel item) =>
+        item.IsCompared ? $"curve:{item.Source!.Index}:{item.Channel.SourceName}" : $"curve:{item.Channel.SourceName}";
 }

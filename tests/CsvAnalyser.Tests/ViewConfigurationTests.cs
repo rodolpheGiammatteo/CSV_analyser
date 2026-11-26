@@ -62,6 +62,43 @@ public class ViewConfigurationTests
     }
 
     [Fact]
+    public void ComparedFiles_RoundTrip_AndAreNotMissingColumns()
+    {
+        var config = new ViewConfiguration
+        {
+            XOffset = -1.5,
+            Files = [new ComparedFileConfig { Path = @"C:\essais\essai 2.csv", Offset = 12.5 }],
+            Curves =
+            [
+                new CurveConfig { Column = "Vitesse", Plotted = true },
+                new CurveConfig { Column = "Vitesse", File = 1, Plotted = true },
+                new CurveConfig { Column = "Seulement dans essai 2", File = 1, Plotted = true },
+            ],
+            Annotations = [new AnnotationConfig { Kind = AnnotationConfig.Note, Row = 4, Curve = "Vitesse", CurveFile = 1 }],
+        };
+
+        var back = ViewConfiguration.FromJson(config.ToJson());
+
+        Assert.Equal(-1.5, back.XOffset);
+        var file = Assert.Single(back.Files!);
+        Assert.Equal(@"C:\essais\essai 2.csv", file.Path);
+        Assert.Equal(12.5, file.Offset);
+        Assert.Equal([null, 1, 1], back.Curves.Select(c => c.File));
+        Assert.Equal(1, Assert.Single(back.Annotations!).CurveFile);
+        // Only the opened file's columns are checked against it.
+        Assert.Empty(back.MissingColumns(["Vitesse"]));
+    }
+
+    [Fact]
+    public void SingleFile_WritesNothingAboutComparison()
+    {
+        var json = Sample().ToJson();
+        Assert.DoesNotContain("\"files\"", json);
+        Assert.DoesNotContain("\"xOffset\"", json);
+        Assert.DoesNotContain("\"file\"", json);
+    }
+
+    [Fact]
     public void MissingColumns_ListsColumnsAbsentFromTheFile()
     {
         var missing = Sample().MissingColumns(["Temps", "Courant"]);

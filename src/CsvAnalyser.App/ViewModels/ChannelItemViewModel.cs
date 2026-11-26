@@ -88,6 +88,22 @@ public partial class ChannelItemViewModel : ObservableObject
 
     public Channel Channel { get; }
 
+    /// <summary>The file of this curve (the opened one, or a file added to compare); computed curves belong to the opened one.</summary>
+    public DataSource? Source { get; set; }
+
+    /// <summary>A column of a file added to compare (not the opened one).</summary>
+    public bool IsCompared => Source is { IsPrimary: false };
+
+    /// <summary>The name and, with several files, the file it comes from ("Vitesse — essai 2"): cursor panel.</summary>
+    public string ShortName => Name + (Source?.Suffix ?? "");
+
+    /// <summary>The file name was shown or hidden (a file added or removed): legends and cursor panel follow.</summary>
+    public void RefreshSourceLabel()
+    {
+        OnPropertyChanged(nameof(LegendText));
+        OnPropertyChanged(nameof(ShortName));
+    }
+
     /// <summary>How the curve is computed; null for a column of the file.</summary>
     public CsvAnalyser.Core.Configuration.ComputedCurveConfig? Definition { get; init; }
 
@@ -120,7 +136,7 @@ public partial class ChannelItemViewModel : ObservableObject
 
     public string UnitLabel => string.IsNullOrEmpty(Unit) ? "" : $"[{Unit}]";
 
-    public string LegendText => string.IsNullOrEmpty(Unit) ? Name : $"{Name} [{Unit}]";
+    public string LegendText => (string.IsNullOrEmpty(Unit) ? Name : $"{Name} [{Unit}]") + (Source?.Suffix ?? "");
 
     public bool IsRenamed => Name != Channel.SourceName;
 
@@ -207,6 +223,7 @@ public partial class ChannelItemViewModel : ObservableObject
         OnPropertyChanged(nameof(Unit));
         OnPropertyChanged(nameof(UnitLabel));
         OnPropertyChanged(nameof(LegendText));
+        OnPropertyChanged(nameof(ShortName));
         OnPropertyChanged(nameof(IsRenamed));
         _host.OnAppearanceChanged(this);
     }

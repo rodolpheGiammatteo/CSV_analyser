@@ -47,6 +47,12 @@ public sealed class ViewConfiguration
     /// <summary>Markers, highlighted zones and notes on a point (restored only on the same file).</summary>
     public List<AnnotationConfig>? Annotations { get; set; }
 
+    /// <summary>X offset of the opened file (null = 0).</summary>
+    public double? XOffset { get; set; }
+
+    /// <summary>Files added to compare with the opened one, in order (curve <see cref="CurveConfig.File"/> 1, 2…).</summary>
+    public List<ComparedFileConfig>? Files { get; set; }
+
     /// <summary>Columns used by the configuration's curves that are neither in <paramref name="available"/> nor computed.</summary>
     public IReadOnlyList<string> MissingColumns(IEnumerable<string> available)
     {
@@ -54,7 +60,7 @@ public sealed class ViewConfiguration
         foreach (var c in Computed)
             known.Add(c.Name);
         var missing = new List<string>();
-        foreach (var name in Curves.Select(c => c.Column))
+        foreach (var name in Curves.Where(c => c.File is null or 0).Select(c => c.Column))
         {
             if (!known.Contains(name) && !missing.Contains(name))
                 missing.Add(name);
@@ -232,8 +238,20 @@ public sealed class AxisConfig
     public string? Title { get; set; }
 }
 
+/// <summary>A file added to compare: its path and its X offset.</summary>
+public sealed class ComparedFileConfig
+{
+    public string Path { get; set; } = "";
+
+    /// <summary>Added to its X values (null = 0).</summary>
+    public double? Offset { get; set; }
+}
+
 public sealed class CurveConfig
 {
+    /// <summary>0 or null = the opened file; 1, 2… = <see cref="ViewConfiguration.Files"/>[n - 1].</summary>
+    public int? File { get; set; }
+
     /// <summary>Column header in the file (or name of a computed curve).</summary>
     public string Column { get; set; } = "";
 
@@ -273,6 +291,9 @@ public sealed class CurveConfig
 /// </summary>
 public sealed class AnnotationConfig
 {
+    /// <summary>A note on a curve of a compared file: that file's number (1, 2…); its row is a row of that file.</summary>
+    public int? CurveFile { get; set; }
+
     public const string Marker = "Marker", Zone = "Zone", Note = "Note";
 
     /// <summary>Marker, Zone or Note.</summary>

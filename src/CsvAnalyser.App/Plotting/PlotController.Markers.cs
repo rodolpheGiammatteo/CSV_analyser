@@ -16,11 +16,9 @@ public sealed partial class PlotController
     /// </summary>
     private void PlaceSpacedMarkers()
     {
-        if (_xs is not { Length: > 0 } xs || !_xSorted)
-            return;
         foreach (var s in _series)
         {
-            if (s.Spaced is not { IsVisible: true })
+            if (s.Spaced is not { IsVisible: true } || !s.XSorted || s.Xs is not { Length: > 0 } xs)
                 continue;
             s.SpacedXs.Clear();
             s.SpacedYs.Clear();

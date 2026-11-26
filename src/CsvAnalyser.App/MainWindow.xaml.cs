@@ -208,6 +208,17 @@ public partial class MainWindow : FluentWindow
             PlacementTarget = (UIElement)sender,
             Placement = System.Windows.Controls.Primitives.PlacementMode.Bottom,
         };
+        if (_viewModel.Dataset is not null)
+        {
+            menu.Items.Add(new System.Windows.Controls.MenuItem
+            {
+                Header = L.T("Ajouter un fichier pour comparer…"),
+                Icon = new SymbolIcon(SymbolRegular.DocumentAdd24),
+                InputGestureText = CurrentShortcuts.TryGetValue("file.compare", out var g) ? Services.ShortcutGesture.Display(g) : "",
+                Command = _viewModel.AddCompareFileCommand,
+            });
+            menu.Items.Add(new Separator());
+        }
         if (_viewModel.RecentFiles.Count == 0)
             menu.Items.Add(new System.Windows.Controls.MenuItem { Header = L.T("Aucun fichier récent"), IsEnabled = false });
         foreach (var recent in _viewModel.RecentFiles)
@@ -385,12 +396,37 @@ public partial class MainWindow : FluentWindow
                         ? L.F("Supprimer les {0} courbes calculées", computed)
                         : L.T("Supprimer la courbe calculée");
                     break;
+                case "allFiles":
+                    entry.Visibility = _viewModel.HasSeveralFiles && !item.IsComputed ? Visibility.Visible : Visibility.Collapsed;
+                    break;
+                case "computedFrom":
+                    // Computed curves work on the rows of the opened file.
+                    entry.Visibility = item.IsCompared ? Visibility.Collapsed : Visibility.Visible;
+                    break;
                 case "duplicate":
+                    entry.Visibility = curves.All(c => c.IsCompared) ? Visibility.Collapsed : Visibility.Visible;
                     ((System.Windows.Controls.MenuItem)entry).Header = curves.Count > 1
                         ? L.F("Dupliquer les {0} courbes", curves.Count)
                         : L.T("Dupliquer");
                     break;
             }
+        }
+    }
+
+    private void OnPlotForAllFiles(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement { DataContext: ChannelItemViewModel item })
+            _viewModel.PlotForAllFiles(item);
+    }
+
+    /// <summary>File header of the curve list: Entrée applies the typed X offset.</summary>
+    private void OnOffsetKeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key == Key.Enter && sender is System.Windows.Controls.TextBox box)
+        {
+            box.GetBindingExpression(System.Windows.Controls.TextBox.TextProperty)?.UpdateSource();
+            box.SelectAll();
+            e.Handled = true;
         }
     }
 
@@ -544,6 +580,24 @@ public partial class MainWindow : FluentWindow
         HighlightFileDropZone(false);
         if (e.Data.GetData(DataFormats.FileDrop) is not string[] { Length: > 0 } files)
             return;
+        // A CSV dropped while a file is open: replace it, or add it (them) to compare.
+        var csvs = files.Where(f => !f.EndsWith(".json", StringComparison.OrdinalIgnoreCase)).ToList();
+        if (_viewModel.Dataset is not null && csvs.Count == files.Length)
+        {
+            var answer = System.Windows.MessageBox.Show(this,
+                csvs.Count == 1
+                    ? L.F("Ajouter « {0} » pour le comparer au fichier ouvert ?\n\nOui : l'ajouter pour comparer.\nNon : l'ouvrir à la place du fichier actuel.", System.IO.Path.GetFileName(csvs[0]))
+                    : L.F("Ajouter ces {0} fichiers pour les comparer au fichier ouvert ?\n\nOui : les ajouter pour comparer.\nNon : ouvrir le premier à la place du fichier actuel.", csvs.Count),
+                L.T("Fichier déposé"), System.Windows.MessageBoxButton.YesNoCancel, System.Windows.MessageBoxImage.Question);
+            if (answer == System.Windows.MessageBoxResult.Cancel)
+                return;
+            if (answer == System.Windows.MessageBoxResult.Yes)
+            {
+                foreach (var csv in csvs)
+                    await _viewModel.AddCompareFileAsync(csv);
+                return;
+            }
+        }
         await _viewModel.LoadFileAsync(files[0]); // a .json project opens with its CSV (or applies to the open one)
     }
 }
