@@ -73,6 +73,7 @@
                                      Text="{Binding DisplayText, Mode=OneWay}"
                                      ToolTip="Cliquez puis appuyez sur la combinaison de touches"
                                      PreviewKeyDown="OnGestureKeyDown"
+                                     PreviewMouseLeftButtonUp="OnGestureClick"
                                      GotKeyboardFocus="OnGestureFocus"
                                      LostKeyboardFocus="OnGestureBlur" />
                             <ui:Button Grid.Column="2" Margin="6,0,0,0" Padding="6"

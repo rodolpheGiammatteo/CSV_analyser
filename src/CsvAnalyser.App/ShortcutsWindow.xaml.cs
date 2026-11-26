@@ -82,6 +82,13 @@ public partial class ShortcutsWindow : FluentWindow
 
     private static ShortcutRow? RowOf(object sender) => (sender as FrameworkElement)?.DataContext as ShortcutRow;
 
+    /// <summary>A click in the box that already has the focus: waits for a new combination again.</summary>
+    private void OnGestureClick(object sender, MouseButtonEventArgs e)
+    {
+        if (RowOf(sender) is { } row)
+            row.IsRecording = true;
+    }
+
     private void OnGestureFocus(object sender, KeyboardFocusChangedEventArgs e)
     {
         if (RowOf(sender) is { } row)
@@ -111,6 +118,7 @@ public partial class ShortcutsWindow : FluentWindow
         if (key is Key.Back or Key.Delete && Keyboard.Modifiers == ModifierKeys.None)
         {
             row.Gesture = "";
+            row.IsRecording = false; // shown at once; another combination still replaces it
             return;
         }
         if (key is Key.LeftCtrl or Key.RightCtrl or Key.LeftShift or Key.RightShift or Key.LeftAlt or Key.RightAlt)
@@ -135,6 +143,7 @@ public partial class ShortcutsWindow : FluentWindow
             other.Gesture = "";
         }
         row.Gesture = gesture;
+        row.IsRecording = false; // the combination is shown at once, no need to click elsewhere
         ShowMessage(null);
     }
 
