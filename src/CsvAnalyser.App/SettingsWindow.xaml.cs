@@ -23,4 +23,10 @@ public partial class SettingsWindow : FluentWindow
     }
 
     private void OnClose(object sender, RoutedEventArgs e) => Close();
+
+    private void OnShortcuts(object sender, RoutedEventArgs e)
+    {
+        if (Owner is MainWindow main)
+            new ShortcutsWindow(main) { Owner = this }.ShowDialog();
+    }
 }

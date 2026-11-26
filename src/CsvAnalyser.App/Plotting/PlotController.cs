@@ -572,6 +572,15 @@ public sealed partial class PlotController : IPlotView
     private GraphRender? LegendAt(Pixel pixel) => _graphs.FirstOrDefault(g =>
         LegendRect(g) is { } r && pixel.X >= r.Left && pixel.X <= r.Right && pixel.Y >= r.Top && pixel.Y <= r.Bottom);
 
+    /// <summary>The curve nearest to the mouse when it is over a graph (the "active curve" of the keyboard shortcuts).</summary>
+    public ChannelItemViewModel? CurveUnderMouse()
+    {
+        if (!_view.IsMouseOver || _series.Count == 0)
+            return null;
+        var p = Mouse.GetPosition(_view);
+        return NearestSeries(new Pixel((float)(p.X * _view.DisplayScale), (float)(p.Y * _view.DisplayScale)))?.Item;
+    }
+
     private Pixel ToPixel(MouseEventArgs e)
     {
         var p = e.GetPosition(_view);

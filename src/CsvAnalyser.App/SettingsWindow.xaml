@@ -142,6 +142,13 @@
                       ToolTip="Chaque valeur est écrite à côté de son point d'intersection avec le curseur"
                       IsChecked="{Binding ShowCursorLabels}" />
 
+            <TextBlock Margin="0,12,0,0" FontWeight="SemiBold" Text="Raccourcis clavier" />
+            <ui:Button Margin="0,6,0,8"
+                       Content="Raccourcis clavier…"
+                       Icon="{ui:SymbolIcon Keyboard24}"
+                       ToolTip="Choisir une combinaison de touches pour chaque action"
+                       Click="OnShortcuts" />
+
             <TextBlock Margin="0,12,0,0" FontWeight="SemiBold" Text="Choix des actions souris" />
             <ComboBox Margin="0,6,0,8"
                       ItemsSource="{x:Static vm:MainViewModel.MouseChoices}"

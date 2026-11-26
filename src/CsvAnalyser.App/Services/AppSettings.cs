@@ -80,6 +80,9 @@ public sealed class AppSettings
     /// <summary>Last opened CSV files and projects, most recent first.</summary>
     public List<string> RecentFiles { get; set; } = [];
 
+    /// <summary>Keyboard shortcuts changed by the user (action id → gesture such as "Ctrl+F", "" = none).</summary>
+    public Dictionary<string, string> Shortcuts { get; set; } = [];
+
     /// <summary>Left-button drag zooms on a rectangle (and the wheel button pans); false = the reverse.</summary>
     public bool LeftDragZooms { get; set; } = true;
 

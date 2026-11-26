@@ -37,17 +37,7 @@
         </Style>
         <!-- Right-click on the fit buttons (one copy per button). -->
     </ui:FluentWindow.Resources>
-    <ui:FluentWindow.InputBindings>
-        <KeyBinding Modifiers="Ctrl" Key="O" Command="{Binding OpenCommand}" />
-        <KeyBinding Modifiers="Ctrl" Key="Z" Command="{Binding UndoViewCommand}" />
-        <KeyBinding Modifiers="Ctrl" Key="Y" Command="{Binding RedoViewCommand}" />
-        <KeyBinding Modifiers="Ctrl+Shift" Key="Z" Command="{Binding RedoViewCommand}" />
-        <KeyBinding Modifiers="Ctrl" Key="S" Command="{Binding SaveProjectCommand}" />
-        <KeyBinding Modifiers="Ctrl+Shift" Key="S" Command="{Binding SaveProjectAsCommand}" />
-        <KeyBinding Modifiers="Ctrl" Key="E" Command="{Binding ExportCommand}" />
-        <KeyBinding Modifiers="Ctrl" Key="M" Command="{Binding ToggleMeasureCommand}" />
-        <KeyBinding Modifiers="Ctrl+Shift" Key="M" Command="{Binding ToggleMeasureYCommand}" />
-    </ui:FluentWindow.InputBindings>
+    <!-- Keyboard shortcuts: Paramètres → Raccourcis clavier (MainWindow.Shortcuts.cs). -->
     <Grid Background="{DynamicResource ApplicationBackgroundBrush}">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
@@ -72,6 +62,7 @@
                        Margin="8,0,0,0"
                        Content="Paramètres"
                        Icon="{ui:SymbolIcon Settings24}"
+                       controls:ShortcutHint.Action="view.settings"
                        Click="OnOpenSettings" />
             <!-- Shown only when a newer version was found on GitHub -->
             <ui:Button DockPanel.Dock="Right"
@@ -92,29 +83,33 @@
                 <ui:Button x:Name="CurveListButton"
                            Margin="0,2,8,2"
                            Icon="{ui:SymbolIcon PanelLeftContract24}"
-                           ToolTip="Masquer ou afficher la liste des courbes (Ctrl+L)"
+                           ToolTip="Masquer ou afficher la liste des courbes"
+                           controls:ShortcutHint.Action="view.curveList"
                            Click="OnToggleCurveList" />
                 <ui:Button Margin="0,2,0,2"
                            Appearance="Primary"
                            Content="Ouvrir…"
                            Icon="{ui:SymbolIcon FolderOpen24}"
-                           ToolTip="Ouvrir un fichier CSV ou un projet (Ctrl+O)"
+                           ToolTip="Ouvrir un fichier CSV ou un projet"
+                           controls:ShortcutHint.Action="file.open"
                            Command="{Binding OpenCommand}" />
-                <ui:Button Icon="{ui:SymbolIcon History24}"
+                <ui:Button x:Name="RecentButton"
+                           Icon="{ui:SymbolIcon History24}"
                            ToolTip="Ouvrir un fichier récent"
+                           controls:ShortcutHint.Action="file.recent"
                            Click="OnRecentMenu" />
                 <ui:Button Icon="{ui:SymbolIcon Save24}"
                            ToolTip="Projet : enregistrer, ouvrir, appliquer une mise en page, exporter en CSV"
                            Click="OnOpenButtonMenu">
                     <ui:Button.ContextMenu>
                         <ContextMenu>
-                            <MenuItem Header="Enregistrer le projet" InputGestureText="Ctrl+S"
+                            <MenuItem Header="Enregistrer le projet" controls:ShortcutHint.Action="file.save"
                                       Icon="{ui:SymbolIcon Save24}"
                                       Command="{Binding SaveProjectCommand}" />
-                            <MenuItem Header="Enregistrer le projet sous…" InputGestureText="Ctrl+Maj+S"
+                            <MenuItem Header="Enregistrer le projet sous…" controls:ShortcutHint.Action="file.saveAs"
                                       Icon="{ui:SymbolIcon SaveEdit24}"
                                       Command="{Binding SaveProjectAsCommand}" />
-                            <MenuItem Header="Ouvrir un projet…"
+                            <MenuItem Header="Ouvrir un projet…" controls:ShortcutHint.Action="file.openProject"
                                       Icon="{ui:SymbolIcon FolderOpen24}"
                                       Command="{Binding OpenProjectCommand}" />
                             <MenuItem Header="Ouvrir l'emplacement du fichier"
@@ -132,7 +127,7 @@
                                       Icon="{ui:SymbolIcon DocumentArrowLeft24}"
                                       Command="{Binding OpenConfigurationCommand}" />
                             <Separator />
-                            <MenuItem Header="Exporter en CSV…" InputGestureText="Ctrl+E"
+                            <MenuItem Header="Exporter en CSV…" controls:ShortcutHint.Action="file.export"
                                       Icon="{ui:SymbolIcon ArrowExportLtr24}"
                                       Command="{Binding ExportCommand}" />
                         </ContextMenu>
@@ -150,6 +145,7 @@
                            Content="Ajuster"
                            Icon="{ui:SymbolIcon ArrowMaximize24}"
                            ToolTip="Tout ajuster : X et Y, axes manuels compris.&#10;Clic droit : tout remettre en automatique."
+                           controls:ShortcutHint.Action="view.fitAll"
                            Command="{Binding AutoScaleCommand}">
                     <ui:Button.InputBindings>
                         <MouseBinding MouseAction="RightClick" Command="{Binding AutoAllAxesCommand}" CommandParameter="xy" />
@@ -157,6 +153,7 @@
                 </ui:Button>
                 <ui:Button Icon="{ui:SymbolIcon ArrowAutofitWidth24}"
                            ToolTip="Ajuster X seulement, le zoom vertical est gardé.&#10;Clic droit : tout remettre en automatique."
+                           controls:ShortcutHint.Action="view.fitX"
                            Command="{Binding AutoScaleXCommand}">
                     <ui:Button.InputBindings>
                         <MouseBinding MouseAction="RightClick" Command="{Binding AutoAllAxesCommand}" CommandParameter="xy" />
@@ -164,6 +161,7 @@
                 </ui:Button>
                 <ui:Button Icon="{ui:SymbolIcon ArrowAutofitHeight24}"
                            ToolTip="Ajuster Y de tous les graphes sur la zone visible, axes manuels compris.&#10;Clic droit : tous les axes Y en automatique."
+                           controls:ShortcutHint.Action="view.fitY"
                            Command="{Binding AutoScaleYCommand}">
                     <ui:Button.InputBindings>
                         <MouseBinding MouseAction="RightClick" Command="{Binding AutoAllAxesCommand}" CommandParameter="y" />
@@ -171,13 +169,15 @@
                 </ui:Button>
                 <ui:Button Margin="8,2,0,2"
                            Icon="{ui:SymbolIcon ArrowUndo24}"
-                           ToolTip="Annuler la dernière action (Ctrl+Z ou bouton « précédent » de la souris)"
+                           ToolTip="Annuler la dernière action (bouton « précédent » de la souris)"
+                           controls:ShortcutHint.Action="edit.undo"
                            Style="{StaticResource HistoryButton}"
                            Tag="{Binding CanUndoView}"
                            Command="{Binding UndoViewCommand}" />
                 <ui:Button Margin="4,2,0,2"
                            Icon="{ui:SymbolIcon ArrowRedo24}"
-                           ToolTip="Rétablir (Ctrl+Y ou bouton « suivant » de la souris)"
+                           ToolTip="Rétablir (bouton « suivant » de la souris)"
+                           controls:ShortcutHint.Action="edit.redo"
                            Style="{StaticResource HistoryButton}"
                            Tag="{Binding CanRedoView}"
                            Command="{Binding RedoViewCommand}" />
@@ -185,6 +185,7 @@
                            Content="Graphes"
                            Icon="{ui:SymbolIcon DataLine24}"
                            ToolTip="Titres, légendes et axes Y des graphes"
+                           controls:ShortcutHint.Action="view.graphs"
                            Command="{Binding EditAxesCommand}" />
                 <ui:Button Margin="12,2,0,2"
                            Content="Calculs"
@@ -193,10 +194,10 @@
                            Click="OnOpenButtonMenu">
                     <ui:Button.ContextMenu>
                         <ContextMenu>
-                            <MenuItem Header="Nouvelle courbe calculée…"
+                            <MenuItem Header="Nouvelle courbe calculée…" controls:ShortcutHint.Action="calc.new"
                                       Icon="{ui:SymbolIcon MathFormula24}"
                                       Command="{Binding NewComputedCommand}" />
-                            <MenuItem Header="Spectre (FFT)…"
+                            <MenuItem Header="Spectre (FFT)…" controls:ShortcutHint.Action="calc.spectrum"
                                       Icon="{ui:SymbolIcon DataHistogram24}"
                                       Command="{Binding ShowSpectrumCommand}" />
                         </ContextMenu>
@@ -204,7 +205,8 @@
                 </ui:Button>
                 <ToggleButton Margin="8,2,0,2"
                               Padding="11,5"
-                              ToolTip="Deux curseurs verticaux X1 et X2 : écart, min, max, moyenne et valeur efficace entre les deux (Ctrl+M)"
+                              ToolTip="Deux curseurs verticaux X1 et X2 : écart, min, max, moyenne et valeur efficace entre les deux"
+                           controls:ShortcutHint.Action="measure.x"
                               IsChecked="{Binding IsMeasuring}"
                               IsEnabled="{Binding HasData}">
                     <StackPanel Orientation="Horizontal">
@@ -214,7 +216,8 @@
                 </ToggleButton>
                 <ToggleButton Margin="4,2,0,2"
                               Padding="11,5"
-                              ToolTip="Deux curseurs horizontaux Y1 et Y2 : niveaux et écart sur un axe Y (Ctrl+Maj+M)"
+                              ToolTip="Deux curseurs horizontaux Y1 et Y2 : niveaux et écart sur un axe Y"
+                           controls:ShortcutHint.Action="measure.y"
                               IsChecked="{Binding IsMeasuringY}"
                               IsEnabled="{Binding HasData}">
                     <StackPanel Orientation="Horizontal">
@@ -229,6 +232,7 @@
                 <ui:Button Margin="8,2,0,2"
                            Icon="{ui:SymbolIcon Eraser24}"
                            ToolTip="Masquer toutes les courbes.&#10;Clic droit : réinitialiser la mise en page."
+                           controls:ShortcutHint.Action="view.hideAll"
                            Command="{Binding ClearSelectionCommand}">
                     <ui:Button.ContextMenu>
                         <ContextMenu>
@@ -270,10 +274,12 @@
                                   Padding="8,0"
                                   VerticalAlignment="Stretch"
                                   ToolTip="Afficher seulement les courbes cochées"
+                           controls:ShortcutHint.Action="view.plottedOnly"
                                   IsChecked="{Binding ShowPlottedOnly}">
                         <ui:SymbolIcon Symbol="Filter24" />
                     </ToggleButton>
-                    <ui:TextBox PlaceholderText="Rechercher une courbe…"
+                    <ui:TextBox x:Name="SearchBox"
+                                PlaceholderText="Rechercher une courbe…"
                                 Icon="{ui:SymbolIcon Search24}"
                                 ClearButtonEnabled="True"
                                 Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" />
@@ -715,7 +721,8 @@
                             <ui:Button DockPanel.Dock="Right" Padding="4" MinHeight="0"
                                        Appearance="Transparent" BorderThickness="0"
                                        Icon="{ui:SymbolIcon Dismiss16}"
-                                       ToolTip="Masquer les curseurs Y1 et Y2 (Ctrl+Maj+M)"
+                                       ToolTip="Masquer les curseurs Y1 et Y2"
+                           controls:ShortcutHint.Action="measure.y"
                                        Command="{Binding ToggleMeasureYCommand}" />
                             <TextBlock VerticalAlignment="Center" FontWeight="SemiBold" Text="Mesures entre Y1 et Y2" />
                             <ComboBox Margin="12,0,0,0" MinWidth="220" HorizontalAlignment="Left" VerticalAlignment="Center"
@@ -733,7 +740,8 @@
                             <ui:Button DockPanel.Dock="Right" Padding="4" MinHeight="0"
                                        Appearance="Transparent" BorderThickness="0"
                                        Icon="{ui:SymbolIcon Dismiss16}"
-                                       ToolTip="Masquer les curseurs X1 et X2 (Ctrl+M)"
+                                       ToolTip="Masquer les curseurs X1 et X2"
+                           controls:ShortcutHint.Action="measure.x"
                                        Command="{Binding ToggleMeasureCommand}" />
                             <ui:Button DockPanel.Dock="Right" Margin="0,0,6,0" Padding="8,3" MinHeight="0"
                                        Icon="{ui:SymbolIcon Highlight16}"

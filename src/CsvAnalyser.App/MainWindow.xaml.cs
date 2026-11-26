@@ -28,6 +28,7 @@ public partial class MainWindow : FluentWindow
         viewModel.EditChannelRequested += (_, item) =>
             new CurveSettingsWindow(item, GraphLayout.AxisChoices(item, viewModel.BuildLayout()), viewModel.IsXPointCloud) { Owner = this }.ShowDialog();
         PlaceCursorCard();
+        SetupShortcuts();
         viewModel.PropertyChanged += (_, e) =>
         {
             if (e.PropertyName == nameof(MainViewModel.CursorPanelPlacement))
@@ -126,17 +127,6 @@ public partial class MainWindow : FluentWindow
         LimitCurveList();
         CurveListButton.Icon = new SymbolIcon(hidden ? SymbolRegular.PanelLeftExpand24 : SymbolRegular.PanelLeftContract24);
         _viewModel.Settings.CurveListHidden = hidden;
-    }
-
-    protected override void OnPreviewKeyDown(KeyEventArgs e)
-    {
-        if (e.Key == Key.L && Keyboard.Modifiers == ModifierKeys.Control)
-        {
-            SetCurveListHidden(LeftPanel.Visibility == Visibility.Visible);
-            e.Handled = true;
-            return;
-        }
-        base.OnPreviewKeyDown(e);
     }
 
     // ---- Window size and curve list width, kept between sessions ----
@@ -338,6 +328,8 @@ public partial class MainWindow : FluentWindow
         _dragStart = e.GetPosition(this);
         _dragItem = (e.OriginalSource as FrameworkElement ?? (e.OriginalSource as FrameworkContentElement)?.Parent as FrameworkElement)
             ?.DataContext as ChannelItemViewModel;
+        if (_dragItem is not null)
+            _lastClickedCurve = _dragItem; // the "active curve" of the keyboard shortcuts
         if (sender != CurveListBox || _dragItem is not { } item || IsInsideButton(e.OriginalSource as DependencyObject))
             return;
 
