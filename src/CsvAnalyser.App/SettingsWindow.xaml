@@ -20,9 +20,10 @@
                  Background="{DynamicResource ApplicationBackgroundBrush}"
                  WindowCornerPreference="Round">
     <Grid Background="{DynamicResource ApplicationBackgroundBrush}">
+        <!-- The settings row takes what is left (and scrolls): a window shorter than its content keeps its buttons. -->
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
-            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
